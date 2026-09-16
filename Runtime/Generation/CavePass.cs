@@ -15,17 +15,17 @@ namespace Jolybob.ProceduralWorld
         private readonly float threshold;
         private readonly float minimumDistance;
 
-        public CavePass(int seed, WorldGenerationSettings settings)
-            : this(new DefaultCaveFieldProvider(seed, settings), settings)
+        public CavePass(WorldGenerationSettings settings)
+            : this(null, settings)
         {
         }
 
         public CavePass(ICaveFieldProvider fieldProvider, WorldGenerationSettings settings)
         {
-            this.fieldProvider = fieldProvider ?? throw new ArgumentNullException(nameof(fieldProvider));
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
+            this.fieldProvider = fieldProvider;
             threshold = Mathf.Clamp01(settings.caveThreshold);
             minimumDistance = Mathf.Max(0f, settings.caveMinimumDistance);
         }
@@ -38,7 +38,9 @@ namespace Jolybob.ProceduralWorld
             if (!context.Settings.cavesEnabled)
                 return;
 
+            ICaveFieldProvider provider = fieldProvider ?? context.CaveFields;
             int size = context.Chunk.Size;
+
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -49,8 +51,7 @@ namespace Jolybob.ProceduralWorld
                     if (!CanCarve(worldX, worldY))
                         continue;
 
-                    float caveValue = fieldProvider.Sample(worldX, worldY);
-                    if (caveValue < threshold)
+                    if (provider.Sample(worldX, worldY) < threshold)
                         continue;
 
                     var cell = context.Chunk.GetCell(x, y);

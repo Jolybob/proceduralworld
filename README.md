@@ -2,20 +2,46 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.5
+## Current architecture — 0.1.14
 
-The package now has the first reusable generation architecture rather than keeping generation rules inside one monolithic generator:
+The generation stack is intentionally separated by responsibility:
 
-- deterministic seeded world generation
-- chunk-based world data
-- ordered, pluggable generation passes via `IWorldGenerationPass`
-- reusable `WorldGenerationContext`
-- pluggable `INoiseField` abstraction
-- deterministic multi-octave `SeededPerlinNoiseField`
-- prototype radial biome logic isolated in `RadialBiomePass`
-- Unity Tilemap presentation adapter kept separate from core generation
+```text
+seed + settings
+      |
+      v
+  field layer
+      |
+      |  IEnvironmentFieldProvider
+      v
+ EnvironmentSample
+      |
+      +----> region resolver ----> region identity
+      |
+      +----> terrain pass -------> terrain category
+      |
+      +----> future caves/resources/structures
+      |
+      v
+ generated chunk data
+      |
+      +----> streaming
+      +----> persistence
+      +----> presentation adapters
+```
 
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide their own `WorldGenerationPipeline` and add custom passes.
+The field layer owns reusable deterministic world values. Region selection consumes those values rather than creating its own noise. Terrain selection consumes region identity and remains separate from environmental sampling.
+
+## Main extension points
+
+- `INoiseField` — deterministic scalar fields
+- `IEnvironmentFieldProvider` — reusable environmental sampling
+- `IRegionResolver` — converts environmental samples into stable region IDs
+- `IWorldGenerationPass` — ordered generation stages
+- `WorldGenerationPipeline` — composes generation passes
+- `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
+
+The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide a custom pipeline and/or a custom `IEnvironmentFieldProvider`.
 
 ## Install from Git
 
@@ -30,8 +56,6 @@ In a Unity 6 project:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-5. Let Unity import the package.
-
 ## First test in the Universal 2D template
 
 1. Create a new Unity 6 project with the **Universal 2D** template.
@@ -43,61 +67,45 @@ https://github.com/Jolybob/proceduralworld.git
 
 The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
-## Extending the generator
+## Custom environment fields
 
-A custom generation pipeline can be supplied without changing the package generator itself:
-
-```csharp
-using Jolybob.ProceduralWorld;
-
-var settings = new WorldGenerationSettings();
-var pipeline = new WorldGenerationPipeline()
-    .Add(new MyTerrainPass())
-    .Add(new MyCavePass());
-
-var generator = new ProceduralWorldGenerator(12345, settings, pipeline);
-var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
-```
-
-Each pass receives a `WorldGenerationContext`, giving it access to the seed, settings, current chunk, and deterministic noise provider. Passes are executed in ascending `Order`.
-
-## API example
-
-The core generator can also be used without the Tilemap adapter:
+A custom field provider can change environmental inputs without changing region or terrain passes:
 
 ```csharp
 using Jolybob.ProceduralWorld;
 
 var settings = new WorldGenerationSettings();
-var generator = new ProceduralWorldGenerator(12345, settings);
+var fields = new MyEnvironmentFieldProvider();
+var generator = new ProceduralWorldGenerator(12345, settings, null, fields);
 var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
-
-GeneratedCell cell = chunk.GetCell(10, 10);
 ```
 
-The generator works on plain data. The Tilemap component is only a presentation adapter.
+This keeps world data generation independent from how the fields are produced.
 
 ## Roadmap
 
-The intended architecture is:
+The architecture is intended to grow in this order:
 
 ```text
-Core data / algorithms
-        -> fields / noise
-        -> generation pipeline
-        -> biome / region resolution
-        -> terrain / caves / structures
-        -> chunk data
-        -> streaming / persistence
-        -> optional presentation adapters
+fields
+  -> regions / biomes
+  -> terrain layers
+  -> caves
+  -> resources
+  -> structures
+  -> post-process
+  -> chunk streaming
+  -> persistence
+  -> rendering adapters
 ```
 
 Planned extension points include:
 
-- richer biome and region resolvers
-- Voronoi/region fields
-- cellular-automata caves
+- richer biome and region definitions
+- Voronoi and domain-warped fields
+- cellular-automata and noise-based caves
 - terrain layers and material selection
+- resource distribution
 - structure placement and WFC
 - world modification layers
 - chunk streaming

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.16] - 2026-09-17
+
+- Added `GeneratedCellFlags` to let generation passes annotate cell modifications without coupling those changes to rendering.
+- Added `ICaveFieldProvider` and deterministic `DefaultCaveFieldProvider`.
+- Added `CavePass` as an independent post-terrain modifier stage.
+- Added configurable cave settings while keeping caves disabled by default for backward-compatible world output.
+- Updated `WorldGenerationContext` and `ProceduralWorldGenerator` to support injected cave field providers.
+- Added deterministic and injected cave-generation tests.
+- Added cave-layer documentation.
+- Bumped the package version to 0.1.16.
+- Incremented package version for this update.
+
 ## [0.1.15] - 2026-09-17
 
 - Added stable `TerrainId` identifiers for data-driven terrain definitions.

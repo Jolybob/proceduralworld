@@ -77,6 +77,55 @@ namespace Jolybob.ProceduralWorld.Tests
                 Assert.AreEqual((byte)3, chunk.Cells[i].Biome);
         }
 
+        [Test]
+        public void CustomCatalogsDriveTerrainWithoutChangingGeneratedRegionIds()
+        {
+            var settings = new WorldGenerationSettings { chunkSize = 2 };
+            var regions = new RegionCatalog(new[]
+            {
+                new RegionDefinition(
+                    new RegionId(7),
+                    "Test Region",
+                    new TerrainId(9))
+            });
+            var terrains = new TerrainCatalog(new[]
+            {
+                new TerrainDefinition(
+                    new TerrainId(9),
+                    "Test Terrain",
+                    WorldTile.Core)
+            });
+            var resolver = new ConstantRegionResolver(new RegionId(7));
+            var pipeline = new WorldGenerationPipeline()
+                .Add(new RegionBiomePass(resolver))
+                .Add(new TerrainPass(regions, terrains));
+
+            var chunk = new ProceduralWorldGenerator(
+                123,
+                settings,
+                pipeline,
+                new ConstantEnvironmentFieldProvider(new EnvironmentSample(0.5f, 0.5f, 0.5f, 0.5f)),
+                regions,
+                terrains)
+                .GenerateChunk(new ChunkCoord(0, 0));
+
+            for (int i = 0; i < chunk.Cells.Length; i++)
+            {
+                Assert.AreEqual((byte)7, chunk.Cells[i].Biome);
+                Assert.AreEqual(WorldTile.Core, chunk.Cells[i].Tile);
+            }
+        }
+
+        [Test]
+        public void RegionCatalogRejectsDuplicateIds()
+        {
+            Assert.Throws<System.ArgumentException>(() => new RegionCatalog(new[]
+            {
+                new RegionDefinition(new RegionId(1), "A", new TerrainId(1)),
+                new RegionDefinition(new RegionId(1), "B", new TerrainId(1))
+            }));
+        }
+
         private sealed class ConstantEnvironmentFieldProvider : IEnvironmentFieldProvider
         {
             private readonly EnvironmentSample sample;
@@ -89,6 +138,21 @@ namespace Jolybob.ProceduralWorld.Tests
             public EnvironmentSample Sample(int worldX, int worldY)
             {
                 return sample;
+            }
+        }
+
+        private sealed class ConstantRegionResolver : IRegionResolver
+        {
+            private readonly RegionId region;
+
+            public ConstantRegionResolver(RegionId region)
+            {
+                this.region = region;
+            }
+
+            public RegionId Resolve(EnvironmentSample sample)
+            {
+                return region;
             }
         }
     }

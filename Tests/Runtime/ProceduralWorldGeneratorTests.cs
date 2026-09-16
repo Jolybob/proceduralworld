@@ -8,9 +8,9 @@ namespace Jolybob.ProceduralWorld.Tests
         public void SameSeedAndChunkProduceSameData()
         {
             var settings = new WorldGenerationSettings { chunkSize = 16 };
-            var a = new ProceduralWorldGenerator(12345, settings)
+            var a = new ProceduralWorldGenerator(24680, settings)
                 .GenerateChunk(new ChunkCoord(3, -2));
-            var b = new ProceduralWorldGenerator(12345, settings)
+            var b = new ProceduralWorldGenerator(24680, settings)
                 .GenerateChunk(new ChunkCoord(3, -2));
 
             Assert.AreEqual(a.Cells.Length, b.Cells.Length);
@@ -18,6 +18,7 @@ namespace Jolybob.ProceduralWorld.Tests
             {
                 Assert.AreEqual(a.Cells[i].Region, b.Cells[i].Region);
                 Assert.AreEqual(a.Cells[i].Terrain, b.Cells[i].Terrain);
+                Assert.AreEqual(a.Cells[i].Resource, b.Cells[i].Resource);
                 Assert.AreEqual(a.Cells[i].Tile, b.Cells[i].Tile);
                 Assert.AreEqual(a.Cells[i].Biome, b.Cells[i].Biome);
                 Assert.AreEqual(a.Cells[i].Flags, b.Cells[i].Flags);
@@ -150,11 +151,11 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void RandomStreamIsDeterministicForSameSeedChunkAndDomain()
         {
-            var serviceA = new WorldRandomService(12345);
-            var serviceB = new WorldRandomService(12345);
+            var serviceA = new WorldRandomService(24680);
+            var serviceB = new WorldRandomService(24680);
             var chunk = new ChunkCoord(-3, 7);
-            var a = serviceA.Create(chunk, WorldRandomDomain.Resources);
-            var b = serviceB.Create(chunk, WorldRandomDomain.Resources);
+            var a = serviceA.Create(chunk, WorldRandomDomain.Resources, 1u);
+            var b = serviceB.Create(chunk, WorldRandomDomain.Resources, 1u);
 
             for (int i = 0; i < 32; i++)
             {
@@ -166,16 +167,16 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void RandomDomainsAreIndependent()
+        public void RandomResourceStreamsAreIndependent()
         {
-            var service = new WorldRandomService(12345);
-            var resources = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources);
-            var structures = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Structures);
+            var service = new WorldRandomService(24680);
+            var crystal = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources, 1u);
+            var ore = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources, 2u);
 
             bool foundDifference = false;
             for (int i = 0; i < 8; i++)
             {
-                if (resources.NextUInt() != structures.NextUInt())
+                if (crystal.NextUInt() != ore.NextUInt())
                 {
                     foundDifference = true;
                     break;
@@ -191,11 +192,80 @@ namespace Jolybob.ProceduralWorld.Tests
             var cell = new GeneratedCell(WorldTile.Deep, 1);
             cell.SetRegion(new RegionId(8));
             cell.SetTerrain(new TerrainId(12), WorldTile.Core);
+            cell.SetResource(new ResourceId(6));
 
             Assert.AreEqual(new RegionId(8), cell.Region);
             Assert.AreEqual((byte)8, cell.Biome);
             Assert.AreEqual(new TerrainId(12), cell.Terrain);
-            Assert.AreEqual(WorldTile.Core, cell.Tile);
+            Assert.AreEqual(new ResourceId(6), cell.Resource);
+            Assert.IsTrue((cell.Flags & GeneratedCellFlags.HasResource) != 0);
+
+            cell.ClearResource();
+            Assert.AreEqual(default(ResourceId), cell.Resource);
+            Assert.IsFalse((cell.Flags & GeneratedCellFlags.HasResource) != 0);
+        }
+
+        [Test]
+        public void ResourcesAreDisabledByDefault()
+        {
+            var settings = new WorldGenerationSettings { chunkSize = 32 };
+            var chunk = new ProceduralWorldGenerator(24680, settings)
+                .GenerateChunk(new ChunkCoord(0, 0));
+
+            for (int i = 0; i < chunk.Cells.Length; i++)
+                Assert.IsFalse((chunk.Cells[i].Flags & GeneratedCellFlags.HasResource) != 0);
+        }
+
+        [Test]
+        public void CustomResourceCatalogCanPlaceDeterministicResources()
+        {
+            var settings = new WorldGenerationSettings
+            {
+                chunkSize = 4,
+                resourcesEnabled = true
+            };
+            var regions = new RegionCatalog(new[]
+            {
+                new RegionDefinition(new RegionId(7), "Resource Region", new TerrainId(9))
+            });
+            var terrains = new TerrainCatalog(new[]
+            {
+                new TerrainDefinition(new TerrainId(9), "Resource Terrain", WorldTile.Core)
+            });
+            var resources = new ResourceCatalog(new[]
+            {
+                new ResourceDefinition(
+                    new ResourceId(7),
+                    "Test Resource",
+                    new RegionId(7),
+                    new TerrainId(9),
+                    1f,
+                    2)
+            });
+            var pipeline = new WorldGenerationPipeline()
+                .Add(new RegionBiomePass(new ConstantRegionResolver(new RegionId(7))))
+                .Add(new TerrainPass(regions, terrains))
+                .Add(new ResourcePass(resources));
+
+            var a = new ProceduralWorldGenerator(
+                24680, settings, pipeline, null, null, regions, terrains, resources)
+                .GenerateChunk(new ChunkCoord(0, 0));
+            var b = new ProceduralWorldGenerator(
+                24680, settings, pipeline, null, null, regions, terrains, resources)
+                .GenerateChunk(new ChunkCoord(0, 0));
+
+            int resourceCount = 0;
+            for (int i = 0; i < a.Cells.Length; i++)
+            {
+                Assert.AreEqual(a.Cells[i].Resource, b.Cells[i].Resource);
+                if ((a.Cells[i].Flags & GeneratedCellFlags.HasResource) != 0)
+                {
+                    Assert.AreEqual(new ResourceId(7), a.Cells[i].Resource);
+                    resourceCount++;
+                }
+            }
+
+            Assert.AreEqual(2, resourceCount);
         }
 
         private sealed class ConstantEnvironmentFieldProvider : IEnvironmentFieldProvider

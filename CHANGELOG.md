@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.7] - 2026-09-17
+
+- Fixed missing `RegionId` and `EnvironmentSample` definitions required by `RegionBiomePass`.
+- Added Unity metadata for the Regions folder and region types.
+- Incremented package version for this update.
+
 ## [0.1.6] - 2026-09-17
 
 - Refactored the default generator into explicit region and terrain stages.

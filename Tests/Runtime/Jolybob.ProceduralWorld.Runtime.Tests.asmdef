@@ -2,9 +2,7 @@
   "name": "Jolybob.ProceduralWorld.Runtime.Tests",
   "rootNamespace": "Jolybob.ProceduralWorld.Tests",
   "references": [
-    "Jolybob.ProceduralWorld.Runtime",
-    "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "Jolybob.ProceduralWorld.Runtime"
   ],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]

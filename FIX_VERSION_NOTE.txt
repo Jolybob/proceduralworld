@@ -1,0 +1,1 @@
+All package updates must increment package.json version.

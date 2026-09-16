@@ -1,1 +1,0 @@
-The adapter must reference UnityEngine.Tilemaps.Tilemap explicitly to avoid collision with Jolybob.ProceduralWorld.Tilemap namespace.

@@ -1,0 +1,9 @@
+{
+  "name": "Jolybob.ProceduralWorld.Runtime.Tests",
+  "rootNamespace": "Jolybob.ProceduralWorld.Tests",
+  "references": [
+    "Jolybob.ProceduralWorld.Runtime"
+  ],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

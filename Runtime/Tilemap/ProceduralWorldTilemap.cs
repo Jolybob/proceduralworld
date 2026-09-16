@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityTilemap = UnityEngine.Tilemaps.Tilemap;
 using UnityEngine.Tilemaps;
 using Jolybob.ProceduralWorld;
 
@@ -17,7 +18,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
         [SerializeField] private bool generateOnStart = true;
         [SerializeField] private bool centerCameraOnWorld = true;
 
-        private UnityEngine.Tilemaps.Tilemap tilemap;
+        private UnityTilemap tilemap;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
 
         private void Start()
@@ -50,7 +51,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
         private void EnsureTilemap()
         {
-            tilemap = GetComponent<Tilemap>();
+            tilemap = GetComponent<UnityTilemap>();
             if (tilemap != null)
                 return;
 
@@ -58,9 +59,9 @@ namespace Jolybob.ProceduralWorld.Tilemap
             if (grid == null)
                 grid = gameObject.AddComponent<Grid>();
 
-            tilemap = GetComponent<Tilemap>();
+            tilemap = GetComponent<UnityTilemap>();
             if (tilemap == null)
-                tilemap = gameObject.AddComponent<Tilemap>();
+                tilemap = gameObject.AddComponent<UnityTilemap>();
 
             var renderer = GetComponent<TilemapRenderer>();
             if (renderer == null)

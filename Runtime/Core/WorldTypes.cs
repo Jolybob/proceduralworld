@@ -65,15 +65,30 @@ namespace Jolybob.ProceduralWorld
         public override string ToString() => Value.ToString();
     }
 
+    [Flags]
+    public enum GeneratedCellFlags : byte
+    {
+        None = 0,
+        Carved = 1 << 0,
+        Reserved = 1 << 1
+    }
+
     public struct GeneratedCell
     {
         public WorldTile Tile;
         public byte Biome;
+        public GeneratedCellFlags Flags;
 
         public GeneratedCell(WorldTile tile, byte biome)
+            : this(tile, biome, GeneratedCellFlags.None)
+        {
+        }
+
+        public GeneratedCell(WorldTile tile, byte biome, GeneratedCellFlags flags)
         {
             Tile = tile;
             Biome = biome;
+            Flags = flags;
         }
     }
 

@@ -17,6 +17,7 @@ namespace Jolybob.ProceduralWorld
         public GeneratedChunk Chunk { get; }
         public INoiseField Noise { get; }
         public IEnvironmentFieldProvider EnvironmentFields { get; }
+        public ICaveFieldProvider CaveFields { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -30,7 +31,8 @@ namespace Jolybob.ProceduralWorld
                 chunkCoordinate,
                 chunk,
                 noise,
-                new DefaultEnvironmentFieldProvider(seed, settings, noise))
+                new DefaultEnvironmentFieldProvider(seed, settings, noise),
+                new DefaultCaveFieldProvider(seed, settings))
         {
         }
 
@@ -41,6 +43,25 @@ namespace Jolybob.ProceduralWorld
             GeneratedChunk chunk,
             INoiseField noise,
             IEnvironmentFieldProvider environmentFields)
+            : this(
+                seed,
+                settings,
+                chunkCoordinate,
+                chunk,
+                noise,
+                environmentFields,
+                new DefaultCaveFieldProvider(seed, settings))
+        {
+        }
+
+        public WorldGenerationContext(
+            int seed,
+            WorldGenerationSettings settings,
+            ChunkCoord chunkCoordinate,
+            GeneratedChunk chunk,
+            INoiseField noise,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields)
         {
             Seed = seed;
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -48,6 +69,7 @@ namespace Jolybob.ProceduralWorld
             Chunk = chunk ?? throw new ArgumentNullException(nameof(chunk));
             Noise = noise ?? throw new ArgumentNullException(nameof(noise));
             EnvironmentFields = environmentFields ?? throw new ArgumentNullException(nameof(environmentFields));
+            CaveFields = caveFields ?? throw new ArgumentNullException(nameof(caveFields));
         }
     }
 

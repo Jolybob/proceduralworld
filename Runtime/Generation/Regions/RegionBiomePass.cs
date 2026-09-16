@@ -33,8 +33,10 @@ namespace Jolybob.ProceduralWorld
 
         public void Execute(WorldGenerationContext context)
         {
-            int size = context.Chunk.Size;
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
+            int size = context.Chunk.Size;
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -46,7 +48,7 @@ namespace Jolybob.ProceduralWorld
                     RegionId region = resolver.Resolve(sample);
 
                     var cell = context.Chunk.GetCell(x, y);
-                    cell.Biome = region.Value;
+                    cell.SetRegion(region);
                     context.Chunk.SetCell(x, y, cell);
                 }
             }

@@ -2,10 +2,7 @@ using System;
 
 namespace Jolybob.ProceduralWorld
 {
-    /// <summary>
-    /// Stable domains for deterministic generation streams. Adding a domain does not change
-    /// the sequence produced by existing domains.
-    /// </summary>
+    /// <summary>Stable domains for deterministic generation streams.</summary>
     public enum WorldRandomDomain : uint
     {
         General = 0x13579BDFu,
@@ -16,9 +13,6 @@ namespace Jolybob.ProceduralWorld
         PostProcess = 0x5EED1234u
     }
 
-    /// <summary>
-    /// Small deterministic random stream intended for procedural generation.
-    /// </summary>
     public interface IWorldRandom
     {
         uint NextUInt();
@@ -27,18 +21,15 @@ namespace Jolybob.ProceduralWorld
         bool Chance(float probability);
     }
 
-    /// <summary>
-    /// Deterministic xorshift-based random stream with an explicit per-world domain and chunk seed.
-    /// It does not use UnityEngine.Random or runtime-dependent hash functions.
-    /// </summary>
     public sealed class DeterministicWorldRandom : IWorldRandom
     {
         private uint state;
 
-        public DeterministicWorldRandom(int seed, ChunkCoord chunk, WorldRandomDomain domain)
+        public DeterministicWorldRandom(int seed, ChunkCoord chunk, WorldRandomDomain domain, uint salt = 0u)
         {
             state = Mix((uint)seed);
             state = Mix(state ^ (uint)domain);
+            state = Mix(state ^ salt);
             state = Mix(state ^ unchecked((uint)chunk.X));
             state = Mix(state ^ unchecked((uint)chunk.Y));
 
@@ -85,14 +76,12 @@ namespace Jolybob.ProceduralWorld
             value *= 0x7FEB352Du;
             value ^= value >> 15;
             value *= 0x846CA68Bu;
+            value ^= value << 7;
             value ^= value >> 16;
             return value;
         }
     }
 
-    /// <summary>
-    /// Creates independent deterministic random streams for a world, subsystem, and chunk.
-    /// </summary>
     public sealed class WorldRandomService
     {
         private readonly int seed;
@@ -104,7 +93,12 @@ namespace Jolybob.ProceduralWorld
 
         public IWorldRandom Create(ChunkCoord chunk, WorldRandomDomain domain)
         {
-            return new DeterministicWorldRandom(seed, chunk, domain);
+            return Create(chunk, domain, 0u);
+        }
+
+        public IWorldRandom Create(ChunkCoord chunk, WorldRandomDomain domain, uint salt)
+        {
+            return new DeterministicWorldRandom(seed, chunk, domain, salt);
         }
     }
 }

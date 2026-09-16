@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.15] - 2026-09-17
+
+- Added stable `TerrainId` identifiers for data-driven terrain definitions.
+- Added `RegionDefinition` and `RegionCatalog` for immutable region metadata and region-to-terrain defaults.
+- Added `TerrainDefinition` and `TerrainCatalog` for immutable terrain metadata and rendering tile mapping.
+- Refactored `TerrainPass` to resolve region and terrain data through catalogs instead of a hardcoded region-to-tile switch.
+- Added constructor injection for custom region and terrain catalogs while preserving existing generator constructors.
+- Preserved the existing `GeneratedCell.Biome` and `GeneratedCell.Tile` fields for backward compatibility.
+- Added deterministic/custom-catalog tests and duplicate-ID validation coverage.
+- Added documentation for the region definition/catalog layer.
+- Bumped the package version to 0.1.15.
+- Incremented package version for this update.
+
 ## [0.1.14] - 2026-09-17
 
 - Added a dedicated field layer with `IEnvironmentFieldProvider` and `DefaultEnvironmentFieldProvider`.

@@ -34,9 +34,11 @@ namespace Jolybob.ProceduralWorld
         private readonly WorldGenerationPipeline pipeline;
         private readonly INoiseField noise;
         private readonly IEnvironmentFieldProvider environmentFields;
+        private readonly RegionCatalog regions;
+        private readonly TerrainCatalog terrains;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
-            : this(seed, settings, null, null)
+            : this(seed, settings, null, null, null, null)
         {
         }
 
@@ -44,7 +46,7 @@ namespace Jolybob.ProceduralWorld
             int seed,
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline)
-            : this(seed, settings, pipeline, null)
+            : this(seed, settings, pipeline, null, null, null)
         {
         }
 
@@ -53,6 +55,17 @@ namespace Jolybob.ProceduralWorld
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline,
             IEnvironmentFieldProvider environmentFields)
+            : this(seed, settings, pipeline, environmentFields, null, null)
+        {
+        }
+
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            IEnvironmentFieldProvider environmentFields,
+            RegionCatalog regions,
+            TerrainCatalog terrains)
         {
             this.seed = seed;
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -69,8 +82,9 @@ namespace Jolybob.ProceduralWorld
 
             this.environmentFields = environmentFields ??
                 new DefaultEnvironmentFieldProvider(seed, settings, noise);
-
-            this.pipeline = pipeline ?? CreateDefaultPipeline();
+            this.regions = regions ?? RegionCatalog.CreateDefault();
+            this.terrains = terrains ?? TerrainCatalog.CreateDefault();
+            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains);
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
@@ -87,11 +101,13 @@ namespace Jolybob.ProceduralWorld
             return chunk;
         }
 
-        private static WorldGenerationPipeline CreateDefaultPipeline()
+        private static WorldGenerationPipeline CreateDefaultPipeline(
+            RegionCatalog regions,
+            TerrainCatalog terrains)
         {
             return new WorldGenerationPipeline()
                 .Add(new RegionBiomePass(new ThresholdRegionResolver()))
-                .Add(new TerrainPass());
+                .Add(new TerrainPass(regions, terrains));
         }
     }
 }

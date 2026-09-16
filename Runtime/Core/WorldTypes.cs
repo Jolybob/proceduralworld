@@ -64,17 +64,10 @@ namespace Jolybob.ProceduralWorld
         public override string ToString() => Value.ToString();
     }
 
-    [Flags]
-    public enum GeneratedCellFlags : byte
-    {
-        None = 0,
-        Carved = 1 << 0
-    }
-
     /// <summary>
     /// Core generated state for a single world cell.
     /// Region and terrain IDs are the canonical generated-data identifiers.
-    /// Biome and Tile remain as compatibility mirrors for older integrations.
+    /// Biome and Tile remain compatibility mirrors for older integrations.
     /// </summary>
     public struct GeneratedCell
     {

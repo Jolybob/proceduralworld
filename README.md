@@ -2,20 +2,64 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.5
+## Architecture — 0.1.6
 
-The package now has the first reusable generation architecture rather than keeping generation rules inside one monolithic generator:
+The package is intentionally split by responsibility so generation logic stays reusable and presentation stays optional.
 
-- deterministic seeded world generation
-- chunk-based world data
-- ordered, pluggable generation passes via `IWorldGenerationPass`
-- reusable `WorldGenerationContext`
-- pluggable `INoiseField` abstraction
-- deterministic multi-octave `SeededPerlinNoiseField`
-- prototype radial biome logic isolated in `RadialBiomePass`
-- Unity Tilemap presentation adapter kept separate from core generation
+```text
+Core
+  WorldPosition / ChunkCoord / GeneratedCell / GeneratedChunk
+      |
+      +--> Generation
+             |
+             +--> Fields (continuous deterministic values)
+             |
+             +--> Regions (environment -> biome identity)
+             |
+             +--> Terrain (biome -> base terrain)
+             |
+             +--> future: Caves -> Resources -> Structures -> PostProcess
+      |
+      +--> Streaming (chunk lifetime)
+      +--> Persistence (world modifications)
+      +--> Adapters (Tilemap / Mesh / custom presentation)
+```
 
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide their own `WorldGenerationPipeline` and add custom passes.
+### Architectural rules
+
+1. **Core owns data, not rendering.**
+2. **Fields produce values; they do not choose biomes or tiles.**
+3. **Region passes choose environmental identity.**
+4. **Terrain passes convert identity into generated terrain.**
+5. **Later passes add caves, resources and structures without rewriting earlier stages.**
+6. **Streaming controls which chunks are active, not how they are generated.**
+7. **Persistence stores modifications independently of presentation.**
+8. **Adapters translate package data into a specific game/rendering technology.**
+9. **The same seed, settings and chunk coordinate must produce the same generated data.**
+
+## Current generation pipeline
+
+The default generator currently executes:
+
+```text
+Seed + Settings + ChunkCoord
+          |
+          v
+ Temperature Field ----+
+                       |
+ Moisture Field -------+--> RegionBiomePass
+                              |
+                              v
+                         Biome / Region ID
+                              |
+                              v
+                          TerrainPass
+                              |
+                              v
+                         GeneratedChunk
+```
+
+This is the foundation for richer biome definitions without coupling biome logic to Unity Tilemap.
 
 ## Install from Git
 
@@ -30,78 +74,55 @@ In a Unity 6 project:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-5. Let Unity import the package.
-
 ## First test in the Universal 2D template
 
 1. Create a new Unity 6 project with the **Universal 2D** template.
-2. Install this package using the URL above.
-3. In the Hierarchy create an empty GameObject named `ProceduralWorld`.
-4. Add the component:
-   `Procedural World > Procedural World Tilemap`.
+2. Install this package using the Git URL above.
+3. Create an empty GameObject named `ProceduralWorld`.
+4. Add **Procedural World > Procedural World Tilemap**.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The adapter creates a Tilemap when required and renders a 5x5 chunk preview. Runtime-generated colors mean no external art assets are required for the prototype.
 
 ## Extending the generator
 
-A custom generation pipeline can be supplied without changing the package generator itself:
+Custom stages can be inserted through `WorldGenerationPipeline`:
 
 ```csharp
-using Jolybob.ProceduralWorld;
-
-var settings = new WorldGenerationSettings();
 var pipeline = new WorldGenerationPipeline()
+    .Add(new MyBiomePass())
     .Add(new MyTerrainPass())
     .Add(new MyCavePass());
 
 var generator = new ProceduralWorldGenerator(12345, settings, pipeline);
-var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
 ```
 
-Each pass receives a `WorldGenerationContext`, giving it access to the seed, settings, current chunk, and deterministic noise provider. Passes are executed in ascending `Order`.
+Every pass implements `IWorldGenerationPass`, receives `WorldGenerationContext`, and declares an `Order`. Lower order values execute first.
 
-## API example
+## Folder guide
 
-The core generator can also be used without the Tilemap adapter:
+- `Runtime/Core` — fundamental world data types.
+- `Runtime/Generation` — generation orchestration and passes.
+- `Runtime/Generation/Fields` — deterministic scalar fields/noise.
+- `Runtime/Generation/Regions` — biome/region identity.
+- `Runtime/Streaming` — future chunk loading/unloading.
+- `Runtime/Persistence` — future save/change layers.
+- `Runtime/Adapters` — engine/presentation integrations.
+- `Runtime/Tilemap` — current Unity Tilemap adapter.
 
-```csharp
-using Jolybob.ProceduralWorld;
-
-var settings = new WorldGenerationSettings();
-var generator = new ProceduralWorldGenerator(12345, settings);
-var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
-
-GeneratedCell cell = chunk.GetCell(10, 10);
-```
-
-The generator works on plain data. The Tilemap component is only a presentation adapter.
+Each major folder contains a README describing its responsibility and dependency direction.
 
 ## Roadmap
 
-The intended architecture is:
+Next architectural layers:
 
-```text
-Core data / algorithms
-        -> fields / noise
-        -> generation pipeline
-        -> biome / region resolution
-        -> terrain / caves / structures
-        -> chunk data
-        -> streaming / persistence
-        -> optional presentation adapters
-```
-
-Planned extension points include:
-
-- richer biome and region resolvers
-- Voronoi/region fields
-- cellular-automata caves
-- terrain layers and material selection
-- structure placement and WFC
-- world modification layers
-- chunk streaming
-- persistence interfaces
-- editor world preview
-- Jobs/Burst implementations
-- additional render adapters
+1. named biome definitions and configurable biome resolver
+2. richer environmental fields
+3. cave generation as an independent pass
+4. terrain/material layers
+5. deterministic resource placement
+6. structure placement
+7. chunk streaming
+8. persistence/world modifications
+9. editor preview and diagnostics
+10. optional Jobs/Burst implementations

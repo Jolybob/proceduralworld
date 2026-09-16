@@ -49,7 +49,6 @@ namespace Jolybob.ProceduralWorld
         Core = 4
     }
 
-    /// <summary>Stable identifier for a generated terrain definition.</summary>
     public readonly struct TerrainId : IEquatable<TerrainId>
     {
         public readonly byte Value;
@@ -64,33 +63,45 @@ namespace Jolybob.ProceduralWorld
         public override string ToString() => Value.ToString();
     }
 
-    /// <summary>
-    /// Core generated state for a single world cell.
-    /// Region and terrain IDs are the canonical generated-data identifiers.
-    /// Biome and Tile remain compatibility mirrors for older integrations.
-    /// </summary>
+    public readonly struct ResourceId : IEquatable<ResourceId>
+    {
+        public readonly byte Value;
+
+        public ResourceId(byte value) => Value = value;
+
+        public bool Equals(ResourceId other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is ResourceId other && Equals(other);
+        public override int GetHashCode() => Value.GetHashCode();
+        public static bool operator ==(ResourceId left, ResourceId right) => left.Equals(right);
+        public static bool operator !=(ResourceId left, ResourceId right) => !left.Equals(right);
+        public override string ToString() => Value.ToString();
+    }
+
     public struct GeneratedCell
     {
         public RegionId Region;
         public TerrainId Terrain;
+        public ResourceId Resource;
         public WorldTile Tile;
         public byte Biome;
         public GeneratedCellFlags Flags;
 
         public GeneratedCell(WorldTile tile, byte biome)
-            : this(new RegionId(biome), new TerrainId((byte)tile), tile, biome, GeneratedCellFlags.None)
+            : this(new RegionId(biome), new TerrainId((byte)tile), default(ResourceId), tile, biome, GeneratedCellFlags.None)
         {
         }
 
         public GeneratedCell(
             RegionId region,
             TerrainId terrain,
+            ResourceId resource,
             WorldTile tile,
             byte biome,
             GeneratedCellFlags flags = GeneratedCellFlags.None)
         {
             Region = region;
             Terrain = terrain;
+            Resource = resource;
             Tile = tile;
             Biome = biome;
             Flags = flags;
@@ -106,6 +117,18 @@ namespace Jolybob.ProceduralWorld
         {
             Terrain = terrain;
             Tile = tile;
+        }
+
+        public void SetResource(ResourceId resource)
+        {
+            Resource = resource;
+            Flags |= GeneratedCellFlags.HasResource;
+        }
+
+        public void ClearResource()
+        {
+            Resource = default(ResourceId);
+            Flags &= ~GeneratedCellFlags.HasResource;
         }
     }
 

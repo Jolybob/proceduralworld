@@ -1,31 +1,45 @@
+using System;
+
 namespace Jolybob.ProceduralWorld
 {
+    /// <summary>
+    /// Converts region identity into terrain using data-driven catalogs.
+    /// </summary>
     public sealed class TerrainPass : IWorldGenerationPass
     {
         public int Order => 200;
 
-        public void Execute(WorldGenerationContext context)
+        private readonly RegionCatalog regionCatalog;
+        private readonly TerrainCatalog terrainCatalog;
+
+        public TerrainPass()
+            : this(RegionCatalog.CreateDefault(), TerrainCatalog.CreateDefault())
         {
-            int size = context.Chunk.Size;
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                var cell = context.Chunk.GetCell(x, y);
-                cell.Tile = TileForRegion(cell.Biome);
-                context.Chunk.SetCell(x, y, cell);
-            }
         }
 
-        private static WorldTile TileForRegion(byte region)
+        public TerrainPass(RegionCatalog regionCatalog, TerrainCatalog terrainCatalog)
         {
-            switch (region)
+            this.regionCatalog = regionCatalog ?? throw new ArgumentNullException(nameof(regionCatalog));
+            this.terrainCatalog = terrainCatalog ?? throw new ArgumentNullException(nameof(terrainCatalog));
+        }
+
+        public void Execute(WorldGenerationContext context)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            int size = context.Chunk.Size;
+            for (int y = 0; y < size; y++)
             {
-                case 0: return WorldTile.Core;
-                case 1: return WorldTile.Inner;
-                case 2: return WorldTile.Mid;
-                case 3: return WorldTile.Deep;
-                case 4: return WorldTile.Mid;
-                default: return WorldTile.Deep;
+                for (int x = 0; x < size; x++)
+                {
+                    var cell = context.Chunk.GetCell(x, y);
+                    RegionId regionId = new RegionId(cell.Biome);
+                    RegionDefinition region = regionCatalog.Get(regionId);
+                    TerrainDefinition terrain = terrainCatalog.Get(region.DefaultTerrain);
+                    cell.Tile = terrain.Tile;
+                    context.Chunk.SetCell(x, y, cell);
+                }
             }
         }
     }

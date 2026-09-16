@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.16
+## Current architecture — 0.1.17
 
 The generation stack is intentionally separated by responsibility:
 
@@ -12,16 +12,16 @@ seed + settings
       v
   field layer
       |
-      +----> environment fields -> region resolver -> region identity
+      +----> environment fields -> region resolver -> RegionId
       |
       +----> cave fields -------> cave modifier -> cell flags / terrain changes
       |
-      v
-  terrain catalog / terrain pass
+      +----> future resource / structure fields
       |
       v
- generated chunk data
+ canonical generated cell data
       |
+      +----> TerrainId / rendering tile
       +----> resources
       +----> structures
       +----> post-process
@@ -30,7 +30,11 @@ seed + settings
       +----> presentation adapters
 ```
 
+`GeneratedCell.Region` and `GeneratedCell.Terrain` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
+
 Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Modifier passes such as caves can then alter generated cell state without coupling generation to rendering.
+
+Generation systems that need randomness should use `WorldRandomService` and request a `WorldRandomDomain` stream for their chunk. This keeps resources, structures, caves, and other systems independently deterministic.
 
 ## Main extension points
 
@@ -38,7 +42,9 @@ Fields produce reusable deterministic values. Regions convert environment data i
 - `IEnvironmentFieldProvider` — reusable environmental sampling
 - `ICaveFieldProvider` — reusable cave-density sampling
 - `IRegionResolver` — converts environmental samples into stable region IDs
-- `RegionCatalog` / `TerrainCatalog` — stable data definitions
+- `RegionCatalog` / `RegionDefinition` — stable region data definitions
+- `TerrainCatalog` / `TerrainDefinition` — stable terrain data definitions
+- `IWorldRandom` / `WorldRandomService` — deterministic subsystem random streams
 - `IWorldGenerationPass` — ordered generation stages
 - `WorldGenerationPipeline` — composes generation passes
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
@@ -52,6 +58,23 @@ Caves are implemented as an independent post-terrain modifier. They are disabled
 Enable them through `WorldGenerationSettings.cavesEnabled` and configure `caveScale`, `caveThreshold`, `caveMinimumDistance`, and `caveSeedOffset`.
 
 `GeneratedCellFlags.Carved` records that a cell was modified by cave generation, while the rendering adapter only consumes the resulting cell state.
+
+## Deterministic random streams
+
+A pass can request an isolated stream for its subsystem and chunk:
+
+```csharp
+IWorldRandom random = context.Random.Create(
+    context.ChunkCoordinate,
+    WorldRandomDomain.Resources);
+
+if (random.Chance(0.15f))
+{
+    // deterministic resource placement
+}
+```
+
+The same world seed, chunk coordinate, and domain produce the same random sequence. Different domains are intentionally independent.
 
 ## Install from Git
 

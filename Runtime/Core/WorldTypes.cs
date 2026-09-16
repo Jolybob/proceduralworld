@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
 {
@@ -63,14 +62,6 @@ namespace Jolybob.ProceduralWorld
         public static bool operator ==(TerrainId left, TerrainId right) => left.Equals(right);
         public static bool operator !=(TerrainId left, TerrainId right) => !left.Equals(right);
         public override string ToString() => Value.ToString();
-    }
-
-    [Flags]
-    public enum GeneratedCellFlags : byte
-    {
-        None = 0,
-        Carved = 1 << 0,
-        Reserved = 1 << 1
     }
 
     public struct GeneratedCell

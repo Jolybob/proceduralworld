@@ -20,6 +20,13 @@ namespace Jolybob.ProceduralWorld
         [Min(0.001f)] public float temperatureScale = 0.008f;
         [Min(0.001f)] public float moistureScale = 0.012f;
 
+        [Header("Caves")]
+        public bool cavesEnabled = false;
+        [Min(0.001f)] public float caveScale = 0.045f;
+        [Range(0f, 1f)] public float caveThreshold = 0.72f;
+        [Min(0f)] public float caveMinimumDistance = 24f;
+        public int caveSeedOffset = 303;
+
         [Header("Prototype World Shape")]
         [Min(1f)] public float coreRadius = 18f;
         [Min(1f)] public float innerRadius = 70f;
@@ -38,7 +45,7 @@ namespace Jolybob.ProceduralWorld
         private readonly TerrainCatalog terrains;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
-            : this(seed, settings, null, null, null, null)
+            : this(seed, settings, null, null, null, null, null)
         {
         }
 
@@ -46,7 +53,7 @@ namespace Jolybob.ProceduralWorld
             int seed,
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline)
-            : this(seed, settings, pipeline, null, null, null)
+            : this(seed, settings, pipeline, null, null, null, null)
         {
         }
 
@@ -55,7 +62,7 @@ namespace Jolybob.ProceduralWorld
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline,
             IEnvironmentFieldProvider environmentFields)
-            : this(seed, settings, pipeline, environmentFields, null, null)
+            : this(seed, settings, pipeline, environmentFields, null, null, null)
         {
         }
 
@@ -64,6 +71,18 @@ namespace Jolybob.ProceduralWorld
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline,
             IEnvironmentFieldProvider environmentFields,
+            RegionCatalog regions,
+            TerrainCatalog terrains)
+            : this(seed, settings, pipeline, environmentFields, null, regions, terrains)
+        {
+        }
+
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
             RegionCatalog regions,
             TerrainCatalog terrains)
         {
@@ -85,7 +104,10 @@ namespace Jolybob.ProceduralWorld
             this.regions = regions ?? RegionCatalog.CreateDefault();
             this.terrains = terrains ?? TerrainCatalog.CreateDefault();
             this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains);
+            this.caveFields = caveFields ?? new DefaultCaveFieldProvider(seed, settings);
         }
+
+        private readonly ICaveFieldProvider caveFields;
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
         {
@@ -96,7 +118,8 @@ namespace Jolybob.ProceduralWorld
                 coordinate,
                 chunk,
                 noise,
-                environmentFields);
+                environmentFields,
+                caveFields);
             pipeline.Execute(context);
             return chunk;
         }
@@ -105,9 +128,11 @@ namespace Jolybob.ProceduralWorld
             RegionCatalog regions,
             TerrainCatalog terrains)
         {
+            var settings = new WorldGenerationSettings();
             return new WorldGenerationPipeline()
                 .Add(new RegionBiomePass(new ThresholdRegionResolver()))
-                .Add(new TerrainPass(regions, terrains));
+                .Add(new TerrainPass(regions, terrains))
+                .Add(new CavePass(settings));
         }
     }
 }

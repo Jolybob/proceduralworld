@@ -32,13 +32,17 @@ namespace Jolybob.ProceduralWorld
 
         private static void PlaceResource(ResourceDefinition definition, WorldGenerationContext context, int size)
         {
-            IWorldRandom random = context.Random.Create(context.ChunkCoordinate, WorldRandomDomain.Resources);
-            int placed = 0;
-            int remainingCells = size * size;
+            IWorldRandom random = context.Random.Create(
+                context.ChunkCoordinate,
+                WorldRandomDomain.Resources,
+                definition.Id.Value);
 
-            for (int i = 0; i < remainingCells && placed < definition.MaxPerChunk; i++)
+            int placed = 0;
+            int cellCount = size * size;
+
+            for (int attempt = 0; attempt < cellCount && placed < definition.MaxPerChunk; attempt++)
             {
-                int index = SelectCandidateIndex(random, remainingCells);
+                int index = random.NextInt(0, cellCount);
                 int x = index % size;
                 int y = index / size;
                 var cell = context.Chunk.GetCell(x, y);
@@ -54,21 +58,15 @@ namespace Jolybob.ProceduralWorld
                 if (!random.Chance(definition.SpawnChance))
                     continue;
 
-                cell.Resource = definition.Id;
-                cell.Flags |= GeneratedCellFlags.HasResource;
+                cell.SetResource(definition.Id);
                 context.Chunk.SetCell(x, y, cell);
                 placed++;
             }
         }
 
-        private static int SelectCandidateIndex(IWorldRandom random, int cellCount)
-        {
-            return random.NextInt(0, cellCount);
-        }
-
         private static bool IsEligible(GeneratedCell cell, ResourceDefinition definition)
         {
-            if ((cell.Flags & GeneratedCellFlags.Carved) != 0)
+            if ((cell.Flags & (GeneratedCellFlags.Carved | GeneratedCellFlags.Reserved | GeneratedCellFlags.HasResource)) != 0)
                 return false;
 
             return cell.Region == definition.Region && cell.Terrain == definition.Terrain;

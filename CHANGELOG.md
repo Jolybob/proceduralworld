@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.10] - 2026-09-17
+
+- Added missing Unity `.meta` files for the package root `package.json` and `CHANGELOG.md` so Unity no longer ignores those immutable-package assets.
+- Bumped the package version to 0.1.10.
+- Incremented package version for this update.
+
 ## [0.1.9] - 2026-09-17
 
 - Published the previously prepared 0.1.8 architecture changes on the `main` branch so Git-based UPM installs receive them.

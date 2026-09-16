@@ -16,6 +16,8 @@ namespace Jolybob.ProceduralWorld.Tests
             Assert.AreEqual(a.Cells.Length, b.Cells.Length);
             for (int i = 0; i < a.Cells.Length; i++)
             {
+                Assert.AreEqual(a.Cells[i].Region, b.Cells[i].Region);
+                Assert.AreEqual(a.Cells[i].Terrain, b.Cells[i].Terrain);
                 Assert.AreEqual(a.Cells[i].Tile, b.Cells[i].Tile);
                 Assert.AreEqual(a.Cells[i].Biome, b.Cells[i].Biome);
                 Assert.AreEqual(a.Cells[i].Flags, b.Cells[i].Flags);
@@ -34,9 +36,7 @@ namespace Jolybob.ProceduralWorld.Tests
             bool foundDifference = false;
             for (int i = 0; i < a.Cells.Length; i++)
             {
-                if (a.Cells[i].Tile != b.Cells[i].Tile ||
-                    a.Cells[i].Biome != b.Cells[i].Biome ||
-                    a.Cells[i].Flags != b.Cells[i].Flags)
+                if (a.Cells[i].Tile != b.Cells[i].Tile || a.Cells[i].Region != b.Cells[i].Region)
                 {
                     foundDifference = true;
                     break;
@@ -86,17 +86,11 @@ namespace Jolybob.ProceduralWorld.Tests
             var settings = new WorldGenerationSettings { chunkSize = 2 };
             var regions = new RegionCatalog(new[]
             {
-                new RegionDefinition(
-                    new RegionId(7),
-                    "Test Region",
-                    new TerrainId(9))
+                new RegionDefinition(new RegionId(7), "Test Region", new TerrainId(9))
             });
             var terrains = new TerrainCatalog(new[]
             {
-                new TerrainDefinition(
-                    new TerrainId(9),
-                    "Test Terrain",
-                    WorldTile.Core)
+                new TerrainDefinition(new TerrainId(9), "Test Terrain", WorldTile.Core)
             });
             var resolver = new ConstantRegionResolver(new RegionId(7));
             var pipeline = new WorldGenerationPipeline()
@@ -115,6 +109,8 @@ namespace Jolybob.ProceduralWorld.Tests
             for (int i = 0; i < chunk.Cells.Length; i++)
             {
                 Assert.AreEqual((byte)7, chunk.Cells[i].Biome);
+                Assert.AreEqual(new RegionId(7), chunk.Cells[i].Region);
+                Assert.AreEqual(new TerrainId(9), chunk.Cells[i].Terrain);
                 Assert.AreEqual(WorldTile.Core, chunk.Cells[i].Tile);
             }
         }
@@ -130,47 +126,54 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void CavePassIsDisabledByDefault()
+        public void RandomStreamIsDeterministicForSameSeedChunkAndDomain()
         {
-            var settings = new WorldGenerationSettings { chunkSize = 16 };
-            var chunk = new ProceduralWorldGenerator(123, settings)
-                .GenerateChunk(new ChunkCoord(2, 2));
+            var serviceA = new WorldRandomService(12345);
+            var serviceB = new WorldRandomService(12345);
+            var chunk = new ChunkCoord(-3, 7);
+            var a = serviceA.Create(chunk, WorldRandomDomain.Resources);
+            var b = serviceB.Create(chunk, WorldRandomDomain.Resources);
 
-            for (int i = 0; i < chunk.Cells.Length; i++)
+            for (int i = 0; i < 32; i++)
             {
-                Assert.AreEqual(GeneratedCellFlags.None, chunk.Cells[i].Flags);
-                Assert.AreNotEqual(WorldTile.Empty, chunk.Cells[i].Tile);
+                Assert.AreEqual(a.NextUInt(), b.NextUInt());
+                Assert.AreEqual(a.NextInt(0, 1000), b.NextInt(0, 1000));
+                Assert.AreEqual(a.NextFloat01(), b.NextFloat01());
+                Assert.AreEqual(a.Chance(0.35f), b.Chance(0.35f));
             }
         }
 
         [Test]
-        public void CavePassCanCarveUsingInjectedField()
+        public void RandomDomainsAreIndependent()
         {
-            var settings = new WorldGenerationSettings
+            var service = new WorldRandomService(12345);
+            var resources = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources);
+            var structures = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Structures);
+
+            bool foundDifference = false;
+            for (int i = 0; i < 8; i++)
             {
-                chunkSize = 4,
-                cavesEnabled = true,
-                caveThreshold = 0.5f,
-                caveMinimumDistance = 0f
-            };
-
-            var caveField = new ConstantCaveFieldProvider(1f);
-            var generator = new ProceduralWorldGenerator(
-                123,
-                settings,
-                null,
-                null,
-                caveField,
-                null,
-                null);
-
-            var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
-
-            for (int i = 0; i < chunk.Cells.Length; i++)
-            {
-                Assert.AreEqual(WorldTile.Empty, chunk.Cells[i].Tile);
-                Assert.IsTrue((chunk.Cells[i].Flags & GeneratedCellFlags.Carved) != 0);
+                if (resources.NextUInt() != structures.NextUInt())
+                {
+                    foundDifference = true;
+                    break;
+                }
             }
+
+            Assert.IsTrue(foundDifference);
+        }
+
+        [Test]
+        public void GeneratedCellHelperMethodsKeepCompatibilityMirrorsInSync()
+        {
+            var cell = new GeneratedCell(WorldTile.Deep, 1);
+            cell.SetRegion(new RegionId(8));
+            cell.SetTerrain(new TerrainId(12), WorldTile.Core);
+
+            Assert.AreEqual(new RegionId(8), cell.Region);
+            Assert.AreEqual((byte)8, cell.Biome);
+            Assert.AreEqual(new TerrainId(12), cell.Terrain);
+            Assert.AreEqual(WorldTile.Core, cell.Tile);
         }
 
         private sealed class ConstantEnvironmentFieldProvider : IEnvironmentFieldProvider
@@ -200,21 +203,6 @@ namespace Jolybob.ProceduralWorld.Tests
             public RegionId Resolve(EnvironmentSample sample)
             {
                 return region;
-            }
-        }
-
-        private sealed class ConstantCaveFieldProvider : ICaveFieldProvider
-        {
-            private readonly float value;
-
-            public ConstantCaveFieldProvider(float value)
-            {
-                this.value = value;
-            }
-
-            public float Sample(int worldX, int worldY)
-            {
-                return value;
             }
         }
     }

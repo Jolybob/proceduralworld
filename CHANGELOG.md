@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.6] - 2026-09-17
+
+- Refactored the default generator into explicit region and terrain stages.
+- Added deterministic temperature and moisture fields for biome selection.
+- Added `RegionBiomePass` for environmental region identity.
+- Added `TerrainPass` to keep terrain selection separate from biome logic.
+- Added clearer Runtime architecture documentation by responsibility.
+- Added Unity metadata for new package assets.
+- Incremented package version for this update.
+
 ## [0.1.5] - 2026-09-17
 
 - Added a reusable ordered generation-pass pipeline.

@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
 {
@@ -106,8 +107,7 @@ namespace Jolybob.ProceduralWorld
             this.regions = regions ?? RegionCatalog.CreateDefault();
             this.terrains = terrains ?? TerrainCatalog.CreateDefault();
             random = new WorldRandomService(seed);
-            pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, settings);
-            this.pipeline = pipeline;
+            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, settings);
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)

@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.1.0] - 2026-09-16
+## [0.1.2] - 2026-09-17
 
-- Initial UPM package structure.
-- Added deterministic chunk generation.
-- Added prototype radial/warped world regions.
-- Added multi-octave Perlin noise.
-- Added Tilemap runtime adapter and zero-asset preview.
-- Added installation and first-test documentation.
+- Added Unity metadata for package documentation assets.
+- Fixed the Tilemap namespace/type collision in the Tilemap adapter.
+- Package version incremented for this update.
+
+## [0.1.1]
+
+- Added Unity package metadata and test assembly fixes.

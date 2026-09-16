@@ -3,7 +3,7 @@ using System;
 namespace Jolybob.ProceduralWorld
 {
     /// <summary>
-    /// Converts region identity into terrain using data-driven catalogs.
+    /// Resolves region identity into terrain identity and presentation tile through catalogs.
     /// </summary>
     public sealed class TerrainPass : IWorldGenerationPass
     {
@@ -34,10 +34,9 @@ namespace Jolybob.ProceduralWorld
                 for (int x = 0; x < size; x++)
                 {
                     var cell = context.Chunk.GetCell(x, y);
-                    RegionId regionId = new RegionId(cell.Biome);
-                    RegionDefinition region = regionCatalog.Get(regionId);
+                    RegionDefinition region = regionCatalog.Get(cell.Region);
                     TerrainDefinition terrain = terrainCatalog.Get(region.DefaultTerrain);
-                    cell.Tile = terrain.Tile;
+                    cell.SetTerrain(terrain.Id, terrain.Tile);
                     context.Chunk.SetCell(x, y, cell);
                 }
             }

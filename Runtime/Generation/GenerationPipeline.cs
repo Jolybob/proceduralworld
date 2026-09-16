@@ -18,6 +18,7 @@ namespace Jolybob.ProceduralWorld
         public INoiseField Noise { get; }
         public IEnvironmentFieldProvider EnvironmentFields { get; }
         public ICaveFieldProvider CaveFields { get; }
+        public WorldRandomService Random { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -32,7 +33,8 @@ namespace Jolybob.ProceduralWorld
                 chunk,
                 noise,
                 new DefaultEnvironmentFieldProvider(seed, settings, noise),
-                new DefaultCaveFieldProvider(seed, settings))
+                new DefaultCaveFieldProvider(seed, settings),
+                new WorldRandomService(seed))
         {
         }
 
@@ -50,7 +52,8 @@ namespace Jolybob.ProceduralWorld
                 chunk,
                 noise,
                 environmentFields,
-                new DefaultCaveFieldProvider(seed, settings))
+                new DefaultCaveFieldProvider(seed, settings),
+                new WorldRandomService(seed))
         {
         }
 
@@ -62,6 +65,27 @@ namespace Jolybob.ProceduralWorld
             INoiseField noise,
             IEnvironmentFieldProvider environmentFields,
             ICaveFieldProvider caveFields)
+            : this(
+                seed,
+                settings,
+                chunkCoordinate,
+                chunk,
+                noise,
+                environmentFields,
+                caveFields,
+                new WorldRandomService(seed))
+        {
+        }
+
+        public WorldGenerationContext(
+            int seed,
+            WorldGenerationSettings settings,
+            ChunkCoord chunkCoordinate,
+            GeneratedChunk chunk,
+            INoiseField noise,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
+            WorldRandomService random)
         {
             Seed = seed;
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -70,6 +94,7 @@ namespace Jolybob.ProceduralWorld
             Noise = noise ?? throw new ArgumentNullException(nameof(noise));
             EnvironmentFields = environmentFields ?? throw new ArgumentNullException(nameof(environmentFields));
             CaveFields = caveFields ?? throw new ArgumentNullException(nameof(caveFields));
+            Random = random ?? throw new ArgumentNullException(nameof(random));
         }
     }
 

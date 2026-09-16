@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.19] - 2026-09-17
+
+- Added `ResourceId`, `ResourceDefinition`, and `ResourceCatalog` for data-driven resource metadata.
+- Added canonical resource state to `GeneratedCell` with `SetResource` and `ClearResource` helpers.
+- Added `GeneratedCellFlags.HasResource` to record resource occupancy without coupling generation to rendering.
+- Added `ResourcePass` as a deterministic post-cave resource placement stage.
+- Added salted deterministic RNG streams so each resource type has an independent sequence within the Resources domain.
+- Integrated `ResourceCatalog` into `WorldGenerationContext` and the default generation pipeline.
+- Added resource enablement settings while keeping resources disabled by default for backward-compatible world output.
+- Changed the Tilemap preview seed from `12345` to `24680` for this architecture update.
+- Added deterministic resource-placement and resource-state regression tests.
+- Bumped the package version to 0.1.19.
+- Incremented package version for this update.
+
 ## [0.1.18] - 2026-09-17
 
 - Preserved backward compatibility for integrations that still write `GeneratedCell.Biome` directly before terrain generation.

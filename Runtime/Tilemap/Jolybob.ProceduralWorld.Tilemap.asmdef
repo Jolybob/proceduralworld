@@ -1,8 +1,0 @@
-{
-  "name": "Jolybob.ProceduralWorld.Tilemap",
-  "rootNamespace": "Jolybob.ProceduralWorld.Tilemap",
-  "references": [
-    "Jolybob.ProceduralWorld.Runtime",
-    "UnityEngine.TilemapModule"
-  ]
-}

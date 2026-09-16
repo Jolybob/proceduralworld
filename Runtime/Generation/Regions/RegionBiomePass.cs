@@ -12,9 +12,20 @@ namespace Jolybob.ProceduralWorld
 
         private readonly INoiseField temperatureField;
         private readonly INoiseField moistureField;
+        private readonly IRegionResolver resolver;
 
         public RegionBiomePass(int seed, WorldGenerationSettings settings)
+            : this(seed, settings, new ThresholdRegionResolver())
         {
+        }
+
+        public RegionBiomePass(int seed, WorldGenerationSettings settings, IRegionResolver resolver)
+        {
+            if (settings == null)
+                throw new System.ArgumentNullException(nameof(settings));
+            if (resolver == null)
+                throw new System.ArgumentNullException(nameof(resolver));
+
             temperatureField = new SeededPerlinNoiseField(
                 seed + 101,
                 settings.temperatureScale,
@@ -30,6 +41,8 @@ namespace Jolybob.ProceduralWorld
                 settings.noiseOctaves,
                 settings.noisePersistence,
                 settings.noiseLacunarity);
+
+            this.resolver = resolver;
         }
 
         public void Execute(WorldGenerationContext context)
@@ -50,28 +63,13 @@ namespace Jolybob.ProceduralWorld
                     float moisture = Mathf.Clamp01(0.5f + moistureField.Sample(worldX, worldY) * 0.5f);
 
                     var sample = new EnvironmentSample(temperature, moisture, 1f - radial, radial);
-                    RegionId region = ResolveRegion(sample);
+                    RegionId region = resolver.Resolve(sample);
 
                     var cell = context.Chunk.GetCell(x, y);
                     cell.Biome = region.Value;
                     context.Chunk.SetCell(x, y, cell);
                 }
             }
-        }
-
-        private static RegionId ResolveRegion(EnvironmentSample sample)
-        {
-            // 0-3 are intentionally stable IDs for the prototype default biomes.
-            if (sample.Distance < 0.14f)
-                return new RegionId(0);
-
-            if (sample.Temperature < 0.35f)
-                return new RegionId(sample.Moisture > 0.55f ? (byte)1 : (byte)2);
-
-            if (sample.Moisture > 0.62f)
-                return new RegionId(3);
-
-            return new RegionId(2);
         }
     }
 }

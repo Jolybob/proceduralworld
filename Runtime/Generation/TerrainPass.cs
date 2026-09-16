@@ -27,6 +27,7 @@ namespace Jolybob.ProceduralWorld
                 case 1: return WorldTile.Inner;
                 case 2: return WorldTile.Mid;
                 case 3: return WorldTile.Deep;
+                case 4: return WorldTile.Mid;
                 default: return WorldTile.Deep;
             }
         }

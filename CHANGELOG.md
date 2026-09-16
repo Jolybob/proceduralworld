@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.17] - 2026-09-17
+
+- Promoted `RegionId` and `TerrainId` to canonical generated-cell state.
+- Added `GeneratedCell.SetRegion` and `GeneratedCell.SetTerrain` helpers so compatibility mirrors stay synchronized.
+- Added `WorldRandomDomain`, `IWorldRandom`, `DeterministicWorldRandom`, and `WorldRandomService` for deterministic per-world, per-domain, per-chunk random streams.
+- Updated `WorldGenerationContext` and `ProceduralWorldGenerator` to expose the shared deterministic random service.
+- Updated region and terrain passes to write/read canonical IDs instead of raw byte mappings.
+- Added tests for canonical cell state, compatibility mirrors, deterministic random streams, and independent random domains.
+- Bumped the package version to 0.1.17.
+- Incremented package version for this update.
+
 ## [0.1.16] - 2026-09-17
 
 - Added `GeneratedCellFlags` to let generation passes annotate cell modifications without coupling those changes to rendering.

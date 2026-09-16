@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.17
+## Current architecture — 0.1.18
 
 The generation stack is intentionally separated by responsibility:
 
@@ -32,7 +32,7 @@ seed + settings
 
 `GeneratedCell.Region` and `GeneratedCell.Terrain` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Modifier passes such as caves can then alter generated cell state without coupling generation to rendering.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Modifier passes such as caves can alter generated cell state without coupling generation to rendering.
 
 Generation systems that need randomness should use `WorldRandomService` and request a `WorldRandomDomain` stream for their chunk. This keeps resources, structures, caves, and other systems independently deterministic.
 
@@ -74,7 +74,7 @@ if (random.Chance(0.15f))
 }
 ```
 
-The same world seed, chunk coordinate, and domain produce the same random sequence. Different domains are intentionally independent.
+The same world seed, chunk coordinate, and domain produce the same random sequence. Different domains are intentionally independent. Legacy writes to `GeneratedCell.Biome` are still accepted by `TerrainPass` and synchronized back to canonical `RegionId` state.
 
 ## Install from Git
 

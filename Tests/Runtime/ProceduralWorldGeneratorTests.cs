@@ -18,6 +18,7 @@ namespace Jolybob.ProceduralWorld.Tests
             {
                 Assert.AreEqual(a.Cells[i].Tile, b.Cells[i].Tile);
                 Assert.AreEqual(a.Cells[i].Biome, b.Cells[i].Biome);
+                Assert.AreEqual(a.Cells[i].Flags, b.Cells[i].Flags);
             }
         }
 
@@ -33,7 +34,9 @@ namespace Jolybob.ProceduralWorld.Tests
             bool foundDifference = false;
             for (int i = 0; i < a.Cells.Length; i++)
             {
-                if (a.Cells[i].Tile != b.Cells[i].Tile || a.Cells[i].Biome != b.Cells[i].Biome)
+                if (a.Cells[i].Tile != b.Cells[i].Tile ||
+                    a.Cells[i].Biome != b.Cells[i].Biome ||
+                    a.Cells[i].Flags != b.Cells[i].Flags)
                 {
                     foundDifference = true;
                     break;
@@ -126,6 +129,50 @@ namespace Jolybob.ProceduralWorld.Tests
             }));
         }
 
+        [Test]
+        public void CavePassIsDisabledByDefault()
+        {
+            var settings = new WorldGenerationSettings { chunkSize = 16 };
+            var chunk = new ProceduralWorldGenerator(123, settings)
+                .GenerateChunk(new ChunkCoord(2, 2));
+
+            for (int i = 0; i < chunk.Cells.Length; i++)
+            {
+                Assert.AreEqual(GeneratedCellFlags.None, chunk.Cells[i].Flags);
+                Assert.AreNotEqual(WorldTile.Empty, chunk.Cells[i].Tile);
+            }
+        }
+
+        [Test]
+        public void CavePassCanCarveUsingInjectedField()
+        {
+            var settings = new WorldGenerationSettings
+            {
+                chunkSize = 4,
+                cavesEnabled = true,
+                caveThreshold = 0.5f,
+                caveMinimumDistance = 0f
+            };
+
+            var caveField = new ConstantCaveFieldProvider(1f);
+            var generator = new ProceduralWorldGenerator(
+                123,
+                settings,
+                null,
+                null,
+                caveField,
+                null,
+                null);
+
+            var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
+
+            for (int i = 0; i < chunk.Cells.Length; i++)
+            {
+                Assert.AreEqual(WorldTile.Empty, chunk.Cells[i].Tile);
+                Assert.IsTrue((chunk.Cells[i].Flags & GeneratedCellFlags.Carved) != 0);
+            }
+        }
+
         private sealed class ConstantEnvironmentFieldProvider : IEnvironmentFieldProvider
         {
             private readonly EnvironmentSample sample;
@@ -153,6 +200,21 @@ namespace Jolybob.ProceduralWorld.Tests
             public RegionId Resolve(EnvironmentSample sample)
             {
                 return region;
+            }
+        }
+
+        private sealed class ConstantCaveFieldProvider : ICaveFieldProvider
+        {
+            private readonly float value;
+
+            public ConstantCaveFieldProvider(float value)
+            {
+                this.value = value;
+            }
+
+            public float Sample(int worldX, int worldY)
+            {
+                return value;
             }
         }
     }

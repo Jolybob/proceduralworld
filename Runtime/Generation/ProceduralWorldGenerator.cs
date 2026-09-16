@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
 {
@@ -44,6 +43,7 @@ namespace Jolybob.ProceduralWorld
         private readonly ICaveFieldProvider caveFields;
         private readonly RegionCatalog regions;
         private readonly TerrainCatalog terrains;
+        private readonly WorldRandomService random;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
             : this(seed, settings, null, null, null, null, null)
@@ -105,7 +105,9 @@ namespace Jolybob.ProceduralWorld
             this.caveFields = caveFields ?? new DefaultCaveFieldProvider(seed, settings);
             this.regions = regions ?? RegionCatalog.CreateDefault();
             this.terrains = terrains ?? TerrainCatalog.CreateDefault();
-            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, settings);
+            random = new WorldRandomService(seed);
+            pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, settings);
+            this.pipeline = pipeline;
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
@@ -118,7 +120,8 @@ namespace Jolybob.ProceduralWorld
                 chunk,
                 noise,
                 environmentFields,
-                caveFields);
+                caveFields,
+                random);
             pipeline.Execute(context);
             return chunk;
         }

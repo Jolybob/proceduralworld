@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.14] - 2026-09-17
+
+- Added a dedicated field layer with `IEnvironmentFieldProvider` and `DefaultEnvironmentFieldProvider`.
+- Moved `EnvironmentSample` into the field layer so it can be shared by regions, terrain, caves, resources, and structures.
+- Updated `WorldGenerationContext` to expose reusable environment fields while preserving the existing noise API.
+- Refactored `RegionBiomePass` so it consumes field samples and no longer owns temperature/moisture noise generation.
+- Added constructor injection for custom environment field providers.
+- Added field-layer documentation and deterministic/custom-provider tests.
+- Bumped the package version to 0.1.14.
+- Incremented package version for this update.
+
 ## [0.1.13] - 2026-09-17
 
 - Fixed the generation layer so `RegionBiomePass`, `RegionId`, `EnvironmentSample`, and `TerrainPass` are present together and compile as one coherent runtime API.

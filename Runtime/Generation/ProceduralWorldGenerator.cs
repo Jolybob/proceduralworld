@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
 {
-    /// <summary>Configuration shared by the default generation pipeline.</summary>
     [Serializable]
     public sealed class WorldGenerationSettings
     {
@@ -28,19 +27,16 @@ namespace Jolybob.ProceduralWorld
         [Min(1f)] public float borderWarp = 20f;
     }
 
-    /// <summary>
-    /// Entry point for deterministic chunk generation.
-    /// The generator owns orchestration only; individual world decisions live in passes.
-    /// </summary>
     public sealed class ProceduralWorldGenerator
     {
         private readonly int seed;
         private readonly WorldGenerationSettings settings;
         private readonly WorldGenerationPipeline pipeline;
         private readonly INoiseField noise;
+        private readonly IEnvironmentFieldProvider environmentFields;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
-            : this(seed, settings, null)
+            : this(seed, settings, null, null)
         {
         }
 
@@ -48,6 +44,15 @@ namespace Jolybob.ProceduralWorld
             int seed,
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline)
+            : this(seed, settings, pipeline, null)
+        {
+        }
+
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            IEnvironmentFieldProvider environmentFields)
         {
             this.seed = seed;
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -62,23 +67,30 @@ namespace Jolybob.ProceduralWorld
                 settings.noisePersistence,
                 settings.noiseLacunarity);
 
-            this.pipeline = pipeline ?? CreateDefaultPipeline(seed, settings);
+            this.environmentFields = environmentFields ??
+                new DefaultEnvironmentFieldProvider(seed, settings, noise);
+
+            this.pipeline = pipeline ?? CreateDefaultPipeline();
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
         {
             var chunk = new GeneratedChunk(coordinate, settings.chunkSize);
-            var context = new WorldGenerationContext(seed, settings, coordinate, chunk, noise);
+            var context = new WorldGenerationContext(
+                seed,
+                settings,
+                coordinate,
+                chunk,
+                noise,
+                environmentFields);
             pipeline.Execute(context);
             return chunk;
         }
 
-        private static WorldGenerationPipeline CreateDefaultPipeline(
-            int seed,
-            WorldGenerationSettings settings)
+        private static WorldGenerationPipeline CreateDefaultPipeline()
         {
             return new WorldGenerationPipeline()
-                .Add(new RegionBiomePass(seed, settings))
+                .Add(new RegionBiomePass(new ThresholdRegionResolver()))
                 .Add(new TerrainPass());
         }
     }

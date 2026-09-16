@@ -50,6 +50,21 @@ namespace Jolybob.ProceduralWorld
         Core = 4
     }
 
+    /// <summary>Stable identifier for a generated terrain definition.</summary>
+    public readonly struct TerrainId : IEquatable<TerrainId>
+    {
+        public readonly byte Value;
+
+        public TerrainId(byte value) => Value = value;
+
+        public bool Equals(TerrainId other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is TerrainId other && Equals(other);
+        public override int GetHashCode() => Value.GetHashCode();
+        public static bool operator ==(TerrainId left, TerrainId right) => left.Equals(right);
+        public static bool operator !=(TerrainId left, TerrainId right) => !left.Equals(right);
+        public override string ToString() => Value.ToString();
+    }
+
     public struct GeneratedCell
     {
         public WorldTile Tile;

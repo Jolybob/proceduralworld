@@ -1,10 +1,14 @@
 {
   "name": "com.jolybob.proceduralworld",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Procedural World",
   "description": "A modular, deterministic 2D procedural world generation framework for Unity.",
   "unity": "6000.0",
   "author": {
     "name": "Jolybob"
+  },
+  "dependencies": {
+    "com.unity.modules.tilemap": "1.0.0",
+    "com.unity.2d.tilemap": "1.0.0"
   }
 }

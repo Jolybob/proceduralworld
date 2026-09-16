@@ -1,19 +1,21 @@
 # Procedural World for Unity
 
-A small, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
+A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current prototype
+## Current architecture — 0.1.5
 
-Version `0.1.0` contains:
+The package now has the first reusable generation architecture rather than keeping generation rules inside one monolithic generator:
 
-- deterministic seeded generation
-- chunk-based world data (`64x64` by default)
-- radial/warped region generation
-- multi-octave Perlin noise
-- a Unity Tilemap adapter
-- zero external art assets required for the first test
+- deterministic seeded world generation
+- chunk-based world data
+- ordered, pluggable generation passes via `IWorldGenerationPass`
+- reusable `WorldGenerationContext`
+- pluggable `INoiseField` abstraction
+- deterministic multi-octave `SeededPerlinNoiseField`
+- prototype radial biome logic isolated in `RadialBiomePass`
+- Unity Tilemap presentation adapter kept separate from core generation
 
-This is intentionally the first vertical slice, not the final architecture. The next layers can replace the prototype region/terrain rules with pluggable generation passes, custom region resolvers, noise providers, structures, persistence, and streaming.
+The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide their own `WorldGenerationPipeline` and add custom passes.
 
 ## Install from Git
 
@@ -30,8 +32,6 @@ https://github.com/Jolybob/proceduralworld.git
 
 5. Let Unity import the package.
 
-Unity custom packages use a `package.json` at the package root plus Runtime/Editor assemblies; this repository follows that UPM layout.
-
 ## First test in the Universal 2D template
 
 1. Create a new Unity 6 project with the **Universal 2D** template.
@@ -43,18 +43,23 @@ Unity custom packages use a `package.json` at the package root plus Runtime/Edit
 
 The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
-### Controls in the Inspector
+## Extending the generator
 
-- **Seed**: changing this changes the generated world.
-- **Chunk Size**: size of each logical chunk.
-- **Noise Scale**: large/small terrain variation.
-- **Noise Strength**: amount of border distortion.
-- **Core Radius / Inner Radius / Mid Radius**: prototype biome bands.
-- **Border Warp**: irregularity of radial region boundaries.
-- **Chunks Radius**: how many chunks to preview around `(0,0)`.
-- **Generate On Start**: generate automatically in Play Mode.
+A custom generation pipeline can be supplied without changing the package generator itself:
 
-Use the component's **Generate World** context-menu command to regenerate from the Inspector as well.
+```csharp
+using Jolybob.ProceduralWorld;
+
+var settings = new WorldGenerationSettings();
+var pipeline = new WorldGenerationPipeline()
+    .Add(new MyTerrainPass())
+    .Add(new MyCavePass());
+
+var generator = new ProceduralWorldGenerator(12345, settings, pipeline);
+var chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
+```
+
+Each pass receives a `WorldGenerationContext`, giving it access to the seed, settings, current chunk, and deterministic noise provider. Passes are executed in ascending `Order`.
 
 ## API example
 
@@ -78,16 +83,21 @@ The intended architecture is:
 
 ```text
 Core data / algorithms
+        -> fields / noise
         -> generation pipeline
+        -> biome / region resolution
+        -> terrain / caves / structures
         -> chunk data
+        -> streaming / persistence
         -> optional presentation adapters
 ```
 
 Planned extension points include:
 
-- pluggable generation passes
+- richer biome and region resolvers
 - Voronoi/region fields
 - cellular-automata caves
+- terrain layers and material selection
 - structure placement and WFC
 - world modification layers
 - chunk streaming

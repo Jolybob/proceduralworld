@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.18] - 2026-09-17
+
+- Preserved backward compatibility for integrations that still write `GeneratedCell.Biome` directly before terrain generation.
+- Updated `TerrainPass` to re-synchronize legacy `Biome` writes into canonical `RegionId` state.
+- Added a regression test for legacy biome compatibility.
+- Bumped the package version to 0.1.18.
+- Incremented package version for this update.
+
 ## [0.1.17] - 2026-09-17
 
 - Promoted `RegionId` and `TerrainId` to canonical generated-cell state.

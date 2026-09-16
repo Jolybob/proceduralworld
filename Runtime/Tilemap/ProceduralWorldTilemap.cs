@@ -10,7 +10,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
     public sealed class ProceduralWorldTilemap : MonoBehaviour
     {
         [Header("Generation")]
-        [SerializeField] private int seed = 12345;
+        [SerializeField] private int seed = 24680;
         [SerializeField] private WorldGenerationSettings settings = new WorldGenerationSettings();
 
         [Header("Preview")]

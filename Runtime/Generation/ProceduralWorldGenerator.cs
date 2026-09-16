@@ -41,6 +41,7 @@ namespace Jolybob.ProceduralWorld
         private readonly WorldGenerationPipeline pipeline;
         private readonly INoiseField noise;
         private readonly IEnvironmentFieldProvider environmentFields;
+        private readonly ICaveFieldProvider caveFields;
         private readonly RegionCatalog regions;
         private readonly TerrainCatalog terrains;
 
@@ -101,13 +102,11 @@ namespace Jolybob.ProceduralWorld
 
             this.environmentFields = environmentFields ??
                 new DefaultEnvironmentFieldProvider(seed, settings, noise);
+            this.caveFields = caveFields ?? new DefaultCaveFieldProvider(seed, settings);
             this.regions = regions ?? RegionCatalog.CreateDefault();
             this.terrains = terrains ?? TerrainCatalog.CreateDefault();
-            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains);
-            this.caveFields = caveFields ?? new DefaultCaveFieldProvider(seed, settings);
+            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, settings);
         }
-
-        private readonly ICaveFieldProvider caveFields;
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
         {
@@ -126,9 +125,9 @@ namespace Jolybob.ProceduralWorld
 
         private static WorldGenerationPipeline CreateDefaultPipeline(
             RegionCatalog regions,
-            TerrainCatalog terrains)
+            TerrainCatalog terrains,
+            WorldGenerationSettings settings)
         {
-            var settings = new WorldGenerationSettings();
             return new WorldGenerationPipeline()
                 .Add(new RegionBiomePass(new ThresholdRegionResolver()))
                 .Add(new TerrainPass(regions, terrains))

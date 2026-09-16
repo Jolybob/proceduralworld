@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.4] - 2026-09-17
+
+- Removed temporary Tilemap fix marker files that were being imported as package assets without Unity metadata.
+- Incremented package version for this update.
+
 ## [0.1.3] - 2026-09-17
 
 - Fixed the `Tilemap` namespace/type collision in `ProceduralWorldTilemap` by explicitly aliasing Unity's Tilemap type.

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.9] - 2026-09-17
+
+- Published the previously prepared 0.1.8 architecture changes on the `main` branch so Git-based UPM installs receive them.
+- Bumped the package version to 0.1.9 to identify this published repository state.
+
 ## [0.1.8] - 2026-09-17
 
 - Wired `RegionBiomePass` to the `IRegionResolver` abstraction instead of hardcoded biome selection.

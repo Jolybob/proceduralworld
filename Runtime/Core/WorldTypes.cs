@@ -64,22 +64,55 @@ namespace Jolybob.ProceduralWorld
         public override string ToString() => Value.ToString();
     }
 
+    [Flags]
+    public enum GeneratedCellFlags : byte
+    {
+        None = 0,
+        Carved = 1 << 0
+    }
+
+    /// <summary>
+    /// Core generated state for a single world cell.
+    /// Region and terrain IDs are the canonical generated-data identifiers.
+    /// Biome and Tile remain as compatibility mirrors for older integrations.
+    /// </summary>
     public struct GeneratedCell
     {
+        public RegionId Region;
+        public TerrainId Terrain;
         public WorldTile Tile;
         public byte Biome;
         public GeneratedCellFlags Flags;
 
         public GeneratedCell(WorldTile tile, byte biome)
-            : this(tile, biome, GeneratedCellFlags.None)
+            : this(new RegionId(biome), new TerrainId((byte)tile), tile, biome, GeneratedCellFlags.None)
         {
         }
 
-        public GeneratedCell(WorldTile tile, byte biome, GeneratedCellFlags flags)
+        public GeneratedCell(
+            RegionId region,
+            TerrainId terrain,
+            WorldTile tile,
+            byte biome,
+            GeneratedCellFlags flags = GeneratedCellFlags.None)
         {
+            Region = region;
+            Terrain = terrain;
             Tile = tile;
             Biome = biome;
             Flags = flags;
+        }
+
+        public void SetRegion(RegionId region)
+        {
+            Region = region;
+            Biome = region.Value;
+        }
+
+        public void SetTerrain(TerrainId terrain, WorldTile tile)
+        {
+            Terrain = terrain;
+            Tile = tile;
         }
     }
 

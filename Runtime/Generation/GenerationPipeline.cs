@@ -16,6 +16,7 @@ namespace Jolybob.ProceduralWorld
         public ChunkCoord ChunkCoordinate { get; }
         public GeneratedChunk Chunk { get; }
         public INoiseField Noise { get; }
+        public IEnvironmentFieldProvider EnvironmentFields { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -23,12 +24,30 @@ namespace Jolybob.ProceduralWorld
             ChunkCoord chunkCoordinate,
             GeneratedChunk chunk,
             INoiseField noise)
+            : this(
+                seed,
+                settings,
+                chunkCoordinate,
+                chunk,
+                noise,
+                new DefaultEnvironmentFieldProvider(seed, settings, noise))
+        {
+        }
+
+        public WorldGenerationContext(
+            int seed,
+            WorldGenerationSettings settings,
+            ChunkCoord chunkCoordinate,
+            GeneratedChunk chunk,
+            INoiseField noise,
+            IEnvironmentFieldProvider environmentFields)
         {
             Seed = seed;
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             ChunkCoordinate = chunkCoordinate;
             Chunk = chunk ?? throw new ArgumentNullException(nameof(chunk));
             Noise = noise ?? throw new ArgumentNullException(nameof(noise));
+            EnvironmentFields = environmentFields ?? throw new ArgumentNullException(nameof(environmentFields));
         }
     }
 

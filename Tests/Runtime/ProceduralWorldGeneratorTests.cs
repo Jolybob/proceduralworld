@@ -116,6 +116,28 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void LegacyBiomeWritesAreAcceptedByTerrainPass()
+        {
+            var chunk = new GeneratedChunk(new ChunkCoord(0, 0), 1);
+            var cell = chunk.GetCell(0, 0);
+            cell.Biome = 4;
+            chunk.SetCell(0, 0, cell);
+
+            new TerrainPass().Execute(new WorldGenerationContext(
+                123,
+                new WorldGenerationSettings { chunkSize = 1 },
+                new ChunkCoord(0, 0),
+                chunk,
+                new SeededPerlinNoiseField(123, 0.02f)));
+
+            cell = chunk.GetCell(0, 0);
+            Assert.AreEqual(new RegionId(4), cell.Region);
+            Assert.AreEqual(new TerrainId(2), cell.Terrain);
+            Assert.AreEqual((byte)4, cell.Biome);
+            Assert.AreEqual(WorldTile.Mid, cell.Tile);
+        }
+
+        [Test]
         public void RegionCatalogRejectsDuplicateIds()
         {
             Assert.Throws<System.ArgumentException>(() => new RegionCatalog(new[]

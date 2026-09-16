@@ -38,7 +38,7 @@ namespace Jolybob.ProceduralWorld
         public DeterministicWorldRandom(int seed, ChunkCoord chunk, WorldRandomDomain domain)
         {
             state = Mix((uint)seed);
-            state = Mix(state ^ domain.GetHashCode());
+            state = Mix(state ^ (uint)domain);
             state = Mix(state ^ unchecked((uint)chunk.X));
             state = Mix(state ^ unchecked((uint)chunk.Y));
 

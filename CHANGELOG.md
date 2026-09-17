@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.66] - 2026-09-17
+
+- Added `IWorldPresentationRegionLifecycle` as a framework-neutral load/unload boundary for region presentation and future chunk streaming.
+- Added `WorldPresentationRegionLifecycleCoordinator` to guard region lifecycle operations with explicit disposal semantics.
+- Kept lifecycle orchestration independent from generation, Tilemap, and concrete streaming implementations.
+- Added regression coverage for region identity forwarding and post-disposal no-op behavior.
+- Added Unity `.meta` files for the lifecycle runtime and tests.
+- Bumped the package version to 0.1.66.
+- Incremented package version for this update.
+
 ## [0.1.65] - 2026-09-17
 
 - Fixed Unity compilation errors caused by presentation-region contracts being removed from `WorldPresentationDirtyRegionSet` without preserving their runtime definitions.
@@ -70,7 +80,7 @@
 - Updated `WorldTilemapOverlayRenderer` to pass world-position context during chunk, direct-change, and batch rendering.
 - Added regression coverage for state defaults, clearing, state-driven resolution, fallthrough, and contextual catalog compatibility.
 - Added Unity `.meta` files for the new visual-state runtime and tests.
-- Bumped the package version to 0.1.58.
+- Bumped package version to 0.1.58.
 - Incremented package version for this update.
 
 ## [0.1.57] - 2026-09-17

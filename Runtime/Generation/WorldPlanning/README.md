@@ -1,38 +1,30 @@
 # World Planning Runtime
 
-This module contains the typed semantic world-plan graph, deterministic compiler, reusable hierarchical subgraph expansion, world-space layout, runtime lowering, and chunk-facing realization boundary.
+This module contains the typed semantic world-plan graph, deterministic compiler, reusable hierarchical subgraph expansion, deterministic world-plan selection, world-space layout, runtime lowering, and chunk-facing realization boundary.
 
 The plan layer sits between authored semantic intent and world-space feature/materialization systems.
 
-Current runtime types include:
+## Deterministic plan selection
 
-- `WorldPlanGraphDefinition`
-- `WorldPlanNodeTypeDefinition`
-- `WorldPlanNodeDefinition`
-- `WorldPlanPortDefinition`
-- `WorldPlanConnectionDefinition`
-- `WorldPlanProperty`
-- `WorldPlanSubgraphPortDefinition`
-- `WorldPlanSubgraphTemplateDefinition`
-- `WorldPlanCompiler`
-- `WorldPlanSubgraphCompiler`
-- `WorldPlanValidationResult`
-- `WorldPlanSubgraphExpansionResult`
-- `WorldPlanLayoutSettings`
-- `WorldPlanNodeLayout`
-- `WorldPlanLayoutPort`
-- `WorldPlanLayout`
-- `WorldPlanLayoutSolver`
-- `WorldPlanFeatureLoweringSettings`
-- `WorldPlanFeatureLowerer`
-- `WorldPlanFeaturePlacement`
-- `WorldPlanRealizer`
-- `WorldPlanRuntimeSettings`
-- `WorldPlanRuntimeBuilder`
-- `WorldPlanRuntime`
-- `IWorldPlanChunkGenerator`
-- `WorldPlanChunkGeneration`
-- `WorldPlan`
+`WorldPlanSelector` selects one authored candidate without process-local random state. Candidates are canonicalized by stable ID, filtered by enabled state, positive weight, and required tags, then selected from a seed-derived stable hash. Selection happens once at world scope, before chunk streaming or geometry materialization.
+
+`ProceduralWorldDefinitionAsset` exposes candidate plans with stable IDs, weights, enable flags, required tags, and a selection salt. The existing single `worldPlanGraph` remains the fallback when no candidate catalog is configured.
+
+```text
+world seed + selection salt + tags
+                  |
+                  v
+          eligible candidates
+                  |
+                  v
+        canonical ID ordering
+                  |
+                  v
+          weighted stable draw
+                  |
+                  v
+             selected plan
+```
 
 ## Hierarchical plans
 
@@ -84,7 +76,7 @@ Port anchors are placed on node perimeters using semantic connection direction a
 
 ## Runtime plan program
 
-`WorldPlanRuntimeBuilder` is now the authoritative orchestration boundary for plan-driven generation:
+`WorldPlanRuntimeBuilder` is the authoritative orchestration boundary for plan-driven generation:
 
 ```text
 WorldPlanGraphDefinition
@@ -140,13 +132,13 @@ Consumers that only have `IWorldChunkGenerator` can use `WorldPlanChunkGeneratio
 
 ## Determinism
 
-Expansion, compilation, layout, lowering, realization ordering, and chunk indexing all canonicalize their inputs by stable semantic identifiers and world coordinates. Reordering serialized graph lists does not change scoped IDs, node footprints, port anchors, or realization lookup results.
+Selection, expansion, compilation, layout, lowering, realization ordering, and chunk indexing all canonicalize their inputs by stable semantic identifiers and world coordinates. Reordering candidate or graph lists does not change selection, scoped IDs, node footprints, port anchors, or realization lookup results.
 
 Canvas positions and Unity authoring objects are not part of the deterministic runtime plan or runtime layout representation.
 
 ## Authoring boundary
 
-`ProceduralWorldDefinitionAsset` can now reference a `WorldPlanGraphAsset`. The graph is compiled and laid out with the world definition's seed when the generator is created, using the authored world chunk size for plan indexing. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
+`ProceduralWorldDefinitionAsset` can reference a `WorldPlanGraphAsset` directly or configure a candidate catalog. Candidate selection is performed from the world seed before the selected graph is compiled and laid out. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
 
 ## Runtime boundary
 

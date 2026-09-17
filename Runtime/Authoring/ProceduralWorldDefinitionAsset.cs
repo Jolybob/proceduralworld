@@ -53,6 +53,16 @@ namespace Jolybob.ProceduralWorld.Authoring
             public int priority = 10;
         }
 
+        [Serializable]
+        private sealed class WorldPlanCandidateEntry
+        {
+            public string id = "plan";
+            public WorldPlanGraphAsset graph;
+            [Min(0)] public int weight = 1;
+            public bool enabled = true;
+            public List<string> requiredTags = new List<string>();
+        }
+
         [Header("World")]
         [SerializeField] private int seed = 161729;
         [SerializeField] private WorldGenerationSettings settings = new WorldGenerationSettings();
@@ -68,6 +78,9 @@ namespace Jolybob.ProceduralWorld.Authoring
 
         [Header("Semantic World Plan")]
         [SerializeField] private WorldPlanGraphAsset worldPlanGraph;
+        [SerializeField] private List<WorldPlanCandidateEntry> worldPlanCandidates = new List<WorldPlanCandidateEntry>();
+        [SerializeField] private List<string> worldPlanTags = new List<string>();
+        [SerializeField] private string worldPlanSelectionSalt = "world-plan";
 
         public int Seed => seed;
 
@@ -109,13 +122,58 @@ namespace Jolybob.ProceduralWorld.Authoring
 
         private WorldPlanRuntime BuildWorldPlanRuntime(int chunkSize)
         {
-            if (worldPlanGraph == null)
+            WorldPlanGraphAsset selected = SelectWorldPlanGraph();
+            if (selected == null)
                 return null;
 
             return new WorldPlanRuntimeBuilder().Build(
                 seed,
-                worldPlanGraph.BuildDefinition(),
+                selected.BuildDefinition(),
                 new WorldPlanRuntimeSettings(chunkSize: chunkSize));
+        }
+
+        private WorldPlanGraphAsset SelectWorldPlanGraph()
+        {
+            var candidates = new List<WorldPlanCandidate>();
+            if (worldPlanCandidates != null)
+            {
+                for (int i = 0; i < worldPlanCandidates.Count; i++)
+                {
+                    WorldPlanCandidateEntry entry = worldPlanCandidates[i];
+                    if (entry == null || entry.graph == null)
+                        continue;
+
+                    candidates.Add(new WorldPlanCandidate(
+                        entry.id,
+                        entry.graph.BuildDefinition(),
+                        entry.weight,
+                        entry.enabled,
+                        entry.requiredTags));
+                }
+            }
+
+            if (candidates.Count == 0)
+                return worldPlanGraph;
+
+            WorldPlanSelectionResult result = new WorldPlanSelector().Select(
+                seed,
+                candidates,
+                new WorldPlanSelectionSettings(worldPlanSelectionSalt, worldPlanTags));
+
+            return result.Candidate == null ? null : FindCandidateGraph(result.Candidate.Id);
+        }
+
+        private WorldPlanGraphAsset FindCandidateGraph(string id)
+        {
+            for (int i = 0; i < worldPlanCandidates.Count; i++)
+            {
+                WorldPlanCandidateEntry entry = worldPlanCandidates[i];
+                if (entry != null && entry.graph != null
+                    && string.Equals(entry.id, id, StringComparison.Ordinal))
+                    return entry.graph;
+            }
+
+            return null;
         }
 
         private RegionCatalog BuildRegionCatalog()

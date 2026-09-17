@@ -43,3 +43,8 @@
 - Added a dedicated `TopologyPipeline` so topology modifiers are composed independently from the main generation pipeline.
 - Added `TopologyPass` as the single integration boundary for topology generation at order `350`.
 - Moved `ChasmPass` from `IWorldGenerationPass` to `ITopologyModifier`, making chasms one topology feature instead of a pipeline-level special case.
+- Exposed the topology pipeline through `WorldGenerationContext` and `ProceduralWorldGenerator` for custom topology modifiers without replacing unrelated generation stages.
+- Added regression coverage for topology modifier ordering and deterministic execution order.
+- Added Unity `.meta` files for the new topology pipeline and tests.
+- Bumped the package version to 0.1.49.
+- Incremented package version for this update.

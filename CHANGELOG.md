@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.93] - 2026-09-17
+
+- Fixed `Builder_IsDeterministicRegardlessOfInputOrder` so node and edge collections are compared independently, avoiding an out-of-range edge access when a graph has fewer edges than nodes.
+- Bumped the package version to 0.1.93.
+
 ## [0.1.92] - 2026-09-17
 
 - Added `WorldConnectivityNode`, `WorldConnectivityEdge`, and `WorldConnectivityGraph` as world-space graph primitives independent from chunk residency and rendering.
@@ -23,7 +28,7 @@
 
 - Added a reusable world-space feature placement kernel through `IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource`.
 - Adapted structure definitions and deterministic structure planning/source discovery to use the generic feature placement architecture without changing the existing structure-facing APIs.
-- Added regression coverage for generic feature placement determinism, cross-chunk footprints, negative chunk coordinates, and placement de-duplication.
+- Added regression coverage for generic feature placement determinism, cross-chunk footprints, negative coordinates, and placement de-duplication.
 - Added Unity `.meta` files for the new feature-placement runtime and test assets.
 - Bumped the package version to 0.1.90.
 

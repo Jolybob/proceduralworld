@@ -29,11 +29,12 @@ namespace Jolybob.ProceduralWorld.Tests
 
             Assert.AreEqual(a.Nodes.Count, b.Nodes.Count);
             Assert.AreEqual(a.Edges.Count, b.Edges.Count);
+
             for (int i = 0; i < a.Nodes.Count; i++)
-            {
                 Assert.AreEqual(a.Nodes[i], b.Nodes[i]);
+
+            for (int i = 0; i < a.Edges.Count; i++)
                 Assert.AreEqual(a.Edges[i], b.Edges[i]);
-            }
         }
 
         [Test]

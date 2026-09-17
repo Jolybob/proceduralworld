@@ -41,6 +41,15 @@ namespace Jolybob.ProceduralWorld
                 this.scheduler);
         }
 
+        public ChunkStreamingState GetState(ChunkCoord coordinate)
+        {
+            if (loadedChunks.ContainsKey(coordinate))
+                return ChunkStreamingState.Loaded;
+            if (scheduler.Contains(coordinate))
+                return ChunkStreamingState.Pending;
+            return ChunkStreamingState.Inactive;
+        }
+
         public ChunkStreamingDelta Update(ChunkCoord center)
         {
             ChunkStreamingDelta delta = planner.Update(center);

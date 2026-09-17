@@ -22,7 +22,7 @@
 
 - Fixed `WorldPresentationRegionDemandChange` snapshots to own an immutable copy of the demanded-region sequence.
 - Prevented disposal cleanup from publishing a final demand-change notification.
-- Preserved deterministic load/unload ordering and normal demand notifications.
+- Preserved deterministic reconciliation, load/unload ordering, and normal demand notifications.
 - Bumped the package version to 0.1.83.
 - Incremented package version for this update.
 

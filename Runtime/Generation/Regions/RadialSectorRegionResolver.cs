@@ -24,7 +24,8 @@ namespace Jolybob.ProceduralWorld
             int seed,
             RegionId fallbackRegion,
             INoiseField boundaryField = null,
-            float seedRotationRadians = 0f)
+            float seedRotationRadians = 0f,
+            bool rotateBySeed = true)
         {
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             this.fallbackRegion = fallbackRegion;
@@ -46,7 +47,8 @@ namespace Jolybob.ProceduralWorld
                 }
             }
 
-            seedRotation = NormalizeAngle(seedRotationRadians + SeedRotation(seed));
+            seedRotation = NormalizeAngle(
+                seedRotationRadians + (rotateBySeed ? SeedRotation(seed) : 0f));
         }
 
         public RegionId Resolve(EnvironmentSample sample)

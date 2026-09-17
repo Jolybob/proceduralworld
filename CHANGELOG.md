@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.20] - 2026-09-17
+
+- Added canonical `StructureId` state to generated cells.
+- Added `StructureDefinition` and `StructureCatalog` for data-driven structure metadata.
+- Added multi-cell footprint support with region and terrain eligibility rules.
+- Added `StructurePass` as a deterministic post-resource structure placement stage.
+- Added `GeneratedCellFlags.HasStructure` and `SetStructure` / `ClearStructure` helpers.
+- Integrated `StructureCatalog` into `WorldGenerationContext` and the default generation pipeline.
+- Added structure enablement settings while keeping structures disabled by default.
+- Prevented structure footprints from overlapping caves, resources, or other structures.
+- Added deterministic structure-placement and footprint regression tests.
+- Changed the Tilemap preview and primary deterministic test seed from `24680` to `97531` for this architecture update.
+- Added structure-layer documentation.
+- Bumped the package version to 0.1.20.
+- Incremented package version for this update.
+
 ## [0.1.19] - 2026-09-17
 
 - Added `ResourceId`, `ResourceDefinition`, and `ResourceCatalog` for data-driven resource metadata.

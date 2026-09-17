@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.108] - 2026-09-18
+
+- Added `WorldPlanRuntimeBuilder` as the authoritative orchestration boundary for semantic plan expansion, compilation, world-space layout, optional feature lowering, optional realization, and chunk indexing.
+- Added `WorldPlanRuntimeSettings` so feature resolution, placement feasibility, realization semantics, and deterministic layout/lowering policies remain explicit runtime dependencies.
+- Added `WorldPlanRuntime` with a world-space realization index and chunk-intersection queries without creating chunk-local planning graphs.
+- Added `IWorldPlanChunkGenerator` and `WorldPlanChunkGeneration` as the optional plan-aware capability boundary for chunk generators.
+- Passed the immutable world-plan runtime through `WorldGenerationContext` so custom generation passes can consume global semantic intent during chunk materialization.
+- Integrated optional `WorldPlanGraphAsset` references into `ProceduralWorldDefinitionAsset`, compiling and laying out the plan once per generator instance using the world definition seed.
+- Added regression coverage for plan/layout runtime creation, feature lowering and chunk-indexed realization, context propagation, and capability detection.
+- Restored the complete world-generation checkpoint regression test suite after the previous test-file regression and retained the required `System` import.
+- Added world-plan runtime integration documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.108.
+
 ## [0.1.107] - 2026-09-17
 
 - Added `WorldGenerationExecutionCheckpoint` for resumable generation phase state across bounded execution budgets.

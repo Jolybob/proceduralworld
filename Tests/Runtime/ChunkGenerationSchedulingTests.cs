@@ -154,13 +154,13 @@ namespace Jolybob.ProceduralWorld.Tests
             GeneratedChunk loaded = controller.LoadedChunks[new ChunkCoord(0, 0)];
 
             GeneratedCell edited = loaded.GetCell(0, 0);
-            edited.SetTile(WorldTile.Core);
+            edited.SetTerrain(edited.Terrain, WorldTile.Core);
             loaded.SetCell(0, 0, edited);
 
             controller.Update(new ChunkCoord(3, 0));
 
             Assert.IsFalse(controller.LoadedChunks.ContainsKey(new ChunkCoord(0, 0)));
-            Assert.IsTrue(store.Contains(new ChunkCoord(0, 0)));
+            Assert.IsTrue(store.TryLoad(new ChunkCoord(0, 0), out _));
             Assert.AreEqual(9, sink.Unloaded.Count);
         }
 

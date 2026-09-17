@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.22
+## Current architecture — 0.1.23
 
 The generation stack is intentionally separated by responsibility:
 
@@ -90,7 +90,7 @@ A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(75319, settings);
+var generator = new ProceduralWorldGenerator(68124, settings);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
 var streaming = new WorldChunkStreamingController(generator, planner, sink);
 
@@ -98,6 +98,29 @@ streaming.Update(new ChunkCoord(10, -4));
 ```
 
 See `Runtime/Generation/Streaming/README.md` for the complete contract.
+
+## Running package tests
+
+This package contains an EditMode test assembly under `Tests/Runtime`. Its assembly definition is configured as a Unity test assembly, but Git-installed package tests must also be enabled by the consuming Unity project.
+
+Open your project's `Packages/manifest.json` and add the package name to the top-level `testables` array:
+
+```json
+{
+  "dependencies": {
+    "com.jolybob.proceduralworld": "https://github.com/Jolybob/proceduralworld.git"
+  },
+  "testables": [
+    "com.jolybob.proceduralworld"
+  ]
+}
+```
+
+Keep your project's existing dependencies and add only the `testables` entry; do not replace the whole manifest with the example above.
+
+Then let Unity re-import the package, reopen **Window > General > Test Runner**, select **EditMode**, and use **Run All**. Unity documents `testables` as the project-manifest setting that enables tests from non-embedded packages to appear in the Test Runner. citeturn978183search1turn978183search0
+
+For a locally embedded package, tests are considered testable automatically. citeturn978183search1
 
 ## Cave layer
 
@@ -147,7 +170,7 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `75319` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `68124` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 

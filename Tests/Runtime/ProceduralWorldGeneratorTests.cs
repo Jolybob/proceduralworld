@@ -8,9 +8,9 @@ namespace Jolybob.ProceduralWorld.Tests
         public void SameSeedAndChunkProduceSameData()
         {
             var settings = new WorldGenerationSettings { chunkSize = 16 };
-            var a = new ProceduralWorldGenerator(59273, settings)
+            var a = new ProceduralWorldGenerator(51746, settings)
                 .GenerateChunk(new ChunkCoord(3, -2));
-            var b = new ProceduralWorldGenerator(59273, settings)
+            var b = new ProceduralWorldGenerator(51746, settings)
                 .GenerateChunk(new ChunkCoord(3, -2));
 
             Assert.AreEqual(a.Cells.Length, b.Cells.Length);
@@ -75,14 +75,14 @@ namespace Jolybob.ProceduralWorld.Tests
         {
             var settings = new WorldGenerationSettings();
             var noise = new SeededPerlinNoiseField(
-                59273,
+                51746,
                 settings.noiseScale,
                 settings.noiseStrength,
                 settings.noiseOctaves,
                 settings.noisePersistence,
                 settings.noiseLacunarity);
-            var a = new DefaultEnvironmentFieldProvider(59273, settings, noise).Sample(50, -20);
-            var b = new DefaultEnvironmentFieldProvider(59273, settings, noise).Sample(50, -20);
+            var a = new DefaultEnvironmentFieldProvider(51746, settings, noise).Sample(50, -20);
+            var b = new DefaultEnvironmentFieldProvider(51746, settings, noise).Sample(50, -20);
 
             Assert.AreEqual(a.Temperature, b.Temperature);
             Assert.AreEqual(a.Moisture, b.Moisture);
@@ -97,7 +97,7 @@ namespace Jolybob.ProceduralWorld.Tests
             var fields = new ConstantEnvironmentFieldProvider(
                 new EnvironmentSample(0.9f, 0.9f, 0.8f, 0.5f));
 
-            var chunk = new ProceduralWorldGenerator(59273, settings, null, fields)
+            var chunk = new ProceduralWorldGenerator(51746, settings, null, fields)
                 .GenerateChunk(new ChunkCoord(0, 0));
 
             for (int i = 0; i < chunk.Cells.Length; i++)
@@ -122,7 +122,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 .Add(new TerrainPass(regions, terrains));
 
             var chunk = new ProceduralWorldGenerator(
-                59273,
+                51746,
                 settings,
                 pipeline,
                 new ConstantEnvironmentFieldProvider(new EnvironmentSample(0.5f, 0.5f, 0.5f, 0.5f)),
@@ -148,11 +148,11 @@ namespace Jolybob.ProceduralWorld.Tests
             chunk.SetCell(0, 0, cell);
 
             new TerrainPass().Execute(new WorldGenerationContext(
-                59273,
+                51746,
                 new WorldGenerationSettings { chunkSize = 1 },
                 new ChunkCoord(0, 0),
                 chunk,
-                new SeededPerlinNoiseField(59273, 0.02f)));
+                new SeededPerlinNoiseField(51746, 0.02f)));
 
             cell = chunk.GetCell(0, 0);
             Assert.AreEqual(new RegionId(4), cell.Region);
@@ -174,8 +174,8 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void RandomStreamIsDeterministicForSameSeedChunkAndDomain()
         {
-            var serviceA = new WorldRandomService(59273);
-            var serviceB = new WorldRandomService(59273);
+            var serviceA = new WorldRandomService(51746);
+            var serviceB = new WorldRandomService(51746);
             var chunk = new ChunkCoord(-3, 7);
             var a = serviceA.Create(chunk, WorldRandomDomain.Resources, 1u);
             var b = serviceB.Create(chunk, WorldRandomDomain.Resources, 1u);
@@ -192,7 +192,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void RandomResourceStreamsAreIndependent()
         {
-            var service = new WorldRandomService(59273);
+            var service = new WorldRandomService(51746);
             var crystal = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources, 1u);
             var ore = service.Create(new ChunkCoord(1, 2), WorldRandomDomain.Resources, 2u);
 
@@ -238,7 +238,7 @@ namespace Jolybob.ProceduralWorld.Tests
         public void ResourcesAreDisabledByDefault()
         {
             var settings = new WorldGenerationSettings { chunkSize = 32 };
-            var chunk = new ProceduralWorldGenerator(59273, settings)
+            var chunk = new ProceduralWorldGenerator(51746, settings)
                 .GenerateChunk(new ChunkCoord(0, 0));
 
             for (int i = 0; i < chunk.Cells.Length; i++)
@@ -277,10 +277,10 @@ namespace Jolybob.ProceduralWorld.Tests
                 .Add(new ResourcePass(resources));
 
             var a = new ProceduralWorldGenerator(
-                59273, settings, pipeline, null, null, regions, terrains, resources)
+                51746, settings, pipeline, null, null, regions, terrains, resources)
                 .GenerateChunk(new ChunkCoord(0, 0));
             var b = new ProceduralWorldGenerator(
-                59273, settings, pipeline, null, null, regions, terrains, resources)
+                51746, settings, pipeline, null, null, regions, terrains, resources)
                 .GenerateChunk(new ChunkCoord(0, 0));
 
             int resourceCount = 0;
@@ -301,7 +301,7 @@ namespace Jolybob.ProceduralWorld.Tests
         public void StructuresAreDisabledByDefault()
         {
             var settings = new WorldGenerationSettings { chunkSize = 16 };
-            var chunk = new ProceduralWorldGenerator(59273, settings)
+            var chunk = new ProceduralWorldGenerator(51746, settings)
                 .GenerateChunk(new ChunkCoord(2, -1));
 
             for (int i = 0; i < chunk.Cells.Length; i++)
@@ -342,10 +342,10 @@ namespace Jolybob.ProceduralWorld.Tests
                 .Add(new StructurePass(structures));
 
             var a = new ProceduralWorldGenerator(
-                59273, settings, pipeline, null, null, regions, terrains, null, structures)
+                51746, settings, pipeline, null, null, regions, terrains, null, structures)
                 .GenerateChunk(new ChunkCoord(0, 0));
             var b = new ProceduralWorldGenerator(
-                59273, settings, pipeline, null, null, regions, terrains, null, structures)
+                51746, settings, pipeline, null, null, regions, terrains, null, structures)
                 .GenerateChunk(new ChunkCoord(0, 0));
 
             int structureCells = 0;
@@ -372,7 +372,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 .Add(new MarkCellStep(20, 0x4D41524Bu, GeneratedCellFlags.Reserved))
                 .Add(new MarkCellStep(10, 0x4541524Cu, GeneratedCellFlags.Carved));
             var generator = new ProceduralWorldGenerator(
-                59273,
+                51746,
                 settings,
                 null,
                 null,
@@ -404,13 +404,13 @@ namespace Jolybob.ProceduralWorld.Tests
                 .Add(new RandomMarkStep(10, 0x22222222u));
 
             var a = new ProceduralWorldGenerator(
-                59273, settings, null, null, null, null, null, null, null, pipelineA)
+                51746, settings, null, null, null, null, null, null, null, pipelineA)
                 .GenerateChunk(new ChunkCoord(1, 1));
             var b = new ProceduralWorldGenerator(
-                59273, settings, null, null, null, null, null, null, null, pipelineB)
+                51746, settings, null, null, null, null, null, null, null, pipelineB)
                 .GenerateChunk(new ChunkCoord(1, 1));
             var c = new ProceduralWorldGenerator(
-                59273, settings, null, null, null, null, null, null, null, pipelineC)
+                51746, settings, null, null, null, null, null, null, null, pipelineC)
                 .GenerateChunk(new ChunkCoord(1, 1));
 
             for (int i = 0; i < a.Cells.Length; i++)

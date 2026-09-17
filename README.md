@@ -118,9 +118,9 @@ Open your project's `Packages/manifest.json` and add the package name to the top
 
 Keep your project's existing dependencies and add only the `testables` entry; do not replace the whole manifest with the example above.
 
-Then let Unity re-import the package, reopen **Window > General > Test Runner**, select **EditMode**, and use **Run All**. Unity documents `testables` as the project-manifest setting that enables tests from non-embedded packages to appear in the Test Runner. citeturn978183search1turn978183search0
+Then let Unity re-import the package, reopen **Window > General > Test Runner**, select **EditMode**, and use **Run All**.
 
-For a locally embedded package, tests are considered testable automatically. citeturn978183search1
+For a locally embedded package, tests are considered testable automatically.
 
 ## Cave layer
 

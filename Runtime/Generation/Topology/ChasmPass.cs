@@ -5,11 +5,11 @@ namespace Jolybob.ProceduralWorld
 {
     /// <summary>
     /// Creates long deterministic chasms along Voronoi cell boundaries.
-    /// The pass modifies only canonical generated cell topology and presentation tile state.
+    /// The modifier changes only canonical generated cell topology and presentation tile state.
     /// </summary>
-    public sealed class ChasmPass : IWorldGenerationPass
+    public sealed class ChasmPass : ITopologyModifier
     {
-        public int Order => 350;
+        public int Order => 100;
 
         private readonly IVoronoiEdgeField field;
         private readonly float width;

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.86] - 2026-09-17
+
+- Added configurable resource deposit sizes with `DepositSizeMin` and `DepositSizeMax`.
+- Added deterministic `DepositGrowthChance` so resources can form compact ore/crystal deposits instead of only isolated cells.
+- Updated the default Crystal, Ore, and Rare Ore definitions to generate clustered deposits while preserving deterministic generation.
+- Added regression coverage for single-cell backwards-compatible defaults and deterministic five-cell deposits.
+- Bumped the package version to 0.1.86.
+
 ## [0.1.85] - 2026-09-17
 
 - Added `IRegionLayout` as a generic world-space geography boundary separate from region content and generation passes.

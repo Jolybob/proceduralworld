@@ -100,6 +100,7 @@ namespace Jolybob.ProceduralWorld
         public WorldTile Tile;
         public byte Biome;
         public GeneratedCellFlags Flags;
+        public CellTopology Topology;
 
         public GeneratedCell(WorldTile tile, byte biome)
             : this(
@@ -109,7 +110,8 @@ namespace Jolybob.ProceduralWorld
                 default(StructureId),
                 tile,
                 biome,
-                GeneratedCellFlags.None)
+                GeneratedCellFlags.None,
+                tile == WorldTile.Empty ? CellTopology.Empty : CellTopology.Solid)
         {
         }
 
@@ -120,7 +122,8 @@ namespace Jolybob.ProceduralWorld
             StructureId structure,
             WorldTile tile,
             byte biome,
-            GeneratedCellFlags flags = GeneratedCellFlags.None)
+            GeneratedCellFlags flags = GeneratedCellFlags.None,
+            CellTopology topology = CellTopology.Solid)
         {
             Region = region;
             Terrain = terrain;
@@ -129,6 +132,7 @@ namespace Jolybob.ProceduralWorld
             Tile = tile;
             Biome = biome;
             Flags = flags;
+            Topology = topology;
         }
 
         public void SetRegion(RegionId region)
@@ -141,6 +145,18 @@ namespace Jolybob.ProceduralWorld
         {
             Terrain = terrain;
             Tile = tile;
+            if (Topology == CellTopology.Empty && tile != WorldTile.Empty)
+                Topology = CellTopology.Solid;
+        }
+
+        public void SetTopology(CellTopology topology, WorldTile tile)
+        {
+            Topology = topology;
+            Tile = tile;
+            if (topology == CellTopology.Chasm)
+                Flags |= GeneratedCellFlags.Chasm;
+            else
+                Flags &= ~GeneratedCellFlags.Chasm;
         }
 
         public void SetResource(ResourceId resource)

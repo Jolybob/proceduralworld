@@ -13,12 +13,18 @@ namespace Jolybob.ProceduralWorld
         public int DirtyRegionCount => dirtyRegions.Count;
 
         public WorldPresentationRegionFlushCoordinator(WorldChangeObserverJournal journal, IWorldPresentationRegionResolver resolver, IWorldPresentationRegionRenderer renderer)
-            : this(journal, resolver, renderer, null) { }
+            : this(journal, new WorldPresentationDirtyRegionSet(resolver), renderer) { }
+
+        public WorldPresentationRegionFlushCoordinator(WorldChangeObserverJournal journal, IWorldPresentationRegionImpactResolver impactResolver, IWorldPresentationRegionRenderer renderer)
+            : this(journal, new WorldPresentationDirtyRegionSet(impactResolver), renderer) { }
 
         public WorldPresentationRegionFlushCoordinator(WorldChangeObserverJournal journal, IWorldPresentationRegionResolver resolver, IWorldPresentationRegionRenderer renderer, WorldPresentationDirtyRegionSet dirtyRegions)
+            : this(journal, dirtyRegions ?? new WorldPresentationDirtyRegionSet(resolver), renderer) { }
+
+        private WorldPresentationRegionFlushCoordinator(WorldChangeObserverJournal journal, WorldPresentationDirtyRegionSet dirtyRegions, IWorldPresentationRegionRenderer renderer)
         {
             if (journal == null) throw new ArgumentNullException(nameof(journal));
-            this.dirtyRegions = dirtyRegions ?? new WorldPresentationDirtyRegionSet(resolver);
+            this.dirtyRegions = dirtyRegions ?? throw new ArgumentNullException(nameof(dirtyRegions));
             this.renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             changeSubscription = journal.Subscribe(this);
             batchSubscription = journal.SubscribeBatch(this);

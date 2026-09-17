@@ -142,6 +142,22 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void RepeatedReconciliationDoesNotPublishRedundantChanges()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+            var notifications = 0;
+
+            coordinator.DemandChanged += _ => notifications++;
+            coordinator.SetDemandedRegions(new[] { 2, 4 });
+            coordinator.Reconcile();
+            coordinator.SetDemandedRegions(new[] { 2, 4 });
+
+            Assert.AreEqual(1, notifications);
+        }
+
+        [Test]
         public void DisposedCoordinatorDoesNotPublishFurtherChanges()
         {
             var lifecycle = new RecordingLifecycle();

@@ -11,7 +11,12 @@ namespace Jolybob.ProceduralWorld
 
         internal WorldPresentationRegionDemandChange(IReadOnlyList<int> demandedRegions)
         {
-            this.demandedRegions = demandedRegions ?? throw new ArgumentNullException(nameof(demandedRegions));
+            if (demandedRegions == null)
+            {
+                throw new ArgumentNullException(nameof(demandedRegions));
+            }
+
+            this.demandedRegions = new List<int>(demandedRegions).AsReadOnly();
         }
     }
 }

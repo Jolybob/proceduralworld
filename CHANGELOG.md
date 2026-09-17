@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.83] - 2026-09-17
+
+- Fixed `WorldPresentationRegionDemandChange` to own an immutable copy of its demanded-region snapshot.
+- Suppressed redundant `DemandChanged` notifications when reconciliation does not change demanded region state.
+- Prevented disposal cleanup from publishing a final demand-change notification while still releasing residency deterministically.
+- Preserved deterministic demand ordering and existing aggregation/planning/residency behavior.
+- Bumped the package version to 0.1.83.
+- Incremented package version for this update.
+
 ## [0.1.82] - 2026-09-17
 
 - Added `WorldPresentationRegionDemandChange` as an immutable notification payload for reconciled region demand state.

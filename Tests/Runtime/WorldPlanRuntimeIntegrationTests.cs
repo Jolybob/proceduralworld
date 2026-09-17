@@ -96,17 +96,19 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void RuntimeLowersFeaturesAndIndexesRealizationByChunk()
+        public void RuntimeLowersFeaturesAndIndexesRealizationByConfiguredChunkSize()
         {
             var feature = new FeatureDefinition(7, 2, 2);
             var settings = new WorldPlanRuntimeSettings(
+                chunkSize: 16,
                 featureResolver: new FeatureResolver(feature),
                 realizationSource: new RealizationSource(),
-                loweringSettings: new WorldPlanFeatureLoweringSettings(64, 0, 1));
+                loweringSettings: new WorldPlanFeatureLoweringSettings(16, 0, 1));
 
             WorldPlanRuntime runtime = new WorldPlanRuntimeBuilder().Build(1234, CreatePlan(), settings);
 
             Assert.IsTrue(runtime.Succeeded);
+            Assert.AreEqual(16, runtime.ChunkSize);
             Assert.AreEqual(1, runtime.LoweringResult.Placements.Count);
             Assert.AreEqual(1, runtime.Realization.Count);
 
@@ -118,9 +120,20 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void MismatchedLoweringChunkSizeIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => new WorldPlanRuntimeSettings(
+                chunkSize: 16,
+                loweringSettings: new WorldPlanFeatureLoweringSettings(64)));
+        }
+
+        [Test]
         public void GeneratorPassesTheSameWorldPlanRuntimeIntoChunkContext()
         {
-            WorldPlanRuntime runtime = new WorldPlanRuntimeBuilder().Build(1234, CreatePlan());
+            WorldPlanRuntime runtime = new WorldPlanRuntimeBuilder().Build(
+                1234,
+                CreatePlan(),
+                new WorldPlanRuntimeSettings(chunkSize: 4));
             var observer = new ObservePlanPass();
             var pipeline = new WorldGenerationPipeline().Add(observer);
             var generator = new ProceduralWorldGenerator(
@@ -142,6 +155,30 @@ namespace Jolybob.ProceduralWorld.Tests
 
             Assert.AreSame(runtime, generator.WorldPlan);
             Assert.AreSame(runtime, observer.Received);
+        }
+
+        [Test]
+        public void GeneratorRejectsWorldPlanWithDifferentChunkSize()
+        {
+            WorldPlanRuntime runtime = new WorldPlanRuntimeBuilder().Build(
+                1234,
+                CreatePlan(),
+                new WorldPlanRuntimeSettings(chunkSize: 16));
+
+            Assert.Throws<ArgumentException>(() => new ProceduralWorldGenerator(
+                1234,
+                new WorldGenerationSettings { chunkSize = 4 },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                runtime));
         }
 
         [Test]

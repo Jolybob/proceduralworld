@@ -105,6 +105,48 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void VisualResolverIsUsedByRenderer()
+        {
+            var expected = CreateTile("Injected");
+            var resolver = new StubVisualResolver(expected);
+            var renderer = new WorldTilemapRenderer(tilemap, 1, resolver);
+
+            renderer.Render(new WorldCellChange(
+                new WorldPosition(4, -3),
+                new GeneratedCell(WorldTile.Deep, 0),
+                new GeneratedCell(WorldTile.Core, 0),
+                WorldEditOperationKind.SetTile));
+
+            Assert.AreSame(expected, tilemap.GetTile(new Vector3Int(4, -3, 0)));
+            Assert.AreEqual(1, resolver.ResolveCount);
+            Assert.AreEqual(WorldTile.Core, resolver.LastCell.Tile);
+        }
+
+        [Test]
+        public void CatalogResolvesTopologyBeforeTerrain()
+        {
+            var deep = tiles[WorldTile.Deep];
+            var water = topologyTiles[CellTopology.Water];
+            var catalog = new WorldCellVisualCatalog(tiles, topologyTiles);
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetTopology(CellTopology.Water, WorldTile.Deep);
+
+            Assert.AreSame(water, catalog.Resolve(cell));
+            Assert.AreNotSame(deep, catalog.Resolve(cell));
+        }
+
+        [Test]
+        public void CatalogFallsBackToTerrainWhenTopologyIsUnmapped()
+        {
+            var deep = tiles[WorldTile.Deep];
+            var catalog = new WorldCellVisualCatalog(tiles, new Dictionary<CellTopology, TileBase>());
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetTopology(CellTopology.Water, WorldTile.Deep);
+
+            Assert.AreSame(deep, catalog.Resolve(cell));
+        }
+
+        [Test]
         public void DirectChangeRendersTopologyWhenMapped()
         {
             var renderer = new WorldTilemapRenderer(tilemap, 2, tiles, topologyTiles);
@@ -192,6 +234,26 @@ namespace Jolybob.ProceduralWorld.Tests
             tile.name = name;
             createdTiles.Add(tile);
             return tile;
+        }
+
+        private sealed class StubVisualResolver : IWorldCellVisualResolver
+        {
+            private readonly TileBase tile;
+
+            public StubVisualResolver(TileBase tile)
+            {
+                this.tile = tile;
+            }
+
+            public int ResolveCount { get; private set; }
+            public GeneratedCell LastCell { get; private set; }
+
+            public TileBase Resolve(GeneratedCell cell)
+            {
+                ResolveCount++;
+                LastCell = cell;
+                return tile;
+            }
         }
     }
 }

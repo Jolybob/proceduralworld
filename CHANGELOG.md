@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.53] - 2026-09-17
+
+- Added `IWorldCellVisualResolver` to decouple Tilemap rendering from visual selection.
+- Added `WorldCellVisualCatalog` for topology-first, terrain-fallback TileBase resolution.
+- Updated `WorldTilemapRenderer` to accept an injected visual resolver while preserving existing constructors.
+- Added regression coverage for resolver injection, topology precedence, and terrain fallback.
+- Added Unity `.meta` files for the new presentation abstraction and catalog.
+- Bumped the package version to 0.1.53.
+- Incremented package version for this update.
+
 ## [0.1.52] - 2026-09-17
 
 - Fixed a missing closing parenthesis in `WorldTilemapRendererTests.UnknownWorldTileFailsFast` that caused Unity compilation error CS1026.

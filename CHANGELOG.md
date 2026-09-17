@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.89] - 2026-09-17
+
+- Added Unity `.meta` files for the `docs` folder and `docs/ARCHITECTURE.md` so package documentation is imported correctly from immutable UPM package folders.
+- Bumped the package version to 0.1.89.
+
 ## [0.1.88] - 2026-09-17
 
 - Restored the six-argument `ProceduralWorldGenerator` constructor shape used by the 0.1.87 structure-placement regression test.
@@ -30,7 +35,7 @@
 ## [0.1.85] - 2026-09-17
 
 - Added `IRegionLayout` as a generic world-space geography boundary separate from region content and generation passes.
-- Added `RegionLayoutResolver` to adapt world-space layouts to the existing resolver contract without breaking legacy integrations.
+- Added `RegionLayoutResolver` to adapt world-space layouts to the existing region resolver contract without breaking legacy integrations.
 - Extended `RadialSectorRegionResolver` to implement `IRegionLayout` while preserving its existing API and deterministic behaviour.
 - Added the optional `Jolybob.ProceduralWorld.Authoring` assembly with `ProceduralWorldDefinitionAsset` for Unity-authored world settings, region profiles, terrain profiles, and radial macro-region layouts.
 - Allowed `ProceduralWorldGenerator` to accept a custom region resolver while retaining the default pipeline and existing constructor overloads.

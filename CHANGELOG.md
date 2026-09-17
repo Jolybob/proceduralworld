@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.50] - 2026-09-17
+
+- Added `LiquidTopologyPass` as the first reusable liquid-topology modifier.
+- Added deterministic water and lava classification from environment elevation, moisture, and temperature fields.
+- Added `liquidsEnabled` plus water/lava threshold settings; liquids remain disabled by default for compatibility.
+- Preserved existing non-solid topology so liquids never overwrite caves, chasms, or other topology decisions.
+- Kept liquid generation data-only, leaving fluid simulation and rendering to later systems.
+- Added regression coverage for disabled behavior, water/lava classification, topology preservation, and deterministic generation.
+- Added Unity `.meta` files for the liquid topology runtime and tests.
+- Bumped the package version to 0.1.50.
+- Incremented package version for this update.
+
 ## [0.1.49] - 2026-09-17
 
 - Added a dedicated `TopologyPipeline` so topology modifiers are composed independently from the main generation pipeline.

@@ -26,6 +26,7 @@ namespace Jolybob.ProceduralWorld
     {
         int Count { get; }
         void Enqueue(ChunkCoord coordinate, int priority = 0);
+        bool Contains(ChunkCoord coordinate);
         bool Cancel(ChunkCoord coordinate);
         bool TryDequeue(out ChunkGenerationRequest request);
         void Clear();
@@ -53,6 +54,11 @@ namespace Jolybob.ProceduralWorld
             var request = new ChunkGenerationRequest(coordinate, priority, sequence);
             pending[coordinate] = request;
             queue.Add(request);
+        }
+
+        public bool Contains(ChunkCoord coordinate)
+        {
+            return pending.ContainsKey(coordinate);
         }
 
         public bool Cancel(ChunkCoord coordinate)
@@ -142,11 +148,13 @@ namespace Jolybob.ProceduralWorld
         private readonly IChunkGenerationScheduler scheduler;
         private readonly BudgetedChunkGenerationService generation;
         private readonly List<GeneratedChunk> generatedBuffer = new List<GeneratedChunk>();
+        private readonly HashSet<ChunkCoord> loadedChunks = new HashSet<ChunkCoord>();
 
         public IWorldChunkGenerator Generator => generator;
         public ChunkStreamingPlanner Planner => planner;
         public IWorldChunkSink Sink => sink;
         public IChunkGenerationScheduler Scheduler => scheduler;
+        public IReadOnlyCollection<ChunkCoord> LoadedChunks => loadedChunks;
         public int PendingGenerations => scheduler.Count;
 
         public WorldScheduledChunkStreamingController(
@@ -162,14 +170,25 @@ namespace Jolybob.ProceduralWorld
             generation = new BudgetedChunkGenerationService(this.generator, this.scheduler);
         }
 
+        public ChunkStreamingState GetState(ChunkCoord coordinate)
+        {
+            if (loadedChunks.Contains(coordinate))
+                return ChunkStreamingState.Loaded;
+            if (scheduler.Contains(coordinate))
+                return ChunkStreamingState.Pending;
+            return ChunkStreamingState.Inactive;
+        }
+
         public ChunkStreamingDelta Update(ChunkCoord center)
         {
             ChunkStreamingDelta delta = planner.Update(center);
 
             for (int i = 0; i < delta.ToUnload.Count; i++)
             {
-                scheduler.Cancel(delta.ToUnload[i]);
-                sink.Unload(delta.ToUnload[i]);
+                ChunkCoord coordinate = delta.ToUnload[i];
+                scheduler.Cancel(coordinate);
+                loadedChunks.Remove(coordinate);
+                sink.Unload(coordinate);
             }
 
             for (int i = 0; i < delta.ToLoad.Count; i++)
@@ -186,6 +205,7 @@ namespace Jolybob.ProceduralWorld
             for (int i = 0; i < generatedBuffer.Count; i++)
             {
                 GeneratedChunk chunk = generatedBuffer[i];
+                loadedChunks.Add(chunk.Coordinate);
                 sink.Load(chunk.Coordinate, chunk);
             }
 
@@ -197,6 +217,7 @@ namespace Jolybob.ProceduralWorld
             planner.Reset();
             scheduler.Clear();
             generatedBuffer.Clear();
+            loadedChunks.Clear();
         }
     }
 }

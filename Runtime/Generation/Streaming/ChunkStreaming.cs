@@ -27,15 +27,17 @@ namespace Jolybob.ProceduralWorld
     {
         private readonly int loadRadius;
         private readonly int unloadRadius;
+        private readonly IChunkStreamingOrder loadOrder;
         private readonly HashSet<ChunkCoord> active = new HashSet<ChunkCoord>();
         private readonly List<ChunkCoord> toLoad = new List<ChunkCoord>();
         private readonly List<ChunkCoord> toUnload = new List<ChunkCoord>();
 
         public int LoadRadius => loadRadius;
         public int UnloadRadius => unloadRadius;
+        public IChunkStreamingOrder LoadOrder => loadOrder;
         public IReadOnlyCollection<ChunkCoord> ActiveChunks => active;
 
-        public ChunkStreamingPlanner(int loadRadius, int unloadRadius = -1)
+        public ChunkStreamingPlanner(int loadRadius, int unloadRadius = -1, IChunkStreamingOrder loadOrder = null)
         {
             if (loadRadius < 0)
                 throw new ArgumentOutOfRangeException(nameof(loadRadius));
@@ -48,6 +50,7 @@ namespace Jolybob.ProceduralWorld
 
             this.loadRadius = loadRadius;
             this.unloadRadius = unloadRadius;
+            this.loadOrder = loadOrder ?? new NearestFirstChunkStreamingOrder();
         }
 
         public ChunkStreamingDelta Update(ChunkCoord center)
@@ -88,7 +91,7 @@ namespace Jolybob.ProceduralWorld
                 }
             }
 
-            toLoad.Sort(CompareCoordinates);
+            loadOrder.Sort(toLoad, center);
             toUnload.Sort(CompareCoordinates);
             return new ChunkStreamingDelta(new List<ChunkCoord>(toLoad), new List<ChunkCoord>(toUnload));
         }
@@ -102,8 +105,8 @@ namespace Jolybob.ProceduralWorld
 
         private static bool IsOutsideSquare(ChunkCoord coordinate, ChunkCoord center, int radius)
         {
-            return Math.Abs(coordinate.X - center.X) > radius ||
-                   Math.Abs(coordinate.Y - center.Y) > radius;
+            return Math.Abs((long)coordinate.X - center.X) > radius ||
+                   Math.Abs((long)coordinate.Y - center.Y) > radius;
         }
 
         private static int CompareCoordinates(ChunkCoord left, ChunkCoord right)

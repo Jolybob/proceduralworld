@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.37] - 2026-09-17
+
+- Added `IChunkStreamingOrder` to separate deterministic chunk load prioritization from active-set calculation.
+- Added `NearestFirstChunkStreamingOrder` as the default strategy, prioritizing chunks by Manhattan distance from the streaming center with deterministic Y/X tie-breaking.
+- Updated `ChunkStreamingPlanner` to accept a custom load-order strategy without changing its existing radius or active-chunk semantics.
+- Hardened chunk-distance and boundary arithmetic with `long` calculations so extreme integer chunk coordinates cannot overflow during prioritization or radius checks.
+- Added regression tests for nearest-first ordering, deterministic tie-breaking, custom ordering, and extreme coordinate safety.
+- Changed the architecture preview and streaming test seed from `161729` to `173921`.
+- Updated streaming documentation with the scheduling boundary and custom ordering contract.
+- Updated the preview component seed to `173921`.
+- Bumped the package version to 0.1.37.
+- Incremented package version for this update.
+
 ## [0.1.36] - 2026-09-17
 
 - Added `WorldTilemapRenderer` as the first concrete Unity presentation adapter implementing both `IWorldChunkSink` and `IWorldChangeRenderer`.
@@ -66,7 +79,7 @@
 
 ## [0.1.31] - 2026-09-17
 
-- Added `WorldEditHistoryEntry` to represent named groups of changes as one history entry.
+- Added `WorldEditHistoryEntry` to represent named groups of changes as one undo/redo operation.
 - Added `WorldEditHistory` to build grouped history entries from `IWorldChangeJournal` records.
 - Added exact before/after undo and redo application through `IWorldChunkAccess`.
 - Added automatic capture of pending journal changes when undo or redo is requested without an explicit commit.

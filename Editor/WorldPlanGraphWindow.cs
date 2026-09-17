@@ -58,13 +58,19 @@ namespace Jolybob.ProceduralWorld.Editor
 
         private void BuildToolbar()
         {
-            var toolbar = new Toolbar();
+            var toolbar = new VisualElement();
+            toolbar.style.flexDirection = FlexDirection.Row;
+            toolbar.style.minHeight = 24f;
+            toolbar.style.paddingLeft = 4f;
+            toolbar.style.paddingRight = 4f;
+
             toolbar.Add(new Button(SelectGraphAsset) { text = "Select Graph" });
             toolbar.Add(new Button(ValidateGraph) { text = "Validate" });
             toolbar.Add(new Button(() => graphView?.FrameAll()) { text = "Frame" });
 
             statusLabel = new Label("No graph selected.");
             statusLabel.style.flexGrow = 1f;
+            statusLabel.style.marginLeft = 8f;
             toolbar.Add(statusLabel);
             rootVisualElement.Add(toolbar);
         }
@@ -157,12 +163,12 @@ namespace Jolybob.ProceduralWorld.Editor
             public WorldPlanGraphView()
             {
                 Insert(0, new GridBackground());
-                AddManipulator(new ContentDragger());
-                AddManipulator(new SelectionDragger());
-                AddManipulator(new RectangleSelector());
+                this.AddManipulator(new ContentDragger());
+                this.AddManipulator(new SelectionDragger());
+                this.AddManipulator(new RectangleSelector());
                 graphViewChanged = OnGraphViewChanged;
                 SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
-                AddManipulator(new ContextualMenuManipulator(BuildContextualMenu));
+                this.AddManipulator(new ContextualMenuManipulator(BuildContextualMenu));
             }
 
             public void SetAsset(WorldPlanGraphAsset graphAsset)
@@ -274,7 +280,7 @@ namespace Jolybob.ProceduralWorld.Editor
                 Direction direction,
                 string suffix)
             {
-                Port port = Port.Create(
+                Port port = Port.Create<Edge>(
                     Orientation.Horizontal,
                     direction,
                     portRecord.allowMultipleConnections
@@ -286,7 +292,6 @@ namespace Jolybob.ProceduralWorld.Editor
                 port.tooltip = string.IsNullOrWhiteSpace(portRecord.semanticType)
                     ? portRecord.displayName
                     : portRecord.displayName + " [" + portRecord.semanticType + "]";
-                port.AddManipulator(new EdgeConnector<Edge>(new EdgeConnectorListener()));
                 return port;
             }
 
@@ -302,14 +307,8 @@ namespace Jolybob.ProceduralWorld.Editor
                 if (sourcePort == null || targetPort == null)
                     return;
 
-                var edge = new Edge
-                {
-                    output = sourcePort,
-                    input = targetPort,
-                    userData = connection.id
-                };
-                sourcePort.Connect(edge);
-                targetPort.Connect(edge);
+                Edge edge = sourcePort.ConnectTo(targetPort);
+                edge.userData = connection.id;
                 AddElement(edge);
             }
 
@@ -339,24 +338,19 @@ namespace Jolybob.ProceduralWorld.Editor
 
                 if (change.edgesToCreate != null)
                 {
-                    for (int i = change.edgesToCreate.Count - 1; i >= 0; i--)
+                    for (int i = 0; i < change.edgesToCreate.Count; i++)
                     {
                         Edge edge = change.edgesToCreate[i];
                         if (!(edge.output?.userData is PortBinding sourceBinding)
                             || !(edge.input?.userData is PortBinding targetBinding))
-                        {
                             continue;
-                        }
 
                         if (FindConnection(
                                 sourceBinding.NodeId,
                                 sourceBinding.PortId,
                                 targetBinding.NodeId,
                                 targetBinding.PortId) != null)
-                        {
-                            change.edgesToCreate.RemoveAt(i);
                             continue;
-                        }
 
                         Undo.RecordObject(asset, "Create World Plan Connection");
                         var record = new WorldPlanGraphAsset.ConnectionRecord
@@ -522,21 +516,6 @@ namespace Jolybob.ProceduralWorld.Editor
                 return string.IsNullOrEmpty(left)
                     || string.IsNullOrEmpty(right)
                     || string.Equals(left, right, StringComparison.Ordinal);
-            }
-
-            private sealed class EdgeConnectorListener : IEdgeConnectorListener
-            {
-                public void OnDropOutsidePort(Edge edge, Vector2 position)
-                {
-                }
-
-                public void OnDrop(GraphView graphView, Edge edge)
-                {
-                    if (edge.output == null || edge.input == null)
-                        return;
-
-                    graphView.AddElement(edge);
-                }
             }
         }
     }

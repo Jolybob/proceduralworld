@@ -28,6 +28,13 @@ namespace Jolybob.ProceduralWorld
         [Min(0f)] public float caveMinimumDistance = 24f;
         public int caveSeedOffset = 303;
 
+        [Header("Topology / Liquids")]
+        public bool liquidsEnabled = false;
+        [Range(0f, 1f)] public float waterElevationThreshold = 0.30f;
+        [Range(0f, 1f)] public float waterMoistureThreshold = 0.60f;
+        [Range(0f, 1f)] public float lavaElevationThreshold = 0.78f;
+        [Range(0f, 1f)] public float lavaHeatThreshold = 0.72f;
+
         [Header("Topology / Chasms")]
         public bool chasmsEnabled = false;
         [Min(0.001f)] public float chasmCellSize = 80f;
@@ -169,6 +176,7 @@ namespace Jolybob.ProceduralWorld
             this.resources = resources ?? ResourceCatalog.CreateDefault();
             this.structures = structures ?? StructureCatalog.CreateDefault();
             this.topology = topology ?? new TopologyPipeline()
+                .Add(new LiquidTopologyPass(settings))
                 .Add(new ChasmPass(settings));
             random = new WorldRandomService(seed);
             this.pipeline = pipeline ?? CreateDefaultPipeline(

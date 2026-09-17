@@ -3,13 +3,7 @@ using System.Collections.Generic;
 
 namespace Jolybob.ProceduralWorld
 {
-    public enum WorldGenerationWorkStatus
-    {
-        Pending = 0,
-        Running = 1,
-        Completed = 2,
-        Failed = 3
-    }
+    public enum WorldGenerationWorkStatus { Pending = 0, Running = 1, Completed = 2, Failed = 3 }
 
     public readonly struct WorldGenerationWorkKey : IEquatable<WorldGenerationWorkKey>
     {
@@ -113,22 +107,19 @@ namespace Jolybob.ProceduralWorld
         public bool Complete(WorldGenerationWorkKey key)
         {
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Running) return false;
-            statuses[key] = WorldGenerationWorkStatus.Completed;
-            return true;
+            statuses[key] = WorldGenerationWorkStatus.Completed; return true;
         }
 
         public bool Fail(WorldGenerationWorkKey key)
         {
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Running) return false;
-            statuses[key] = WorldGenerationWorkStatus.Failed;
-            return true;
+            statuses[key] = WorldGenerationWorkStatus.Failed; return true;
         }
 
         public bool Retry(WorldGenerationWorkKey key)
         {
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Failed) return false;
-            statuses[key] = WorldGenerationWorkStatus.Pending;
-            return true;
+            statuses[key] = WorldGenerationWorkStatus.Pending; return true;
         }
 
         public WorldGenerationDependencySchedule BuildSchedule(int maxItems = int.MaxValue)
@@ -139,7 +130,6 @@ namespace Jolybob.ProceduralWorld
             foreach (KeyValuePair<WorldGenerationWorkKey, WorldGenerationWorkItem> pair in items)
                 if (statuses[pair.Key] == WorldGenerationWorkStatus.Pending) pending.Add(pair.Key);
 
-            var ready = new List<WorldGenerationWorkKey>();
             var unresolved = new Dictionary<WorldGenerationWorkKey, int>();
             foreach (WorldGenerationWorkKey key in pending) unresolved[key] = 0;
             foreach (WorldGenerationDependency dependency in dependencies)
@@ -150,21 +140,19 @@ namespace Jolybob.ProceduralWorld
                     continue;
                 }
                 if (!unresolved.ContainsKey(dependency.Dependent)) continue;
-                WorldGenerationWorkStatus prerequisiteStatus = statuses[dependency.Prerequisite];
-                if (prerequisiteStatus == WorldGenerationWorkStatus.Failed)
+                WorldGenerationWorkStatus status = statuses[dependency.Prerequisite];
+                if (status == WorldGenerationWorkStatus.Failed)
                     issues.Add(new WorldGenerationDependencyIssue("FailedDependency", "A pending work item depends on failed generation work.", dependency.Dependent));
-                else if (prerequisiteStatus != WorldGenerationWorkStatus.Completed)
-                    unresolved[dependency.Dependent]++;
+                else if (status != WorldGenerationWorkStatus.Completed) unresolved[dependency.Dependent]++;
             }
-            foreach (KeyValuePair<WorldGenerationWorkKey, int> pair in unresolved)
-                if (pair.Value == 0) ready.Add(pair.Key);
-            ready.Sort(CompareReady);
 
+            var ready = new List<WorldGenerationWorkKey>();
+            foreach (KeyValuePair<WorldGenerationWorkKey, int> pair in unresolved) if (pair.Value == 0) ready.Add(pair.Key);
+            ready.Sort(CompareReady);
             var result = new List<WorldGenerationWorkItem>();
             while (ready.Count > 0 && result.Count < maxItems)
             {
                 WorldGenerationWorkKey key = ready[0]; ready.RemoveAt(0); result.Add(items[key]);
-                for (int i = 0; i < dependencies.Count; i++) { }
                 foreach (WorldGenerationDependency dependency in dependencies)
                 {
                     if (!dependency.Prerequisite.Equals(key) || !unresolved.ContainsKey(dependency.Dependent)) continue;
@@ -175,9 +163,9 @@ namespace Jolybob.ProceduralWorld
 
             if (result.Count < pending.Count && maxItems >= pending.Count)
             {
-                WorldGenerationWorkKey cycle = FindCycleKey(unresolved);
-                bool hasCycle = !cycle.Equals(default(WorldGenerationWorkKey)) || ContainsDefaultKey(unresolved);
-                if (hasCycle) issues.Add(new WorldGenerationDependencyIssue("DependencyCycle", "The generation dependency graph contains a cycle, so no complete schedule exists.", cycle));
+                WorldGenerationWorkKey cycle;
+                if (TryFindPendingCycle(pending, out cycle))
+                    issues.Add(new WorldGenerationDependencyIssue("DependencyCycle", "The generation dependency graph contains a cycle, so no complete schedule exists.", cycle));
             }
             return new WorldGenerationDependencySchedule(result, issues);
         }
@@ -198,9 +186,7 @@ namespace Jolybob.ProceduralWorld
 
         private int CountStatus(WorldGenerationWorkStatus status)
         {
-            int count = 0;
-            foreach (WorldGenerationWorkStatus value in statuses.Values) if (value == status) count++;
-            return count;
+            int count = 0; foreach (WorldGenerationWorkStatus value in statuses.Values) if (value == status) count++; return count;
         }
 
         private int CompareReady(WorldGenerationWorkKey a, WorldGenerationWorkKey b)
@@ -211,17 +197,40 @@ namespace Jolybob.ProceduralWorld
             return a.Chunk.Y.CompareTo(b.Chunk.Y);
         }
 
-        private WorldGenerationWorkKey FindCycleKey(Dictionary<WorldGenerationWorkKey, int> unresolved)
+        private bool TryFindPendingCycle(List<WorldGenerationWorkKey> pending, out WorldGenerationWorkKey cycleKey)
         {
-            WorldGenerationWorkKey found = default(WorldGenerationWorkKey); bool hasFound = false;
-            foreach (KeyValuePair<WorldGenerationWorkKey, int> pair in unresolved)
-                if (pair.Value > 0 && (!hasFound || CompareReady(pair.Key, found) < 0)) { found = pair.Key; hasFound = true; }
-            return found;
+            var pendingSet = new HashSet<WorldGenerationWorkKey>(pending);
+            var state = new Dictionary<WorldGenerationWorkKey, int>();
+            cycleKey = default(WorldGenerationWorkKey);
+            pending.Sort(CompareReady);
+            for (int i = 0; i < pending.Count; i++)
+            {
+                WorldGenerationWorkKey current = pending[i];
+                if (state.ContainsKey(current)) continue;
+                if (VisitForCycle(current, pendingSet, state, out cycleKey)) return true;
+            }
+            return false;
         }
 
-        private static bool ContainsDefaultKey(Dictionary<WorldGenerationWorkKey, int> values)
+        private bool VisitForCycle(WorldGenerationWorkKey key, HashSet<WorldGenerationWorkKey> pending, Dictionary<WorldGenerationWorkKey, int> state, out WorldGenerationWorkKey cycleKey)
         {
-            return values.ContainsKey(default(WorldGenerationWorkKey));
+            cycleKey = default(WorldGenerationWorkKey);
+            state[key] = 1;
+            var next = new List<WorldGenerationWorkKey>();
+            foreach (WorldGenerationDependency dependency in dependencies)
+                if (dependency.Prerequisite.Equals(key) && pending.Contains(dependency.Dependent)) next.Add(dependency.Dependent);
+            next.Sort(CompareReady);
+            for (int i = 0; i < next.Count; i++)
+            {
+                WorldGenerationWorkKey dependent = next[i];
+                if (!state.TryGetValue(dependent, out int dependentState))
+                {
+                    if (VisitForCycle(dependent, pending, state, out cycleKey)) return true;
+                }
+                else if (dependentState == 1) { cycleKey = dependent; return true; }
+            }
+            state[key] = 2;
+            return false;
         }
     }
 
@@ -231,7 +240,6 @@ namespace Jolybob.ProceduralWorld
         private readonly IWorldGenerationWorkExecutor executor;
         public WorldGenerationDependencySchedulerRunner(WorldGenerationWorkGraph graph, IWorldGenerationWorkExecutor executor)
         { this.graph = graph ?? throw new ArgumentNullException(nameof(graph)); this.executor = executor ?? throw new ArgumentNullException(nameof(executor)); }
-
         public int Run(int maxItems)
         {
             WorldGenerationDependencySchedule schedule = graph.Dequeue(maxItems);

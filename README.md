@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.19
+## Current architecture — 0.1.20
 
 The generation stack is intentionally separated by responsibility:
 
@@ -21,18 +21,18 @@ seed + settings
       |
       +----> TerrainId
       +----> ResourceId
-      +----> structures
+      +----> StructureId
       +----> post-process
       +----> streaming
       +----> persistence
       +----> presentation adapters
 ```
 
-`GeneratedCell.Region`, `GeneratedCell.Terrain`, and `GeneratedCell.Resource` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
+`GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves and resources are independent generation passes that modify generated cell state without coupling generation to rendering.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering.
 
-Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types and future structure systems independently deterministic.
+Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types and structure types independently deterministic.
 
 ## Main extension points
 
@@ -43,18 +43,25 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `RegionCatalog` / `RegionDefinition` — stable region data definitions
 - `TerrainCatalog` / `TerrainDefinition` — stable terrain data definitions
 - `ResourceCatalog` / `ResourceDefinition` — stable resource data definitions
+- `StructureCatalog` / `StructureDefinition` — stable structure data definitions
 - `IWorldRandom` / `WorldRandomService` — deterministic subsystem random streams
 - `IWorldGenerationPass` — ordered generation stages
 - `WorldGenerationPipeline` — composes generation passes
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
 
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, and resource catalogs.
+The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, and structure catalogs.
 
 ## Resource layer
 
 Resources are generated as data, not rendered objects. `ResourcePass` selects eligible cells by canonical region and terrain IDs, uses a dedicated deterministic Resources stream per resource type, respects per-resource spawn probability and per-chunk limits, and marks occupied cells with `GeneratedCellFlags.HasResource`.
 
 Resources are disabled by default. Enable `WorldGenerationSettings.resourcesEnabled` when a project wants procedural resource placement.
+
+## Structure layer
+
+Structures are generated as deterministic multi-cell footprints. `StructurePass` selects anchors using the Structures random domain plus the structure ID as a salt, validates the entire footprint before placement, prevents overlap with caves, resources, and other structures, and records occupancy through `GeneratedCell.Structure` and `GeneratedCellFlags.HasStructure`.
+
+Structures are disabled by default. Enable `WorldGenerationSettings.structuresEnabled` when a project wants procedural structure placement.
 
 ## Cave layer
 
@@ -71,12 +78,12 @@ A generation pass can request an isolated stream:
 ```csharp
 IWorldRandom random = context.Random.Create(
     context.ChunkCoordinate,
-    WorldRandomDomain.Resources,
-    resource.Id.Value);
+    WorldRandomDomain.Structures,
+    structure.Id.Value);
 
-if (random.Chance(0.15f))
+if (random.Chance(0.01f))
 {
-    // deterministic resource placement
+    // deterministic structure placement
 }
 ```
 
@@ -104,11 +111,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `24680` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `97531` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, or the complete pipeline without changing the core chunk data model.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, or the complete pipeline without changing the core chunk data model.
 
 ## Roadmap
 
@@ -134,7 +141,7 @@ Planned extension points include:
 - cellular-automata cave refinement
 - terrain layers and material selection
 - richer resource distribution and clustering
-- structure placement and WFC
+- richer structure placement and WFC
 - world modification layers
 - chunk streaming
 - persistence interfaces

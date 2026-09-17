@@ -133,8 +133,7 @@ namespace Jolybob.ProceduralWorld
                 WorldRealizationEdit edit = batch.Edits[i];
                 if (map.TryGet(edit.Id, out WorldRealizationEdit existingById))
                 {
-                    if (!existingById.Equals(edit))
-                        return Conflict(existingById, edit);
+                    if (!existingById.Equals(edit)) return Conflict(existingById, edit);
                     alreadyPresentCount++;
                     continue;
                 }
@@ -143,17 +142,12 @@ namespace Jolybob.ProceduralWorld
                 if (!seenSlots.Add(slot))
                 {
                     for (int prior = 0; prior < toAdd.Count; prior++)
-                    {
-                        if (new RealizationSlot(toAdd[prior].Position, toAdd[prior].Kind).Equals(slot))
-                            return Conflict(toAdd[prior], edit);
-                    }
+                        if (new RealizationSlot(toAdd[prior].Position, toAdd[prior].Kind).Equals(slot)) return Conflict(toAdd[prior], edit);
                 }
 
                 var existing = new List<WorldRealizationEdit>();
                 map.Collect(edit.Position, edit.Kind, existing);
-                if (existing.Count > 0)
-                    return Conflict(existing[0], edit);
-
+                if (existing.Count > 0) return Conflict(existing[0], edit);
                 toAdd.Add(edit);
             }
 
@@ -222,13 +216,16 @@ namespace Jolybob.ProceduralWorld
 
         public int Run(int maxItems)
         {
-            WorldGenerationDependencySchedule schedule = graph.Dequeue(maxItems);
-            if (!schedule.Succeeded) throw new InvalidOperationException(schedule.Issues[0].Message);
+            if (maxItems < 0) throw new ArgumentOutOfRangeException(nameof(maxItems));
 
             int completed = 0;
-            for (int i = 0; i < schedule.Count; i++)
+            while (completed < maxItems)
             {
-                WorldGenerationWorkItem item = schedule.Items[i];
+                WorldGenerationDependencySchedule schedule = graph.Dequeue(1);
+                if (!schedule.Succeeded) throw new InvalidOperationException(schedule.Issues[0].Message);
+                if (schedule.Count == 0) break;
+
+                WorldGenerationWorkItem item = schedule.Items[0];
                 WorldGenerationWorkKey key = new WorldGenerationWorkKey(item.Chunk, item.Kind);
                 try
                 {

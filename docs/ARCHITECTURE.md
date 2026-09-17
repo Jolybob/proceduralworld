@@ -12,9 +12,13 @@ The core rule is:
 
 > **World coordinates define the truth; chunks define the execution and storage boundary.**
 
-A world feature must not become a different feature merely because its cells happen to cross a chunk boundary. Large features are therefore represented as world-space placements first and materialized into chunks second.
+A second rule now follows from that boundary:
 
-The reusable placement kernel introduced in `0.1.90` is the intended foundation for structures, deposits, rivers, roads, chasms, landmarks, and points of interest.
+> **Semantic world intent is planned before world geometry is materialized.**
+
+A world feature must not become a different feature merely because its cells happen to cross a chunk boundary. Large features are therefore represented as world-space placements first and materialized into chunks second. Likewise, relationships such as `town -> gate -> dungeon` should exist as world-plan intent before they are reduced to geometric proximity or tiles.
+
+The reusable placement kernel introduced in `0.1.90` is the intended foundation for structures, deposits, rivers, roads, chasms, landmarks, and points of interest. A future world-plan layer composes those primitives without making the placement system responsible for semantic hierarchy.
 
 ## Target system graph
 
@@ -34,39 +38,48 @@ The reusable placement kernel introduced in `0.1.90` is the intended foundation 
           v                     v                      v
    LARGE-SCALE FIELDS     REGIONS / BIOMES       WORLD FEATURES
           |                     |                      |
-   temperature              region graph        feature planners
-   moisture                 macro regions        structures
-   elevation                biome zones           deposits
-   density                  terrain families      chasms / rivers
-   domain masks             local transitions     points of interest
+   temperature              region graph        feature definitions
+   moisture                 macro regions        placement rules
+   elevation                biome zones           structures
+   density                  terrain families      deposits
+   domain masks             local transitions     landmarks / POIs
           |                     |                      |
           +---------------------+----------------------+
                                 |
                                 v
-                     WORLD GENERATION PLAN
+                    DETERMINISTIC WORLD PLAN
                                 |
-                 deterministic feature identities
+              semantic nodes / ports / constraints
                                 |
-                     +----------+----------+
-                     |                     |
-                     v                     v
-              CHUNK MATERIALIZER      WORLD GRAPH/QUERIES
-                     |                     |
-               GeneratedChunk       placements / connectivity
-                     |                     |
-        +------------+--------------------+----------------+
-        |                         |                       |
-        v                         v                       v
-     RENDERING                PERSISTENCE              GAMEPLAY
-     adapters               save overrides           world access
-     Tilemap                chunk storage            edits
-     sprites                world metadata           simulation
-     ECS/custom             migrations               queries
-        |                         |                       |
-        +-------------------------+-----------------------+
-                                  v
-                         CHANGE / EVENT LAYER
-                                  |
+                                v
+                     WORLD LAYOUT / SOLVER
+                                |
+               placements + semantic connections
+                                |
+            +-------------------+-------------------+
+            |                                       |
+            v                                       v
+     FEATURE / PATH DATA                    WORLD GRAPH / QUERIES
+            |                                       |
+            v                              placements / connectivity
+     CHUNK MATERIALIZER                            |
+            |                                      |
+       GeneratedChunk                              |
+            |                                      |
+        +---+------------------+--------------------+----------------+
+        |                      |                    |               |
+        v                      v                    v               v
+     RENDERING             PERSISTENCE            GAMEPLAY       SIMULATION
+     adapters            save overrides          world access   navigation
+     Tilemap              chunk storage           edits          encounters
+     sprites              world metadata          queries        systems
+     ECS/custom           migrations              plans          world logic
+        |                      |                    |               |
+        +----------------------+--------------------+---------------+
+                               |
+                               v
+                      CHANGE / EVENT LAYER
+                               |
                     cell changes + logical batches
                     history + observers + transactions
 ```
@@ -90,10 +103,13 @@ It should eventually contain:
 - structure definitions;
 - topology rules;
 - feature density and placement rules;
+- world-plan rules and optional plan templates;
 - optional world bounds or special zones;
 - references to content catalogs.
 
 The existing `ProceduralWorldDefinitionAsset` is the beginning of this layer. It already authors seed/settings, regions, terrains, and macro layouts. Resource, structure, topology, and broader feature authoring should be added without moving those responsibilities into presentation code.
+
+A world definition should describe **what may exist and what must be true**, while runtime planning chooses one deterministic concrete realization from those rules.
 
 ### 2. Deterministic world fields
 
@@ -114,6 +130,8 @@ The existing `INoiseField`, `IEnvironmentFieldProvider`, and `ICaveFieldProvider
 
 A field should be stable for a fixed `(seed, generation version, world coordinate)` and should not consume mutable shared random state.
 
+Fields describe the physical domain. They should not become the only source of higher-level semantic structure.
+
 ### 3. Regions and macro geography
 
 Regions describe **where a world is**. They should not also be responsible for choosing every object that appears there.
@@ -127,6 +145,7 @@ World
           -> biome / region identity
               -> terrain families
                   -> local feature rules
+                      -> world-plan eligibility
 ```
 
 `IRegionLayout` separates world-space geography from region content. `RegionLayoutResolver` adapts that layout into the existing resolver contract, allowing older field-based resolvers to continue working.
@@ -157,6 +176,8 @@ The canonical identifiers are:
 - `StructureId`.
 
 `GeneratedCell.Biome` and `GeneratedCell.Tile` remain compatibility mirrors for existing users.
+
+Terrain remains a materialization concern. World-plan nodes may constrain which terrain or region they require, but the plan should not directly own tile values.
 
 ### 5. World feature planning
 
@@ -196,7 +217,213 @@ Structures are the first feature type adapted to this kernel. `StructureDefiniti
 
 This architecture is intentionally generic so deposits, rivers, roads, chasms, landmark complexes, and points of interest can reuse the same ownership and cross-chunk mechanics rather than each inventing a separate chunk-boundary solution.
 
-### 6. World feature queries
+World features should remain the **geometry primitive**. Semantic composition belongs in the world-plan layer below.
+
+### 6. World planning
+
+The world plan is a deterministic intermediate representation between authored rules and concrete world-space placements.
+
+Its purpose is to represent **intent, hierarchy, constraints, and required relationships** before those concepts are lowered into geometry.
+
+The target flow is:
+
+```text
+world-plan definition / rules
+            |
+            v
+DeterministicWorldPlanBuilder
+            |
+            v
+       WorldPlan
+      /         \
+ PlanNodes     PlanConnections
+    |                |
+ PlanPorts      semantic requirements
+    |                |
+    +-------+--------+
+            |
+            v
+   WorldPlanLayoutSolver
+            |
+            +----> WorldFeaturePlacement
+            +----> semantic world connections
+            +----> world corridors / paths
+```
+
+A plan node represents one semantic thing that the world must or may contain. A node may represent a region-scale landmark, dungeon, settlement, room group, entrance, encounter area, or another logical feature without prescribing its final rendering.
+
+Plan nodes may be hierarchical:
+
+```text
+WorldPlan
+  -> Settlement
+      -> TownCenter
+      -> District
+          -> Building
+              -> Room
+      -> Gate
+  -> Dungeon
+      -> Entrance
+      -> Wing
+          -> Room
+```
+
+This hierarchy is intended to support reusable composition at different scales. A larger node may contain child nodes whose concrete geometry is solved only after their own requirements are expanded.
+
+Plan nodes should be deterministic data rather than mutable scene objects. The plan is a generated world-data artifact, not a Unity hierarchy.
+
+### 7. Semantic ports and connections
+
+World-plan relationships should not rely exclusively on spatial proximity.
+
+A semantic connection describes an intended relationship such as:
+
+```text
+TownCenter.east_gate -> Road.west_entry
+DungeonEntrance.outside -> DungeonCorridor.entry
+RoomA.east_door -> RoomB.west_door
+```
+
+The target abstraction is a world-space `Port` owned by a plan node, with enough information to express:
+
+- stable port identity;
+- direction or orientation;
+- semantic type;
+- required vs optional status;
+- compatibility constraints;
+- eventual world-space position.
+
+Connections should be able to express both required and optional relationships.
+
+```text
+Required
+--------
+Must resolve during plan validation.
+
+Optional
+--------
+May resolve depending on deterministic selection.
+
+Derived
+-------
+May be inferred later from world-space proximity or graph analysis.
+```
+
+The important distinction is:
+
+```text
+WORLD PLAN
+semantic intent
+      |
+      v
+GEOMETRIC PLACEMENT
+world-space realization
+      |
+      v
+CONNECTIVITY GRAPH
+spatially derived relations
+```
+
+The existing `WorldConnectivityGraph` remains useful for derived graph relationships. It should not become the sole representation of semantic intent.
+
+### 8. World-plan layout and constraint solving
+
+Once a concrete plan is selected, child nodes and features must be arranged in world coordinates before chunk materialization.
+
+The intended solver responsibilities include:
+
+- satisfy required port alignments;
+- respect node footprint and clearance constraints;
+- keep forbidden overlaps apart;
+- preserve region or terrain eligibility constraints;
+- prefer stable deterministic arrangements when multiple solutions exist;
+- allow unconstrained nodes to be placed within authored world-space bounds or radial domains;
+- produce a final world-space placement for each resolved feature;
+- detect unsatisfied requirements before chunk materialization.
+
+A conceptual process is:
+
+```text
+required relationships
+        |
+        v
+initial constrained placement
+        |
+        v
+local adjustments / alignment
+        |
+        v
+overlap and clearance resolution
+        |
+        v
+boundary / world-domain normalization
+        |
+        v
+validated world plan
+```
+
+A solver may use iterative separation or other deterministic techniques, but it must not rely on global mutable random state. Any tie-breaking randomness must come from an isolated deterministic random domain derived from stable plan identities.
+
+The solver operates in world coordinates. It must not solve separately per chunk.
+
+### 9. World-plan validation and structural completeness
+
+A selected plan should be validated as a semantic object before it becomes authoritative world geometry.
+
+Validation should be able to detect:
+
+- missing required plan nodes;
+- unresolved required ports;
+- incompatible port types;
+- impossible footprint constraints;
+- illegal overlaps;
+- invalid region or terrain requirements;
+- disconnected required components;
+- connections that cannot be routed under the current rules;
+- recursion or expansion cycles that exceed configured limits.
+
+This creates a useful guarantee:
+
+```text
+selected plan
+    -> validate intent
+    -> solve geometry
+    -> validate geometry
+    -> materialize
+```
+
+The goal is that once a plan is accepted, its required semantic content is not silently lost during chunk generation.
+
+Optional content may still be rejected by deterministic rules; required content should produce an explicit planning failure rather than quietly disappearing.
+
+### 10. World feature and path lowering
+
+World-plan nodes should lower into the existing world-space feature system rather than creating a second chunk-placement mechanism.
+
+The intended lowering is:
+
+```text
+PlanNode
+   |
+   +----> WorldFeaturePlacement
+   |
+   +----> WorldFeaturePort positions
+   |
+   +----> WorldCorridor / WorldPath
+```
+
+This keeps the responsibilities separate:
+
+- **plan** — what the world intends to contain;
+- **placement** — where a concrete feature exists;
+- **path/corridor** — how compatible plan ports are spatially connected;
+- **chunk materializer** — how those results become local canonical cells.
+
+This also allows roads, tunnels, rivers, and dungeon corridors to share a future world-space path abstraction without coupling them to the Tilemap or a specific chunk.
+
+A future `IWorldCorridorPlanner` should consume semantic or graph connections and return deterministic world-space paths. Path planning should query world traversability and remain independent from chunk residency.
+
+### 11. World feature queries
 
 Feature discovery is a world-level query boundary, separate from chunk generation and renderer residency.
 
@@ -218,7 +445,9 @@ The index is intentionally session-scoped: generation rules remain the source of
 
 This creates a stable bridge between deterministic generation and future gameplay systems such as landmark lookup, proximity checks, POI discovery, and world simulation.
 
-### 7. World connectivity graph
+World-plan queries should eventually follow the same rule: a caller should be able to inspect semantic nodes, ports, or planned relationships without requiring every underlying chunk to be resident.
+
+### 12. World connectivity graph
 
 Connectivity is a world-data layer built over feature placements rather than over resident chunks.
 
@@ -242,9 +471,22 @@ The builder can consume an explicit placement list or `WorldFeaturePlacementInde
 
 The graph does not itself carve terrain, spawn prefabs, or run pathfinding. It provides stable world-space relations for later points of interest, landmarks, roads, navigation topology, and simulation systems.
 
+The graph is therefore a **derived relationship layer**, while semantic plan connections are **authored/generated intent**. A future reconciliation stage may use both:
+
+```text
+required plan connections
+          +
+spatial connectivity graph
+          +
+path feasibility
+          |
+          v
+   world-plan reconciliation
+```
+
 See [`CONNECTIVITY.md`](CONNECTIVITY.md) for the detailed connectivity contract.
 
-### 8. Generation pipeline
+### 13. Generation pipeline
 
 The generation pipeline should remain an ordered transformation of canonical data.
 
@@ -254,19 +496,29 @@ Target order:
 1. base world-space fields
 2. macro geography / regions
 3. terrain
-4. topology / caves
-5. large world-feature planning
-6. resource/deposit materialization
-7. structure / landmark materialization
-8. connectivity / post-process reconciliation
-9. final canonical chunk
+4. plan selection / deterministic world planning
+5. plan layout / semantic connection resolution
+6. topology / caves
+7. large world-feature planning
+8. world paths / corridor planning
+9. resource/deposit materialization
+10. structure / landmark materialization
+11. connectivity / post-process reconciliation
+12. final canonical chunk
 ```
+
+The exact ordering of individual passes may vary by game, but the architectural distinction is important:
+
+- **plan selection** decides semantic content;
+- **layout** decides world-space geometry;
+- **feature planning** decides deterministic feature identities/footprints;
+- **materialization** writes only the requested chunk.
 
 The important distinction is that **planning may inspect neighboring world coordinates without writing neighboring chunks**. The final chunk pass owns only its own materialization.
 
 `WorldGenerationPipeline` should remain composable so games can replace one subsystem without replacing the generator itself.
 
-### 9. Chunk boundary policy
+### 14. Chunk boundary policy
 
 A chunk is an implementation boundary, never a gameplay boundary.
 
@@ -276,13 +528,14 @@ Features may:
 - end outside the requested chunk;
 - cross multiple chunks;
 - be discovered from neighboring owner chunks;
-- be reconstructed deterministically when a chunk is loaded later.
+- be reconstructed deterministically when a chunk is loaded later;
+- be produced by a world plan whose nodes and connections span many chunks.
 
-The materializer must therefore reason in world coordinates and convert to local chunk coordinates only at the final write step.
+Plan solving, feature ownership, connectivity, and path planning must therefore remain world-space operations. Chunk-local coordinates appear only when the final materializer writes canonical cells.
 
 Negative chunk coordinates must follow mathematical floor division semantics rather than language truncation semantics.
 
-### 10. Streaming
+### 15. Streaming
 
 Streaming decides **which chunks are resident**, not how the world exists.
 
@@ -310,7 +563,9 @@ The current `ChunkStreamingPlanner`, `WorldChunkStreamingController`, and `World
 
 Future streaming work should add scheduling, priorities, generation budgets, cancellation, and background-safe work without moving gameplay rules into the streaming controller.
 
-### 11. Persistence
+A loaded chunk should never determine which world plan exists. Streaming order must not change plan selection, feature ownership, or semantic connections.
+
+### 16. Persistence
 
 Persistence stores **player-authored divergence from deterministic generation**.
 
@@ -330,7 +585,9 @@ The existing `WorldChunkPersistenceService` already regenerates a base chunk and
 
 The next architectural requirement is versioned generation metadata. A save should be tied to the generation recipe that produced it, so changing a world algorithm cannot silently reinterpret old saves.
 
-### 12. Gameplay world access
+For planned worlds, persistence should continue to store authoritative player changes and world metadata rather than treating the transient plan object as a save-file implementation detail.
+
+### 17. Gameplay world access
 
 Gameplay must interact with an explicit world-access boundary rather than directly modifying chunk storage.
 
@@ -339,13 +596,16 @@ Target responsibilities:
 - read loaded cells;
 - query world-space state;
 - query feature placements and connectivity without coupling to renderer residency;
+- inspect world-plan semantics where available;
 - mutate loaded state through controlled operations;
 - reject operations outside the active-world boundary;
 - produce journaled changes.
 
 The current `IWorldChunkAccess` and `WorldEditService` are the intended foundation.
 
-### 13. Change tracking and events
+Gameplay should consume stable world-data queries rather than infer semantic world structure from rendered tiles.
+
+### 18. Change tracking and events
 
 World changes are data events, not rendering callbacks.
 
@@ -373,7 +633,9 @@ world edit / simulation mutation
 
 The existing journal, transaction, history, observer, and batch interfaces are aligned with this goal.
 
-### 14. Presentation
+Planned semantic state may also need logical change notifications in the future, but those should remain separate from renderer callbacks and should preserve stable world identities.
+
+### 19. Presentation
 
 Presentation is an adapter over canonical world state.
 
@@ -390,6 +652,8 @@ Target adapters include:
 
 `WorldTilemapRenderer` is one adapter, not the world model.
 
+A renderer should not become the source of truth for world-plan hierarchy, feature identity, or semantic connections.
+
 ## Determinism contract
 
 The package should preserve the following contract:
@@ -402,15 +666,29 @@ same world definition
 = same generated result
 ```
 
+For world planning, the contract extends to semantic identity:
+
+```text
+same world definition
++ same seed
++ same generation version
++ same plan scope / stable node identity
+= same selected plan content
+```
+
 Random streams should be isolated by subsystem and stable inputs:
 
 ```text
-seed + owner chunk + domain + stable feature ID
+seed + scope + domain + stable identity
 ```
 
 The generic feature planner keeps placement randomness in the owner's coordinate domain. A structure adapter uses `WorldRandomDomain.Structures`; future feature types should use their own stable random domains so unrelated systems do not perturb one another.
 
+World-plan selection must not consume a shared random stream whose state depends on generation order. Plan nodes, template choices, optional branches, and solver tie-breakers should derive isolated random streams from stable identities.
+
 Connectivity graph construction is deterministic from sorted world-space placements and does not consume mutable random state.
+
+Changing unrelated optional plan content should not silently perturb independently keyed deterministic systems.
 
 ## Coordinate contract
 
@@ -432,6 +710,8 @@ chunkY = floor(worldY / N)
 
 The generic placement source and connectivity spatial index explicitly protect this boundary because world features and graph queries must behave identically across positive and negative coordinate space.
 
+World-plan layout and path planning must obey the same world-space convention. A plan must not acquire different geometry because its nodes happen to be materialized through different chunk requests.
+
 ## Authoring contract
 
 Authoring assets describe **data and rules**, not runtime world objects.
@@ -451,8 +731,12 @@ world definition
    +-- structures
    +-- topology
    +-- feature rules
+   +-- plan templates / world-plan rules
+   +-- semantic port rules
    +-- connectivity rules
 ```
+
+A grammar-like representation may be useful for plan authoring because hierarchical rules are concise and reusable, but the runtime representation should remain typed world-plan data rather than a text parser or renderer-facing hierarchy.
 
 At runtime, a definition becomes a generator/configuration graph. Presentation references should remain outside the generation assemblies whenever possible.
 
@@ -468,6 +752,8 @@ Jolybob.ProceduralWorld.Runtime
     Terrain
     Topology
     Feature planning and queries
+    World-plan data and deterministic planning
+    Path / corridor planning contracts
     Connectivity / graph data
     Generation
     Streaming contracts
@@ -475,6 +761,7 @@ Jolybob.ProceduralWorld.Runtime
 
 Jolybob.ProceduralWorld.Authoring
     ScriptableObject world definitions
+    world-plan / grammar-like authoring data
     editor-facing configuration data
 
 Jolybob.ProceduralWorld.Tilemap
@@ -484,6 +771,7 @@ Jolybob.ProceduralWorld.Editor
     inspectors
     validation tools
     world-generation previews
+    plan / layout diagnostics
 ```
 
 The goal is to keep the runtime generation core usable by projects that do not use Tilemap, while still shipping a convenient Tilemap adapter.
@@ -510,7 +798,12 @@ WORLD SCALE
   |
   +-- deterministic cross-chunk feature queries  <-- implemented in 0.1.91
   +-- connectivity / graph passes  <-- implemented in 0.1.92
-  +-- points of interest / landmarks
+  +-- world-plan data model
+  +-- hierarchical plan expansion
+  +-- semantic ports / required connections
+  +-- deterministic plan layout / validation
+  +-- world-space paths / corridors
+  +-- points of interest / landmarks built from plans
   |
 RUNTIME
   |
@@ -535,10 +828,57 @@ TOOLING
   +-- world-definition editor
   +-- region/terrain preview
   +-- feature preview
+  +-- plan graph preview
+  +-- plan/layout diagnostics
   +-- connectivity diagnostics
   +-- deterministic seed inspector
   +-- generation diagnostics
 ```
+
+## Architectural synthesis: field-driven worlds plus semantic planning
+
+The long-term architecture intentionally combines two complementary procedural techniques.
+
+### Field-driven generation
+
+World fields are good at producing continuous, locally queryable properties such as elevation, temperature, moisture, cave density, and macro-region membership. They scale naturally to unbounded world coordinates and chunk streaming.
+
+### Plan-driven generation
+
+World plans are good at expressing intentional structure: hierarchy, required relationships, semantic entrances, guaranteed landmarks, settlements, dungeon layouts, and other content whose correctness depends on several features being generated together.
+
+The two systems should meet at the world-space boundary:
+
+```text
+continuous world fields
+        |
+        +----------------------+
+        |                      |
+        v                      v
+ region / terrain       plan eligibility / constraints
+        |                      |
+        +----------+-----------+
+                   |
+                   v
+            deterministic plan
+                   |
+             layout / solver
+                   |
+                   v
+        world-space placements
+                   |
+        +----------+----------+
+        |                     |
+        v                     v
+  path / corridor         connectivity
+        |                     |
+        +----------+----------+
+                   |
+                   v
+          chunk materialization
+```
+
+This lets continuous simulation-like world generation and intentionally designed procedural structures coexist without forcing either system to own the responsibilities of the other.
 
 ## What is intentionally out of scope for the core
 
@@ -557,6 +897,8 @@ The core runtime should not own:
 
 Those systems consume the package through stable interfaces.
 
+The core should also not require one particular authoring syntax. Text grammars, ScriptableObjects, code-generated definitions, or custom editor tooling are representations of authoring intent; the runtime plan contract is the stable boundary.
+
 ## Architectural success criteria
 
 The target architecture is considered healthy when a project can:
@@ -569,10 +911,28 @@ The target architecture is considered healthy when a project can:
 6. persist player edits without storing the entire procedural world;
 7. load an old world using the generation version it was authored against;
 8. query and connect world features without requiring those chunks to be resident;
-9. preview and inspect world generation from authoring tools without requiring gameplay systems.
+9. represent intentional multi-feature world structure as a deterministic plan before materialization;
+10. express required semantic connections independently from derived proximity edges;
+11. validate a selected plan before it becomes authoritative world geometry;
+12. solve large features and corridors in world space rather than one chunk at a time;
+13. preview and inspect world generation from authoring tools without requiring gameplay systems.
 
 ## Current implementation status
 
-Implemented foundations include deterministic fields, region layouts and resolvers, terrain catalogs, caves/topology, clustered resource deposits, the generic world-space feature placement kernel, world-space cross-chunk structure placement, deterministic feature queries and caching, the world connectivity graph, post-process pipelines, chunk streaming, persistence, world access/editing, change journals/history/transactions, and a Tilemap presentation adapter.
+Implemented foundations include:
 
-The items in this document under **Target roadmap** are architectural direction unless they are explicitly represented by the current runtime APIs. The goal is to keep the package moving toward a world-scale procedural system without coupling future capabilities to today's chunk-local implementation details.
+- canonical generated-cell state with region/terrain/resource/structure identifiers;
+- deterministic scalar, environment, and cave field providers;
+- region catalogs and world-space macro-region layouts;
+- terrain catalogs and topology passes;
+- clustered deterministic resource deposits;
+- generic world-space feature placement;
+- cross-chunk structure placement using world-space ownership;
+- cached point and rectangle feature queries;
+- deterministic world connectivity graphs;
+- chunk streaming and persistence-aware streaming;
+- world access, controlled editing, transactions, journals, history, and change observers;
+- Unity Tilemap presentation adapters;
+- optional Unity authoring through `ProceduralWorldDefinitionAsset`.
+
+The world-plan, semantic-port, deterministic layout, and world-corridor layers described above are the next architectural expansion rather than current runtime commitments. They should reuse the existing feature placement, query, connectivity, and generation boundaries instead of introducing parallel chunk-local systems.

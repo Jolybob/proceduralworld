@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.51] - 2026-09-17
+
+- Added optional topology-to-TileBase mappings to `WorldTilemapRenderer`.
+- Added topology-aware chunk loading and world-change rendering for `Empty`, `Solid`, `Water`, `Lava`, and `Chasm` states.
+- Preserved the existing three-argument renderer constructor and terrain-only fallback for compatibility.
+- Updated the runtime Tilemap preview to include deterministic visual tiles for generated topology states.
+- Added regression coverage for topology mapping, fallback behavior, and topology-aware direct changes.
+- Bumped the package version to 0.1.51.
+- Incremented package version for this update.
+
 ## [0.1.49] - 2026-09-17
 
 - Added a dedicated `TopologyPipeline` so topology modifiers are composed independently from the main generation pipeline.

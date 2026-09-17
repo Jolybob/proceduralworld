@@ -7,7 +7,7 @@ namespace Jolybob.ProceduralWorld
     {
         int SourceId { get; }
         IEnumerable<int> GetDemandedRegions();
-        event Action DemandChanged;
+        event Action<int> DemandChanged;
     }
 
     public sealed class WorldPresentationRegionDemandSourceCoordinator
@@ -79,22 +79,9 @@ namespace Jolybob.ProceduralWorld
             sourceOrder.Clear();
         }
 
-        private void OnDemandChanged()
+        private void OnDemandChanged(int sourceId)
         {
-            for (var i = 0; i < sourceOrder.Count; i++)
-            {
-                var sourceId = sourceOrder[i];
-                if (sources[sourceId].Equals(GetCurrentSource()))
-                {
-                    Refresh(sourceId);
-                    return;
-                }
-            }
-        }
-
-        private IWorldPresentationRegionDemandSource GetCurrentSource()
-        {
-            return null;
+            Refresh(sourceId);
         }
     }
 }

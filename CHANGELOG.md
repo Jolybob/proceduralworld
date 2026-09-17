@@ -1,10 +1,19 @@
 # Changelog
 
+## [0.1.24] - 2026-09-17
+
+- Fixed the brittle `DifferentSeedsUsuallyProduceDifferentData` regression test that incorrectly required two seeds to produce different coarse region/terrain output in one specific chunk.
+- Replaced it with `DifferentSeedsProduceDifferentEnvironmentFields`, which verifies seed influence directly across multiple world positions.
+- Preserved the generator's deterministic coarse region behavior instead of changing world-generation rules to satisfy a probabilistic test.
+- Changed the Tilemap preview and primary test seed from `68124` to `59273` for this revision.
+- Bumped the package version to 0.1.24.
+- Incremented package version for this update.
+
 ## [0.1.23] - 2026-09-17
 
 - Fixed package test discovery documentation for Git-installed UPM packages.
 - Documented the required project `Packages/manifest.json` `testables` entry for `com.jolybob.proceduralworld` tests.
-- Confirmed the package test assembly remains configured with the Unity test-assembly support and the runtime assembly reference.
+- Confirmed the package test assembly remains configured with Unity test-assembly support and the runtime assembly reference.
 - Changed the Tilemap preview and primary generator test seed from `75319` / `86420` to `68124` for this revision.
 - Bumped the package version to 0.1.23.
 - Incremented package version for this update.

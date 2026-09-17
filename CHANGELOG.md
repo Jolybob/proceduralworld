@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.80] - 2026-09-17
+
+- Fixed the runtime Tilemap visual resolver so the default `CellTopology.Solid` state does not override ordinary terrain visuals.
+- Preserved explicit water, lava, and chasm topology overrides while allowing terrain catalogs to render normal solid cells.
+- Kept the existing runtime Tilemap material, renderer, and camera visibility fixes from 0.1.79.
+- Bumped the package version to 0.1.80.
+- Incremented package version for this update.
+
 ## [0.1.79] - 2026-09-17
 
 - Fixed runtime Tilemap preview rendering by assigning an explicit unlit sprite material when a compatible shader is available.
@@ -23,8 +31,6 @@
 - Ensured the TilemapRenderer is enabled and uses deterministic bottom-left sorting for the generated preview.
 - Hardened preview camera setup by centering on the generated world, correcting a non-negative camera Z that would place the camera on the Tilemap plane, and framing the complete preview for orthographic cameras.
 - Added an opt-out `frameCameraOnWorld` setting for projects that manage their own camera framing.
-- Bumped the package version to 0.1.77.
-- Incremented package version for this update.
 
 ## [0.1.76] - 2026-09-17
 

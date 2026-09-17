@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.52] - 2026-09-17
+
+- Fixed a missing closing parenthesis in `WorldTilemapRendererTests.UnknownWorldTileFailsFast` that caused Unity compilation error CS1026.
+- Bumped the package version to 0.1.52.
+- Incremented package version for this update.
+
 ## [0.1.51] - 2026-09-17
 
 - Added optional topology-to-TileBase mappings to `WorldTilemapRenderer`.

@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Jolybob.ProceduralWorld;
+using Jolybob.ProceduralWorld.Authoring;
 using Direction = UnityEditor.Experimental.GraphView.Direction;
 using Orientation = UnityEditor.Experimental.GraphView.Orientation;
 using Port = UnityEditor.Experimental.GraphView.Port;
@@ -38,7 +41,7 @@ namespace Jolybob.ProceduralWorld.Editor
             BuildToolbar();
 
             graphView = new WorldPlanGraphView();
-            graphView.StretchToParentSize();
+            graphView.style.flexGrow = 1f;
             rootVisualElement.Add(graphView);
 
             Rebuild();
@@ -55,43 +58,15 @@ namespace Jolybob.ProceduralWorld.Editor
 
         private void BuildToolbar()
         {
-            Toolbar toolbar = new Toolbar();
-
-            Button selectButton = new Button(() => SelectGraphAsset())
-            {
-                text = "Select Graph"
-            };
-            toolbar.Add(selectButton);
-
-            ToolbarMenu addMenu = new ToolbarMenu
-            {
-                text = "Add Node"
-            };
-            toolbar.Add(addMenu);
-
-            Button validateButton = new Button(() => ValidateGraph())
-            {
-                text = "Validate"
-            };
-            toolbar.Add(validateButton);
-
-            Button frameButton = new Button(() => graphView?.FrameAll())
-            {
-                text = "Frame"
-            };
-            toolbar.Add(frameButton);
+            var toolbar = new Toolbar();
+            toolbar.Add(new Button(SelectGraphAsset) { text = "Select Graph" });
+            toolbar.Add(new Button(ValidateGraph) { text = "Validate" });
+            toolbar.Add(new Button(() => graphView?.FrameAll()) { text = "Frame" });
 
             statusLabel = new Label("No graph selected.");
+            statusLabel.style.flexGrow = 1f;
             toolbar.Add(statusLabel);
-
             rootVisualElement.Add(toolbar);
-
-            RegisterAddMenuItems(addMenu);
-        }
-
-        private void RegisterAddMenuItems(ToolbarMenu menu)
-        {
-            menu.menu.MenuItems().Clear();
         }
 
         private void Rebuild()
@@ -100,83 +75,25 @@ namespace Jolybob.ProceduralWorld.Editor
                 return;
 
             graphView.SetAsset(asset);
-            RefreshAddMenu();
-
             if (asset == null)
             {
-                statusLabel.text = "No graph selected.";
+                statusLabel.text = "No graph selected. Define node types in the asset inspector, then right-click the canvas.";
                 return;
             }
 
             WorldPlanValidationResult validation = asset.Validate();
             statusLabel.text = validation.IsValid
                 ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
-                : "Graph has " + validation.Issues.Count + " validation issue(s).";
-        }
-
-        private void RefreshAddMenu()
-        {
-            VisualElement toolbar = rootVisualElement.childCount > 0 ? rootVisualElement[0] : null;
-            if (toolbar == null)
-                return;
-
-            ToolbarMenu addMenu = null;
-            for (int i = 0; i < toolbar.childCount; i++)
-            {
-                addMenu = toolbar[i] as ToolbarMenu;
-                if (addMenu != null && addMenu.text == "Add Node")
-                    break;
-            }
-
-            if (addMenu == null)
-                return;
-
-            addMenu.menu.MenuItems().Clear();
-            if (asset == null || asset.NodeTypes.Count == 0)
-            {
-                addMenu.menu.AppendAction(
-                    "No node types defined",
-                    _ => { },
-                    DropdownMenuAction.Status.Disabled);
-                return;
-            }
-
-            for (int i = 0; i < asset.NodeTypes.Count; i++)
-            {
-                WorldPlanGraphAsset.NodeTypeRecord type = asset.NodeTypes[i];
-                if (type == null)
-                    continue;
-
-                string typeId = type.id;
-                string displayName = string.IsNullOrWhiteSpace(type.displayName)
-                    ? typeId
-                    : type.displayName;
-
-                addMenu.menu.AppendAction(
-                    displayName,
-                    _ => AddNode(typeId, new Vector2(80f + asset.Nodes.Count * 24f, 80f + asset.Nodes.Count * 16f)),
-                    DropdownMenuAction.AlwaysEnabled);
-            }
-        }
-
-        private void AddNode(string typeId, Vector2 position)
-        {
-            if (asset == null || asset.FindNodeType(typeId) == null)
-                return;
-
-            Undo.RecordObject(asset, "Add World Plan Node");
-            asset.AddNode(WorldPlanGraphAsset.CreateNode(typeId, typeId, position));
-            asset.EnsureIds();
-            EditorUtility.SetDirty(asset);
-            AssetDatabase.SaveAssets();
-            Rebuild();
+                : BuildIssueSummary(validation);
         }
 
         private void SelectGraphAsset()
         {
+            if (asset == null)
+                return;
+
             Selection.activeObject = asset;
-            if (asset != null)
-                EditorGUIUtility.PingObject(asset);
+            EditorGUIUtility.PingObject(asset);
         }
 
         private void ValidateGraph()
@@ -222,14 +139,10 @@ namespace Jolybob.ProceduralWorld.Editor
             private sealed class WorldPlanGraphNodeView : Node
             {
                 public string NodeId { get; }
-                public WorldPlanGraphAsset.NodeTypeRecord TypeRecord { get; }
 
-                public WorldPlanGraphNodeView(
-                    WorldPlanGraphAsset.NodeRecord node,
-                    WorldPlanGraphAsset.NodeTypeRecord type)
+                public WorldPlanGraphNodeView(WorldPlanGraphAsset.NodeRecord node)
                 {
                     NodeId = node.id;
-                    TypeRecord = type;
                     title = node.label;
                     viewDataKey = node.id;
                     capabilities |= Capabilities.Movable | Capabilities.Selectable | Capabilities.Deletable;
@@ -243,14 +156,13 @@ namespace Jolybob.ProceduralWorld.Editor
 
             public WorldPlanGraphView()
             {
-                styleSheets.Add(Resources.Load<StyleSheet>("WorldPlanGraphWindow"));
                 Insert(0, new GridBackground());
                 AddManipulator(new ContentDragger());
                 AddManipulator(new SelectionDragger());
                 AddManipulator(new RectangleSelector());
                 graphViewChanged = OnGraphViewChanged;
                 SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
-                this.AddManipulator(new ContextualMenuManipulator(BuildContextualMenu));
+                AddManipulator(new ContextualMenuManipulator(BuildContextualMenu));
             }
 
             public void SetAsset(WorldPlanGraphAsset graphAsset)
@@ -265,10 +177,8 @@ namespace Jolybob.ProceduralWorld.Editor
                 if (!(startPort.userData is PortBinding startBinding) || asset == null)
                     return compatible;
 
-                WorldPlanGraphAsset.NodeTypeRecord startType = asset.FindNodeType(
-                    FindNodeTypeId(startBinding.NodeId));
                 WorldPlanGraphAsset.PortRecord startPortRecord = FindPortRecord(startBinding);
-                if (startType == null || startPortRecord == null)
+                if (startPortRecord == null)
                     return compatible;
 
                 foreach (Port port in ports)
@@ -319,9 +229,8 @@ namespace Jolybob.ProceduralWorld.Editor
                     for (int i = 0; i < asset.Connections.Count; i++)
                     {
                         WorldPlanGraphAsset.ConnectionRecord connection = asset.Connections[i];
-                        if (connection == null)
-                            continue;
-                        CreateEdgeView(connection);
+                        if (connection != null)
+                            CreateEdgeView(connection);
                     }
                 }
 
@@ -332,7 +241,7 @@ namespace Jolybob.ProceduralWorld.Editor
                 WorldPlanGraphAsset.NodeRecord node,
                 WorldPlanGraphAsset.NodeTypeRecord type)
             {
-                var view = new WorldPlanGraphNodeView(node, type);
+                var view = new WorldPlanGraphNodeView(node);
 
                 for (int i = 0; i < type.ports.Count; i++)
                 {
@@ -343,23 +252,13 @@ namespace Jolybob.ProceduralWorld.Editor
                     if (portRecord.direction == WorldPlanPortDirection.Input
                         || portRecord.direction == WorldPlanPortDirection.Bidirectional)
                     {
-                        Port inputPort = CreatePort(
-                            node.id,
-                            portRecord,
-                            Direction.Input,
-                            "In");
-                        view.inputContainer.Add(inputPort);
+                        view.inputContainer.Add(CreatePort(node.id, portRecord, Direction.Input, "In"));
                     }
 
                     if (portRecord.direction == WorldPlanPortDirection.Output
                         || portRecord.direction == WorldPlanPortDirection.Bidirectional)
                     {
-                        Port outputPort = CreatePort(
-                            node.id,
-                            portRecord,
-                            Direction.Output,
-                            "Out");
-                        view.outputContainer.Add(outputPort);
+                        view.outputContainer.Add(CreatePort(node.id, portRecord, Direction.Output, "Out"));
                     }
                 }
 
@@ -409,8 +308,8 @@ namespace Jolybob.ProceduralWorld.Editor
                     input = targetPort,
                     userData = connection.id
                 };
-                edge.output.Connect(edge);
-                edge.input.Connect(edge);
+                sourcePort.Connect(edge);
+                targetPort.Connect(edge);
                 AddElement(edge);
             }
 
@@ -429,26 +328,25 @@ namespace Jolybob.ProceduralWorld.Editor
                             continue;
 
                         WorldPlanGraphAsset.NodeRecord record = asset.FindNode(nodeView.NodeId);
-                        if (record == null)
+                        if (record == null || record.position == nodeView.GetPosition().position)
                             continue;
 
-                        if (record.position != nodeView.GetPosition().position)
-                        {
-                            Undo.RecordObject(asset, "Move World Plan Node");
-                            record.position = nodeView.GetPosition().position;
-                            changed = true;
-                        }
+                        Undo.RecordObject(asset, "Move World Plan Node");
+                        record.position = nodeView.GetPosition().position;
+                        changed = true;
                     }
                 }
 
                 if (change.edgesToCreate != null)
                 {
-                    for (int i = 0; i < change.edgesToCreate.Count; i++)
+                    for (int i = change.edgesToCreate.Count - 1; i >= 0; i--)
                     {
                         Edge edge = change.edgesToCreate[i];
                         if (!(edge.output?.userData is PortBinding sourceBinding)
                             || !(edge.input?.userData is PortBinding targetBinding))
+                        {
                             continue;
+                        }
 
                         if (FindConnection(
                                 sourceBinding.NodeId,
@@ -456,6 +354,7 @@ namespace Jolybob.ProceduralWorld.Editor
                                 targetBinding.NodeId,
                                 targetBinding.PortId) != null)
                         {
+                            change.edgesToCreate.RemoveAt(i);
                             continue;
                         }
 
@@ -497,7 +396,6 @@ namespace Jolybob.ProceduralWorld.Editor
 
                 if (changed)
                 {
-                    asset.EnsureIds();
                     EditorUtility.SetDirty(asset);
                     AssetDatabase.SaveAssets();
                 }
@@ -530,18 +428,14 @@ namespace Jolybob.ProceduralWorld.Editor
 
             private void AddNode(string typeId, Vector2 position)
             {
+                if (asset == null || asset.FindNodeType(typeId) == null)
+                    return;
+
                 Undo.RecordObject(asset, "Add World Plan Node");
                 asset.AddNode(WorldPlanGraphAsset.CreateNode(typeId, typeId, position));
-                asset.EnsureIds();
                 EditorUtility.SetDirty(asset);
                 AssetDatabase.SaveAssets();
                 Rebuild();
-            }
-
-            private string FindNodeTypeId(string nodeId)
-            {
-                WorldPlanGraphAsset.NodeRecord node = asset.FindNode(nodeId);
-                return node?.typeId;
             }
 
             private WorldPlanGraphAsset.PortRecord FindPortRecord(PortBinding binding)
@@ -564,10 +458,7 @@ namespace Jolybob.ProceduralWorld.Editor
                 return null;
             }
 
-            private Port FindPort(
-                WorldPlanGraphNodeView node,
-                string portId,
-                Direction direction)
+            private Port FindPort(WorldPlanGraphNodeView node, string portId, Direction direction)
             {
                 VisualElement container = direction == Direction.Input
                     ? node.inputContainer

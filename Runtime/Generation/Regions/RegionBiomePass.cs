@@ -5,6 +5,7 @@ namespace Jolybob.ProceduralWorld
     /// <summary>
     /// Converts reusable environmental field samples into stable region identities.
     /// The pass does not generate noise or own field configuration.
+    /// Position-aware resolvers receive world coordinates; legacy resolvers remain supported.
     /// </summary>
     public sealed class RegionBiomePass : IWorldGenerationPass
     {
@@ -37,6 +38,8 @@ namespace Jolybob.ProceduralWorld
                 throw new ArgumentNullException(nameof(context));
 
             int size = context.Chunk.Size;
+            var positionAwareResolver = resolver as IPositionAwareRegionResolver;
+
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -45,7 +48,9 @@ namespace Jolybob.ProceduralWorld
                     int worldY = context.ChunkCoordinate.Y * size + y;
 
                     EnvironmentSample sample = context.EnvironmentFields.Sample(worldX, worldY);
-                    RegionId region = resolver.Resolve(sample);
+                    RegionId region = positionAwareResolver != null
+                        ? positionAwareResolver.Resolve(new WorldPosition(worldX, worldY), sample)
+                        : resolver.Resolve(sample);
 
                     var cell = context.Chunk.GetCell(x, y);
                     cell.SetRegion(region);

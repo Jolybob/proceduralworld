@@ -69,6 +69,28 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void Validator_HandlesConnectionToUnknownNodeTypeWithoutThrowing()
+        {
+            WorldPlanNodeTypeDefinition sourceType = CreateRoomType();
+            var definition = new WorldPlanGraphDefinition(
+                new[] { sourceType },
+                new[]
+                {
+                    new WorldPlanNodeDefinition("source", "room", "Source"),
+                    new WorldPlanNodeDefinition("target", "missing", "Target")
+                },
+                new[]
+                {
+                    new WorldPlanConnectionDefinition("edge", "source", "out", "target", "in", WorldPlanConnectionKind.Required)
+                });
+
+            WorldPlanValidationResult result = new WorldPlanCompiler().Validate(definition);
+
+            Assert.IsFalse(result.IsValid);
+            AssertHasCode(result, "UnknownNodeType");
+        }
+
+        [Test]
         public void Validator_RejectsIncompatibleSemanticPortTypes()
         {
             WorldPlanNodeTypeDefinition sourceType = new WorldPlanNodeTypeDefinition(

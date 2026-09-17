@@ -9,12 +9,14 @@ namespace Jolybob.ProceduralWorld.Tilemap
     /// <summary>
     /// Concrete Unity Tilemap presentation adapter for streamed chunks and canonical world-change notifications.
     /// It can be used as an <see cref="IWorldChunkSink"/> and an <see cref="IWorldChangeRenderer"/>.
+    /// Topology mappings are optional so existing tile-only integrations remain source compatible.
     /// </summary>
     public sealed class WorldTilemapRenderer : IWorldChunkSink, IWorldChangeRenderer
     {
         private readonly UnityTilemap tilemap;
         private readonly int chunkSize;
         private readonly IReadOnlyDictionary<WorldTile, TileBase> tiles;
+        private readonly IReadOnlyDictionary<CellTopology, TileBase> topologyTiles;
 
         public UnityTilemap Tilemap => tilemap;
         public int ChunkSize => chunkSize;
@@ -23,11 +25,21 @@ namespace Jolybob.ProceduralWorld.Tilemap
             UnityTilemap tilemap,
             int chunkSize,
             IReadOnlyDictionary<WorldTile, TileBase> tiles)
+            : this(tilemap, chunkSize, tiles, null)
+        {
+        }
+
+        public WorldTilemapRenderer(
+            UnityTilemap tilemap,
+            int chunkSize,
+            IReadOnlyDictionary<WorldTile, TileBase> tiles,
+            IReadOnlyDictionary<CellTopology, TileBase> topologyTiles)
         {
             this.tilemap = tilemap ?? throw new ArgumentNullException(nameof(tilemap));
             if (chunkSize <= 0)
                 throw new ArgumentOutOfRangeException(nameof(chunkSize));
             this.tiles = tiles ?? throw new ArgumentNullException(nameof(tiles));
+            this.topologyTiles = topologyTiles;
             this.chunkSize = chunkSize;
         }
 
@@ -52,7 +64,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 {
                     GeneratedCell cell = chunk.GetCell(x, y);
                     positions[index] = ToTilemapPosition(coordinate, x, y);
-                    tileBases[index] = ResolveTile(cell.Tile);
+                    tileBases[index] = ResolveTile(cell);
                     index++;
                 }
             }
@@ -74,7 +86,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
         public void Render(WorldCellChange change)
         {
-            tilemap.SetTile(ToTilemapPosition(change.Position), ResolveTile(change.After.Tile));
+            tilemap.SetTile(ToTilemapPosition(change.Position), ResolveTile(change.After));
         }
 
         public void RenderBatch(WorldChangeBatch batch)
@@ -91,7 +103,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
             {
                 WorldCellChange change = batch.Changes[i];
                 Vector3Int position = ToTilemapPosition(change.Position);
-                TileBase tile = ResolveTile(change.After.Tile);
+                TileBase tile = ResolveTile(change.After);
 
                 if (!latestTiles.ContainsKey(position))
                     positions.Add(position);
@@ -106,7 +118,16 @@ namespace Jolybob.ProceduralWorld.Tilemap
             tilemap.SetTiles(positions.ToArray(), tileBases);
         }
 
-        private TileBase ResolveTile(WorldTile tile)
+        private TileBase ResolveTile(GeneratedCell cell)
+        {
+            TileBase topologyTile;
+            if (topologyTiles != null && topologyTiles.TryGetValue(cell.Topology, out topologyTile))
+                return topologyTile;
+
+            return ResolveTerrainTile(cell.Tile);
+        }
+
+        private TileBase ResolveTerrainTile(WorldTile tile)
         {
             TileBase result;
             if (!tiles.TryGetValue(tile, out result))

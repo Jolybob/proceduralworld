@@ -76,7 +76,10 @@ namespace Jolybob.ProceduralWorld
             for (var i = 0; i < sourceOrder.Count; i++)
                 QueueRefresh(sourceOrder[i]);
 
-            FlushPendingRefreshes();
+            if (batchDepth == 0)
+            {
+                FlushPendingRefreshes();
+            }
         }
 
         public void Clear()

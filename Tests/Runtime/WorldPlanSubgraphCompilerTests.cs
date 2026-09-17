@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using NUnit.Framework;
 using Jolybob.ProceduralWorld;
 
@@ -9,18 +8,15 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void ExpandsTemplateAndRewiresExposedPorts()
         {
-            WorldPlanGraphDefinition template = CreateRoomTemplate("RoomTemplate", "room", "flowOut", WorldPlanPortDirection.Output);
-            var exposed = new[]
-            {
-                new WorldPlanSubgraphTemplateDefinition(
-                    "RoomTemplate",
-                    "Room Template",
-                    template,
-                    new[]
-                    {
-                        new WorldPlanSubgraphPortDefinition("out", "Out", "room", "flowOut")
-                    })
-            };
+            WorldPlanGraphDefinition templateGraph = CreateRoomTemplate("room", "flowOut", WorldPlanPortDirection.Output);
+            var template = new WorldPlanSubgraphTemplateDefinition(
+                "RoomTemplate",
+                "Room Template",
+                templateGraph,
+                new[]
+                {
+                    new WorldPlanSubgraphPortDefinition("out", "Out", "room", "flowOut")
+                });
 
             WorldPlanNodeTypeDefinition sinkType = CreateType(
                 "Sink",
@@ -36,7 +32,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 {
                     new WorldPlanConnectionDefinition("connect", "dungeon", "out", "sink", "in", WorldPlanConnectionKind.Required)
                 },
-                exposed);
+                new[] { template });
 
             WorldPlanSubgraphCompiler compiler = new WorldPlanSubgraphCompiler();
             WorldPlanSubgraphExpansionResult expansion = compiler.Expand(host);
@@ -81,7 +77,7 @@ namespace Jolybob.ProceduralWorld.Tests
                     }));
 
             var first = new WorldPlanGraphDefinition(
-                new[] { CreateType("Host", new WorldPlanPortDefinition("in", "In", WorldPlanPortDirection.Input, "flow", false, true)) },
+                new WorldPlanNodeTypeDefinition[0],
                 new[]
                 {
                     new WorldPlanNodeDefinition("z", "Host", "Z", "Pair"),
@@ -91,7 +87,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 new[] { template });
 
             var second = new WorldPlanGraphDefinition(
-                new[] { CreateType("Host", new WorldPlanPortDefinition("in", "In", WorldPlanPortDirection.Input, "flow", false, true)) },
+                new WorldPlanNodeTypeDefinition[0],
                 new[]
                 {
                     new WorldPlanNodeDefinition("a", "Host", "A", "Pair"),
@@ -115,7 +111,11 @@ namespace Jolybob.ProceduralWorld.Tests
                 Assert.AreEqual(a.Nodes[i].TypeId, b.Nodes[i].TypeId);
             }
             for (int i = 0; i < a.Connections.Count; i++)
+            {
                 Assert.AreEqual(a.Connections[i].Id, b.Connections[i].Id);
+                Assert.AreEqual(a.Connections[i].SourceNodeId, b.Connections[i].SourceNodeId);
+                Assert.AreEqual(a.Connections[i].TargetNodeId, b.Connections[i].TargetNodeId);
+            }
         }
 
         [Test]
@@ -152,32 +152,23 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void TemplateCycleIsRejected()
+        public void MissingTemplateIsRejected()
         {
-            WorldPlanGraphDefinition graph = new WorldPlanGraphDefinition(
-                new WorldPlanNodeTypeDefinition[0],
-                new[] { new WorldPlanNodeDefinition("self", "__subgraph_instance__", "Self", "Self") },
-                new WorldPlanConnectionDefinition[0]);
-            WorldPlanSubgraphTemplateDefinition self = new WorldPlanSubgraphTemplateDefinition(
-                "Self",
-                "Self",
-                graph);
             WorldPlanGraphDefinition host = new WorldPlanGraphDefinition(
                 new WorldPlanNodeTypeDefinition[0],
-                new[] { new WorldPlanNodeDefinition("instance", "__subgraph_instance__", "Instance", "Self") },
-                new WorldPlanConnectionDefinition[0],
-                new[] { self });
+                new[] { new WorldPlanNodeDefinition("instance", "__subgraph_instance__", "Instance", "Missing") },
+                new WorldPlanConnectionDefinition[0]);
 
             WorldPlanValidationResult validation = new WorldPlanSubgraphCompiler().Validate(host);
 
             Assert.IsFalse(validation.IsValid);
-            Assert.IsTrue(ContainsIssue(validation, "TemplateCycle"));
+            Assert.IsTrue(ContainsIssue(validation, "UnknownTemplate"));
         }
 
         [Test]
         public void MissingExposedPortIsRejected()
         {
-            WorldPlanGraphDefinition templateGraph = CreateRoomTemplate("Template", "room", "out", WorldPlanPortDirection.Output);
+            WorldPlanGraphDefinition templateGraph = CreateRoomTemplate("room", "out", WorldPlanPortDirection.Output);
             WorldPlanSubgraphTemplateDefinition template = new WorldPlanSubgraphTemplateDefinition(
                 "Template",
                 "Template",
@@ -199,7 +190,6 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         private static WorldPlanGraphDefinition CreateRoomTemplate(
-            string unusedTemplateId,
             string roomId,
             string portId,
             WorldPlanPortDirection direction)
@@ -220,12 +210,12 @@ namespace Jolybob.ProceduralWorld.Tests
             return new WorldPlanNodeTypeDefinition(id, id, "Test", 1, 1, 0, ports);
         }
 
-        private static WorldPlanNode FindNode(WorldPlanGraphDefinition definition, string id)
+        private static WorldPlanNodeDefinition FindNode(WorldPlanGraphDefinition definition, string id)
         {
             for (int i = 0; i < definition.Nodes.Count; i++)
             {
                 if (definition.Nodes[i].Id == id)
-                    return null;
+                    return definition.Nodes[i];
             }
 
             return null;

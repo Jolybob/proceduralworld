@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.60] - 2026-09-17
+
+- Added `WorldPresentationDirtySet` as a presentation-side change accumulator for incremental rendering.
+- Coalesced repeated changes for the same `WorldPosition` while preserving the first `Before` state and latest `After` state and operation.
+- Preserved deterministic first-seen position order so downstream renderers receive stable batches without sorting world coordinates.
+- Added batch marking, draining, and clearing APIs so frame/update orchestration can decide when presentation work is flushed.
+- Kept the dirty set independent from Tilemap, visual channels, and generated world data so it can feed terrain and multi-channel presentation sinks alike.
+- Added regression coverage for coalescing, ordering, draining, batch ingestion, and null validation.
+- Added Unity `.meta` files for the incremental presentation runtime and tests.
+- Bumped the package version to 0.1.60.
+- Incremented package version for this update.
+
 ## [0.1.59] - 2026-09-17
 
 - Added `WorldCellVisualOverlayChannel` so supplementary visuals can render simultaneously on independent channels.
@@ -32,7 +44,7 @@
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
 - Added Unity `.meta` files for the new overlay runtime and tests.
-- Bumped the package version to 0.1.57.
+- Bumped package version to 0.1.57.
 - Incremented package version for this update.
 
 ## [0.1.56] - 2026-09-17
@@ -43,7 +55,7 @@
 - Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
 - Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
 - Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped the package version to 0.1.56.
+- Bumped package version to 0.1.56.
 - Incremented package version for this update.
 
 ## [0.1.55] - 2026-09-17
@@ -60,7 +72,7 @@
 - Updated the Tilemap preview to compose topology over terrain through the visual-layer architecture.
 - Added regression coverage for layer ordering, fallthrough, and fallback resolution.
 - Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped the package version to 0.1.54.
+- Bumped package version to 0.1.54.
 - Incremented package version for this update.
 
 ## [0.1.53] - 2026-09-17
@@ -76,7 +88,7 @@
 ## [0.1.52] - 2026-09-17
 
 - Fixed a missing closing parenthesis in `WorldTilemapRendererTests.UnknownWorldTileFailsFast` that caused Unity compilation error CS1026.
-- Bumped the package version to 0.1.52.
+- Bumped package version to 0.1.52.
 - Incremented package version for this update.
 
 ## [0.1.51] - 2026-09-17
@@ -86,7 +98,7 @@
 - Preserved the existing three-argument renderer constructor and terrain-only fallback for compatibility.
 - Updated the runtime Tilemap preview with deterministic visual tiles for generated topology states.
 - Added regression coverage for topology mapping, fallback behavior, and topology-aware direct changes.
-- Bumped the package version to 0.1.51.
+- Bumped package version to 0.1.51.
 - Incremented package version for this update.
 
 ## [0.1.50] - 2026-09-17

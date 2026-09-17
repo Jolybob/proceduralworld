@@ -154,7 +154,8 @@ namespace Jolybob.ProceduralWorld.Tests
             GeneratedChunk loaded = controller.LoadedChunks[new ChunkCoord(0, 0)];
 
             GeneratedCell edited = loaded.GetCell(0, 0);
-            edited.SetTerrain(edited.Terrain, WorldTile.Core);
+            WorldTile replacement = edited.Tile == WorldTile.Core ? WorldTile.Deep : WorldTile.Core;
+            edited.SetTerrain(edited.Terrain, replacement);
             loaded.SetCell(0, 0, edited);
 
             controller.Update(new ChunkCoord(3, 0));

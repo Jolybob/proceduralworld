@@ -12,9 +12,9 @@ The core rule is:
 
 > **World coordinates define the truth; chunks define the execution and storage boundary.**
 
-A world feature must not become a different feature merely because its cells happen to cross a chunk boundary. This is why structure placement is now planned in world space and materialized per chunk.
+A world feature must not become a different feature merely because its cells happen to cross a chunk boundary. Large features are therefore represented as world-space placements first and materialized into chunks second.
 
-The same principle should eventually apply to other large-scale systems such as resource deposits, rivers, chasms, landmarks, roads, biome borders, and points of interest.
+The reusable placement kernel introduced in `0.1.90` is the intended foundation for structures, deposits, rivers, roads, chasms, landmarks, and points of interest.
 
 ## Target system graph
 
@@ -97,7 +97,7 @@ It should eventually contain:
 - optional world bounds or special zones;
 - references to content catalogs.
 
-The existing `ProceduralWorldDefinitionAsset` is the beginning of this layer. It already authors seed/settings, regions, terrains, and macro layouts. Resource, structure, topology, and feature authoring should be added without moving those responsibilities into presentation code.
+The existing `ProceduralWorldDefinitionAsset` is the beginning of this layer. It already authors seed/settings, regions, terrains, and macro layouts. Resource, structure, topology, and broader feature authoring should be added without moving those responsibilities into presentation code.
 
 ### 2. Deterministic world fields
 
@@ -164,33 +164,41 @@ The canonical identifiers are:
 
 ### 5. World feature planning
 
-Large or multi-cell features should be represented as **world-space placements** before any chunk is written.
+Large or multi-cell features are represented as **world-space placements** before any chunk is written.
 
-The target abstraction is:
+The shared runtime kernel is now:
 
 ```text
-Feature definition
+feature placement definition
        |
        v
- deterministic planner
+WorldFeaturePlacementPlanner
        |
        v
- world-space placement(s)
+WorldFeaturePlacement
+       |
+       v
+WorldFeaturePlacementSet
+       |
+       v
+IWorldFeaturePlacementSource
        |
        +----> chunk A intersection
        +----> chunk B intersection
        +----> chunk C intersection
 ```
 
-This is now the structure architecture:
+The reusable contracts are:
 
-- `StructurePlacement` is the stable world-space identity;
-- `StructurePlacementPlanner` creates deterministic placements;
-- `IStructurePlacementSource` discovers placements relevant to a chunk;
-- `StructurePlacementPass` materializes only the local intersection;
-- `StructurePass` remains as a compatibility wrapper.
+- `IWorldFeaturePlacementDefinition` — common placement rules such as footprint, spawn chance, owner-chunk density, and origin constraints;
+- `WorldFeaturePlacement` — immutable world-space identity and rectangular footprint;
+- `WorldFeaturePlacementSet` — deterministic unique placement collection;
+- `WorldFeaturePlacementPlanner` — deterministic owner-chunk anchor generation;
+- `IWorldFeaturePlacementSource` — chunk queries without moving the placement identity into chunk-local coordinates.
 
-Future planners should follow the same model for deposits, rivers, roads, landmark complexes, and other features that can span chunks.
+Structures are the first feature type adapted to this kernel. `StructureDefinition` keeps structure-specific content requirements, while `StructurePlacement` is the compatibility/domain adapter and `StructurePlacementPass` remains responsible for local materialization.
+
+This architecture is intentionally generic so deposits, rivers, roads, chasms, landmark complexes, and points of interest can reuse the same ownership and cross-chunk mechanics rather than each inventing a separate chunk-boundary solution.
 
 ### 6. Generation pipeline
 
@@ -352,10 +360,10 @@ same world definition
 Random streams should be isolated by subsystem and stable inputs:
 
 ```text
-seed + world coordinate/chunk owner + domain + stable salt
+seed + owner chunk + domain + stable feature ID
 ```
 
-Changing structure randomness should not silently change resource randomness. Changing a resource rule should not reorder unrelated post-process randomness.
+The generic feature planner keeps placement randomness in the owner's coordinate domain. A structure adapter uses `WorldRandomDomain.Structures`; future feature types should use their own stable random domains so unrelated systems do not perturb one another.
 
 ## Coordinate contract
 
@@ -375,7 +383,7 @@ chunkX = floor(worldX / N)
 chunkY = floor(worldY / N)
 ```
 
-The current structure placement implementation explicitly protects this boundary because world features must behave identically across positive and negative coordinate space.
+The generic placement source explicitly protects this boundary because world features must behave identically across positive and negative coordinate space.
 
 ## Authoring contract
 
@@ -446,15 +454,14 @@ FEATURE SYSTEM
   |
   +-- caves / topology
   +-- resource deposits
-  +-- world-space structure placement
-  +-- generic feature placement framework
+  +-- generic world feature placement  <-- implemented in 0.1.90
+  +-- world-space structure placement  <-- implemented in 0.1.87 / 0.1.90 adapter
   |
 WORLD SCALE
   |
-  +-- cross-chunk feature ownership
-  +-- deterministic feature queries
+  +-- deterministic cross-chunk feature queries
   +-- connectivity / graph passes
-  +-- points of interest
+  +-- points of interest / landmarks
   |
 RUNTIME
   |
@@ -515,6 +522,6 @@ The target architecture is considered healthy when a project can:
 
 ## Current implementation status
 
-Implemented foundations include deterministic fields, region layouts and resolvers, terrain catalogs, caves/topology, clustered resource deposits, world-space cross-chunk structure placement, post-process pipelines, chunk streaming, persistence, world access/editing, change journals/history/transactions, and a Tilemap presentation adapter.
+Implemented foundations include deterministic fields, region layouts and resolvers, terrain catalogs, caves/topology, clustered resource deposits, the generic world-space feature placement kernel, world-space cross-chunk structure placement, post-process pipelines, chunk streaming, persistence, world access/editing, change journals/history/transactions, and a Tilemap presentation adapter.
 
 The items in this document under **Target roadmap** are architectural direction unless they are explicitly represented by the current runtime APIs. The goal is to keep the package moving toward a world-scale procedural system without coupling future capabilities to today's chunk-local implementation details.

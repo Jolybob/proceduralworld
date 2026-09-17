@@ -9,14 +9,16 @@ namespace Jolybob.ProceduralWorld
     /// </summary>
     public readonly struct StructurePlacement : IEquatable<StructurePlacement>
     {
-        public StructureDefinition Definition { get; }
-        public WorldPosition Anchor { get; }
-        public ChunkCoord OwnerChunk { get; }
+        private readonly WorldFeaturePlacement featurePlacement;
 
-        public int MinX => Anchor.X;
-        public int MinY => Anchor.Y;
-        public int MaxX => checked(Anchor.X + Definition.Width - 1);
-        public int MaxY => checked(Anchor.Y + Definition.Height - 1);
+        public StructureDefinition Definition { get; }
+        public WorldPosition Anchor => featurePlacement.Anchor;
+        public ChunkCoord OwnerChunk => featurePlacement.OwnerChunk;
+
+        public int MinX => featurePlacement.MinX;
+        public int MinY => featurePlacement.MinY;
+        public int MaxX => featurePlacement.MaxX;
+        public int MaxY => featurePlacement.MaxY;
 
         public StructurePlacement(
             StructureDefinition definition,
@@ -24,35 +26,35 @@ namespace Jolybob.ProceduralWorld
             ChunkCoord ownerChunk)
         {
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
-            Anchor = anchor;
-            OwnerChunk = ownerChunk;
+            featurePlacement = new WorldFeaturePlacement(
+                definition.Id.Value,
+                anchor,
+                ownerChunk,
+                definition.Width,
+                definition.Height);
+        }
 
-            long maxX = (long)anchor.X + definition.Width - 1L;
-            long maxY = (long)anchor.Y + definition.Height - 1L;
-            if (maxX > int.MaxValue || maxX < int.MinValue)
-                throw new OverflowException("Structure footprint exceeds the supported world X coordinate range.");
-            if (maxY > int.MaxValue || maxY < int.MinValue)
-                throw new OverflowException("Structure footprint exceeds the supported world Y coordinate range.");
+        internal StructurePlacement(
+            StructureDefinition definition,
+            WorldFeaturePlacement featurePlacement)
+        {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            if (featurePlacement.FeatureId != definition.Id.Value)
+                throw new ArgumentException("Feature placement ID does not match the structure definition.", nameof(featurePlacement));
+            if (featurePlacement.Width != definition.Width || featurePlacement.Height != definition.Height)
+                throw new ArgumentException("Feature placement footprint does not match the structure definition.", nameof(featurePlacement));
+
+            this.featurePlacement = featurePlacement;
         }
 
         public bool Contains(WorldPosition position)
         {
-            return position.X >= MinX && position.X <= MaxX
-                && position.Y >= MinY && position.Y <= MaxY;
+            return featurePlacement.Contains(position);
         }
 
         public bool Intersects(ChunkCoord chunk, int chunkSize)
         {
-            if (chunkSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(chunkSize));
-
-            long chunkMinX = (long)chunk.X * chunkSize;
-            long chunkMinY = (long)chunk.Y * chunkSize;
-            long chunkMaxX = chunkMinX + chunkSize - 1L;
-            long chunkMaxY = chunkMinY + chunkSize - 1L;
-
-            return (long)MinX <= chunkMaxX && (long)MaxX >= chunkMinX
-                && (long)MinY <= chunkMaxY && (long)MaxY >= chunkMinY;
+            return featurePlacement.Intersects(chunk, chunkSize);
         }
 
         public bool Equals(StructurePlacement other)

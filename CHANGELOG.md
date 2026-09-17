@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.90] - 2026-09-17
+
+- Added a reusable world-space feature placement kernel through `IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource`.
+- Adapted structure definitions and deterministic structure planning/source discovery to use the generic feature placement architecture without changing the existing structure-facing APIs.
+- Added regression coverage for generic feature placement determinism, cross-chunk footprints, negative chunk coordinates, and placement de-duplication.
+- Added Unity `.meta` files for the new feature-placement runtime and test assets.
+- Bumped the package version to 0.1.90.
+
 ## [0.1.89] - 2026-09-17
 
 - Added Unity `.meta` files for the `docs` folder and `docs/ARCHITECTURE.md` so package documentation is imported correctly from immutable UPM package folders.

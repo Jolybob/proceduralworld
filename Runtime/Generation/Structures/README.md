@@ -2,29 +2,45 @@
 
 The structure layer places deterministic multi-cell structure footprints into generated chunk data.
 
+Structures are the first feature type implemented on top of the package's generic world-space feature planning kernel.
+
 ## Responsibilities
 
-- choose deterministic structure anchors per chunk
-- validate region and terrain requirements
-- prevent overlap with caves, resources, and other structures
+- define structure-specific content and region/terrain requirements
+- use shared deterministic feature placement rules
+- discover world-space placements from their deterministic owner chunks
+- validate the local chunk intersection before materialization
 - stamp structure IDs into generated cells
 - remain independent from prefabs, Tilemaps, and rendering
 
-## Flow
+## Architecture
 
 ```text
-region + terrain + caves + resources
-                |
-                v
-        StructureCatalog
-                |
-                v
-          StructurePass
-                |
-                v
-      GeneratedCell.Structure
+StructureDefinition
+       |
+       v
+IWorldFeaturePlacementDefinition
+       |
+       v
+WorldFeaturePlacementPlanner
+       |
+       v
+WorldFeaturePlacement
+       |
+       v
+StructurePlacement adapter
+       |
+       v
+StructurePlacementPass
+       |
+       v
+GeneratedCell.Structure
 ```
 
-Structures are disabled by default. A structure definition contains a stable ID, region/terrain requirements, spawn chance, maximum count per chunk, origin-distance constraint, and footprint size.
+The shared feature layer owns world-space placement identity, rectangular footprint geometry, deterministic owner-chunk planning, de-duplication, and chunk-intersection discovery. `StructureDefinition` keeps structure-specific content concerns such as region and terrain compatibility.
 
-A structure footprint is treated atomically: every cell in the footprint must be eligible before the structure is stamped.
+`IStructurePlacementSource` and `StructurePlacementPlanner` remain available as compatibility-facing structure APIs. Internally they delegate to the generic feature placement implementation.
+
+Structures are disabled by default. A structure definition contains a stable ID, region/terrain requirements, spawn chance, maximum count per owner chunk, origin-distance constraint, and footprint size.
+
+A structure footprint is treated atomically: every cell in the footprint must be eligible before the structure is stamped into any local intersection.

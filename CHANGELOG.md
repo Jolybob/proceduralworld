@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.34] - 2026-09-17
+
+- Added `WorldChangeBatch` as an immutable snapshot for related cell changes published as one logical world operation.
+- Added `IWorldChangeBatchListener` for reactive systems that need transaction-scale notifications instead of one callback per cell.
+- Added `IWorldChangeBatchJournal` as an optional journal capability that preserves per-cell history while exposing atomic logical batching.
+- Extended `WorldChangeObserverJournal` with batch subscriptions and deterministic batch notification ordering without changing existing per-cell subscriptions.
+- Updated `WorldEditTransaction.Commit()` to publish one batch when the target journal supports batching, while preserving per-change behavior for existing journals.
+- Added regression tests for transaction batching, direct per-cell notification compatibility, empty batches, and legacy journal fallback.
+- Changed the architecture preview and batching test seed from `127931` to `138427`.
+- Updated package architecture and world-editing documentation with the logical change-batching boundary.
+- Bumped the package version to 0.1.34.
+- Incremented package version for this update.
+
 ## [0.1.33] - 2026-09-17
 
 - Added `WorldEditTransaction` for isolated multi-edit workflows built on the existing `WorldEditService`.
@@ -26,7 +39,7 @@
 
 ## [0.1.31] - 2026-09-17
 
-- Added `WorldEditHistoryEntry` to represent named groups of cell changes as one undo/redo operation.
+- Added `WorldEditHistoryEntry` to represent named groups of changes as one undo/redo operation.
 - Added `WorldEditHistory` to build grouped history entries from `IWorldChangeJournal` records.
 - Added exact before/after undo and redo application through `IWorldChunkAccess`.
 - Added automatic capture of pending journal changes when undo or redo is requested without an explicit commit.

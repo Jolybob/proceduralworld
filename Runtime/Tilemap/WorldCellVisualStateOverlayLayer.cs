@@ -4,7 +4,7 @@ using UnityEngine.Tilemaps;
 
 namespace Jolybob.ProceduralWorld.Tilemap
 {
-    public sealed class WorldCellVisualStateOverlayLayer : IWorldCellVisualOverlayContextLayer
+    public sealed class WorldCellVisualStateOverlayLayer : IWorldCellVisualOverlayContextLayer, IWorldCellVisualOverlayChannelLayer
     {
         private readonly IWorldCellVisualStateProvider stateProvider;
         private readonly IReadOnlyDictionary<WorldCellVisualState, TileBase> tiles;
@@ -13,15 +13,26 @@ namespace Jolybob.ProceduralWorld.Tilemap
             IWorldCellVisualStateProvider stateProvider,
             IReadOnlyDictionary<WorldCellVisualState, TileBase> tiles,
             int order = 100)
+            : this(stateProvider, tiles, new WorldCellVisualOverlayChannel(0), order)
+        {
+        }
+
+        public WorldCellVisualStateOverlayLayer(
+            IWorldCellVisualStateProvider stateProvider,
+            IReadOnlyDictionary<WorldCellVisualState, TileBase> tiles,
+            WorldCellVisualOverlayChannel channel,
+            int order = 100)
         {
             this.stateProvider = stateProvider ?? throw new ArgumentNullException(nameof(stateProvider));
             this.tiles = tiles ?? throw new ArgumentNullException(nameof(tiles));
             if (order < 0)
                 throw new ArgumentOutOfRangeException(nameof(order));
+            Channel = channel;
             Order = order;
         }
 
         public int Order { get; }
+        public WorldCellVisualOverlayChannel Channel { get; }
 
         public bool TryResolve(GeneratedCell cell, out TileBase tile)
         {

@@ -1,0 +1,98 @@
+using System.Collections.Generic;
+using NUnit.Framework;
+
+namespace Jolybob.ProceduralWorld.Tests
+{
+    public sealed class WorldPresentationRegionDemandSourceTests
+    {
+        [Test]
+        public void RegisterRefreshesSourceDemand()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+
+            sources.Register(new TestSource(7, 2, 5));
+
+            Assert.IsTrue(sources.HasSource(7));
+            Assert.AreEqual(1, sources.SourceCount);
+            CollectionAssert.AreEqual(new[] { 2, 5 }, lifecycle.LoadedRegions);
+        }
+
+        [Test]
+        public void ReplacingSourceKeepsRegistrationOrder()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+
+            sources.Register(new TestSource(1, 2));
+            sources.Register(new TestSource(2, 4));
+            sources.Register(new TestSource(1, 3));
+
+            sources.RefreshAll();
+
+            Assert.AreEqual(2, sources.SourceCount);
+            CollectionAssert.AreEqual(new[] { 2, 4, 3 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void UnregisterReleasesOnlyThatSourceDemand()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+
+            sources.Register(new TestSource(1, 2, 8));
+            sources.Register(new TestSource(2, 8, 9));
+            sources.Unregister(1);
+
+            CollectionAssert.AreEqual(new[] { 2, 8, 9 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void ClearRemovesAllRegisteredSources()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+
+            sources.Register(new TestSource(1, 2));
+            sources.Register(new TestSource(2, 5));
+            sources.Clear();
+
+            Assert.AreEqual(0, sources.SourceCount);
+            CollectionAssert.AreEqual(new[] { 5, 2 }, lifecycle.UnloadedRegions);
+        }
+
+        private sealed class TestSource : IWorldPresentationRegionDemandSource
+        {
+            private readonly int[] regions;
+
+            public int SourceId { get; }
+
+            public TestSource(int sourceId, params int[] regions)
+            {
+                SourceId = sourceId;
+                this.regions = regions;
+            }
+
+            public IEnumerable<int> GetDemandedRegions() => regions;
+        }
+
+        private sealed class RecordingLifecycle : IWorldPresentationRegionLifecycle
+        {
+            public List<int> LoadedRegions { get; } = new List<int>();
+            public List<int> UnloadedRegions { get; } = new List<int>();
+
+            public void LoadRegion(int regionId) => LoadedRegions.Add(regionId);
+            public void UnloadRegion(int regionId) => UnloadedRegions.Add(regionId);
+        }
+    }
+}

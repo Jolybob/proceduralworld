@@ -21,10 +21,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
         public int ChunkSize => chunkSize;
         public IWorldCellVisualResolver VisualResolver => visualResolver;
 
-        public WorldTilemapRenderer(
-            UnityTilemap tilemap,
-            int chunkSize,
-            IReadOnlyDictionary<WorldTile, TileBase> tiles)
+        public WorldTilemapRenderer(UnityTilemap tilemap, int chunkSize, IReadOnlyDictionary<WorldTile, TileBase> tiles)
             : this(tilemap, chunkSize, new WorldCellVisualCatalog(tiles))
         {
         }

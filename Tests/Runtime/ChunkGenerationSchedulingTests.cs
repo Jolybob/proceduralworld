@@ -50,6 +50,21 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void SchedulerContainsOnlyPendingRequests()
+        {
+            var scheduler = new DeterministicChunkGenerationScheduler();
+            var coordinate = new ChunkCoord(7, -2);
+
+            Assert.IsFalse(scheduler.Contains(coordinate));
+            scheduler.Enqueue(coordinate, 1);
+            Assert.IsTrue(scheduler.Contains(coordinate));
+
+            ChunkGenerationRequest request;
+            Assert.IsTrue(scheduler.TryDequeue(out request));
+            Assert.IsFalse(scheduler.Contains(coordinate));
+        }
+
+        [Test]
         public void CancelRemovesPendingGeneration()
         {
             var scheduler = new DeterministicChunkGenerationScheduler();
@@ -99,14 +114,18 @@ namespace Jolybob.ProceduralWorld.Tests
             Assert.AreEqual(9, controller.PendingGenerations);
             Assert.AreEqual(0, sink.Loaded.Count);
 
+            Assert.AreEqual(ChunkStreamingState.Pending, controller.GetState(delta.ToLoad[0]));
             Assert.AreEqual(3, controller.Process(3));
             Assert.AreEqual(3, sink.Loaded.Count);
             Assert.AreEqual(6, controller.PendingGenerations);
             Assert.AreEqual(delta.ToLoad[0], sink.Loaded[0].Coordinate);
+            Assert.AreEqual(ChunkStreamingState.Loaded, controller.GetState(delta.ToLoad[0]));
+            Assert.AreEqual(ChunkStreamingState.Pending, controller.GetState(delta.ToLoad[3]));
 
             controller.Update(new ChunkCoord(3, 0));
             Assert.AreEqual(9, sink.Unloaded.Count);
             Assert.AreEqual(9, controller.PendingGenerations);
+            Assert.AreEqual(ChunkStreamingState.Inactive, controller.GetState(new ChunkCoord(0, 0)));
         }
 
         [Test]
@@ -129,10 +148,13 @@ namespace Jolybob.ProceduralWorld.Tests
             Assert.AreEqual(9, controller.PendingGenerations);
             Assert.AreEqual(0, controller.LoadedChunks.Count);
             Assert.AreEqual(0, sink.Loaded.Count);
+            Assert.AreEqual(ChunkStreamingState.Pending, controller.GetState(delta.ToLoad[0]));
 
             Assert.AreEqual(2, controller.Process(2));
             Assert.AreEqual(2, controller.LoadedChunks.Count);
             Assert.AreEqual(2, sink.Loaded.Count);
+            Assert.AreEqual(ChunkStreamingState.Loaded, controller.GetState(delta.ToLoad[0]));
+            Assert.AreEqual(ChunkStreamingState.Pending, controller.GetState(delta.ToLoad[2]));
         }
 
         [Test]

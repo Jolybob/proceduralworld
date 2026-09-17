@@ -5,9 +5,9 @@ namespace Jolybob.ProceduralWorld.Tests
 {
     public sealed class WorldSceneCatalogTests
     {
-        private static WorldSceneDefinition Scene(string id, int weight = 1, bool unique = false, IEnumerable<string> tags = null)
+        private static WorldSceneDefinition Scene(string id, int weight = 1, bool unique = false, IEnumerable<string> tags = null, int maxWorldInstances = 0)
         {
-            return new WorldSceneDefinition(id, id.GetHashCode() & int.MaxValue, 4, 4, 1f, 1, 0, 0, weight, true, unique, WorldSceneOrientationMode.RotateAndMirror, tags);
+            return new WorldSceneDefinition(id, id.GetHashCode() & int.MaxValue, 4, 4, 1f, 1, 0, maxWorldInstances, weight, true, unique, WorldSceneOrientationMode.RotateAndMirror, tags);
         }
 
         [Test]
@@ -38,10 +38,15 @@ namespace Jolybob.ProceduralWorld.Tests
             var unique = Scene("temple", 1, true, new[] { "desert" });
             var catalog = new WorldSceneCatalog(new[] { common, unique });
             var consumed = new HashSet<string> { "temple" };
-            WorldSceneDefinition selected = new WorldSceneSelector().Select(
-                99,
-                catalog,
-                new WorldSceneSelectionSettings(tags: new[] { "desert" }, consumedUniqueSceneIds: consumed));
+            WorldSceneDefinition selected = new WorldSceneSelector().Select(99, catalog, new WorldSceneSelectionSettings(tags: new[] { "desert" }, consumedUniqueSceneIds: consumed));
+            Assert.IsNull(selected);
+        }
+
+        [Test]
+        public void WorldInstanceLimitFiltersExhaustedScene()
+        {
+            var limited = Scene("ruins", 1, false, new[] { "forest" }, 2);
+            WorldSceneDefinition selected = new WorldSceneSelector().Select(5, new WorldSceneCatalog(new[] { limited }), new WorldSceneSelectionSettings(tags: new[] { "forest" }, worldSceneUsageCounts: new Dictionary<string, int> { { "ruins", 2 } }));
             Assert.IsNull(selected);
         }
 
@@ -50,19 +55,14 @@ namespace Jolybob.ProceduralWorld.Tests
         {
             var forest = Scene("forest", 1, false, new[] { "forest" });
             var desert = Scene("desert", 1, false, new[] { "desert" });
-            WorldSceneDefinition selected = new WorldSceneSelector().SelectForRegion(
-                5,
-                new WorldSceneCatalog(new[] { forest, desert }),
-                new[] { "desert" });
+            WorldSceneDefinition selected = new WorldSceneSelector().SelectForRegion(5, new WorldSceneCatalog(new[] { forest, desert }), new[] { "desert" });
             Assert.AreEqual("desert", selected.Id);
         }
 
         [Test]
         public void EmptyEligiblePoolReturnsNull()
         {
-            WorldSceneDefinition selected = new WorldSceneSelector().Select(
-                5,
-                new WorldSceneCatalog(new[] { Scene("disabled", 0) }));
+            WorldSceneDefinition selected = new WorldSceneSelector().Select(5, new WorldSceneCatalog(new[] { Scene("disabled", 0) }));
             Assert.IsNull(selected);
         }
     }

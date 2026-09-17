@@ -22,6 +22,7 @@ namespace Jolybob.ProceduralWorld
         public ResourceCatalog Resources { get; }
         public StructureCatalog Structures { get; }
         public TopologyPipeline Topology { get; }
+        public WorldPlanRuntime WorldPlan { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -132,6 +133,29 @@ namespace Jolybob.ProceduralWorld
             Resources = resources ?? throw new ArgumentNullException(nameof(resources));
             Structures = structures ?? throw new ArgumentNullException(nameof(structures));
             Topology = topology ?? new TopologyPipeline();
+            WorldPlan = null;
+        }
+
+        public WorldGenerationContext(
+            int seed,
+            WorldGenerationSettings settings,
+            ChunkCoord chunkCoordinate,
+            GeneratedChunk chunk,
+            INoiseField noise,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
+            WorldRandomService random,
+            ResourceCatalog resources,
+            StructureCatalog structures,
+            TopologyPipeline topology,
+            WorldPlanRuntime worldPlan)
+            : this(seed, settings, chunkCoordinate, chunk, noise, environmentFields, caveFields,
+                random, resources, structures, topology)
+        {
+            if (worldPlan != null && worldPlan.Seed != seed)
+                throw new ArgumentException("World-plan seed must match the chunk generator seed.", nameof(worldPlan));
+
+            WorldPlan = worldPlan;
         }
     }
 

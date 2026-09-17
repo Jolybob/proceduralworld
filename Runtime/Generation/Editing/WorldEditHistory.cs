@@ -32,49 +32,49 @@ namespace Jolybob.ProceduralWorld
         private readonly IWorldChangeJournal journal;
         private readonly List<WorldEditHistoryEntry> undoStack = new List<WorldEditHistoryEntry>();
         private readonly List<WorldEditHistoryEntry> redoStack = new List<WorldEditHistoryEntry>();
-        private int observedChangeCount;
+        private int journalCursor;
 
         public IWorldChunkAccess Access => access;
         public IWorldChangeJournal Journal => journal;
         public IReadOnlyList<WorldEditHistoryEntry> UndoEntries => undoStack;
         public IReadOnlyList<WorldEditHistoryEntry> RedoEntries => redoStack;
-        public bool CanUndo => undoStack.Count > 0;
-        public bool CanRedo => redoStack.Count > 0;
+        public bool CanUndo => undoStack.Count > 0 || journal.Changes.Count > journalCursor;
+        public bool CanRedo => redoStack.Count > 0 && journal.Changes.Count == journalCursor;
 
         public WorldEditHistory(IWorldChunkAccess access, IWorldChangeJournal journal)
         {
             this.access = access ?? throw new ArgumentNullException(nameof(access));
             this.journal = journal ?? throw new ArgumentNullException(nameof(journal));
-            observedChangeCount = journal.Changes.Count;
+            journalCursor = journal.Changes.Count;
         }
 
         /// <summary>
-        /// Captures journal changes created since the last synchronization as one history entry.
+        /// Captures changes recorded since the previous history cursor as one named entry.
         /// </summary>
         public WorldEditHistoryEntry Commit(string name = null)
         {
-            SyncJournal();
-            if (observedChangeCount == 0 || observedChangeCount <= undoChangeTotal)
-                return null;
+            ResetIfJournalWasCleared();
 
-            int start = GetUndoChangeTotal();
             int end = journal.Changes.Count;
-            var captured = new List<WorldCellChange>(Math.Max(0, end - start));
-            for (int i = start; i < end; i++)
-                captured.Add(journal.Changes[i]);
-
-            if (captured.Count == 0)
+            if (end <= journalCursor)
                 return null;
+
+            var captured = new List<WorldCellChange>(end - journalCursor);
+            for (int i = journalCursor; i < end; i++)
+                captured.Add(journal.Changes[i]);
 
             var entry = new WorldEditHistoryEntry(name, captured);
             undoStack.Add(entry);
             redoStack.Clear();
+            journalCursor = end;
             return entry;
         }
 
         public bool Undo()
         {
-            SyncJournal();
+            ResetIfJournalWasCleared();
+            CommitPendingChanges();
+
             if (undoStack.Count == 0)
                 return false;
 
@@ -93,7 +93,9 @@ namespace Jolybob.ProceduralWorld
 
         public bool Redo()
         {
-            SyncJournal();
+            ResetIfJournalWasCleared();
+            CommitPendingChanges();
+
             if (redoStack.Count == 0)
                 return false;
 
@@ -114,37 +116,23 @@ namespace Jolybob.ProceduralWorld
         {
             undoStack.Clear();
             redoStack.Clear();
-            observedChangeCount = journal.Changes.Count;
+            journalCursor = journal.Changes.Count;
         }
 
-        private int undoChangeTotal
+        private void CommitPendingChanges()
         {
-            get
-            {
-                int total = 0;
-                for (int i = 0; i < undoStack.Count; i++)
-                    total += undoStack[i].Changes.Count;
-                return total;
-            }
+            if (journal.Changes.Count > journalCursor)
+                Commit();
         }
 
-        private int GetUndoChangeTotal()
+        private void ResetIfJournalWasCleared()
         {
-            int total = 0;
-            for (int i = 0; i < undoStack.Count; i++)
-                total += undoStack[i].Changes.Count;
-            return total;
-        }
+            if (journal.Changes.Count >= journalCursor)
+                return;
 
-        private void SyncJournal()
-        {
-            if (journal.Changes.Count < observedChangeCount)
-            {
-                undoStack.Clear();
-                redoStack.Clear();
-            }
-
-            observedChangeCount = journal.Changes.Count;
+            undoStack.Clear();
+            redoStack.Clear();
+            journalCursor = journal.Changes.Count;
         }
     }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.72] - 2026-09-17
+
+- Added `WorldPresentationRegionDemandAggregator` to compose region demand from multiple independent consumers before residency reconciliation.
+- Preserved deterministic source registration order and first-seen region order across all demand sources.
+- Added source replacement, removal, shared-region retention, and empty-state regression coverage.
+- Added Unity `.meta` files for the new runtime and test assets.
+- Bumped the package version to 0.1.72.
+- Incremented package version for this update.
+
 ## [0.1.71] - 2026-09-17
 
 - Fixed the deterministic demand planner regression test to match the planner's documented first-seen demand order.

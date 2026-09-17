@@ -15,7 +15,7 @@ namespace Jolybob.ProceduralWorld.Tests
         public void TearDown()
         {
             for (int i = 0; i < createdTiles.Count; i++)
-                Object.DestroyImmediate(createdTiles[i]);
+                UnityEngine.Object.DestroyImmediate(createdTiles[i]);
             createdTiles.Clear();
         }
 

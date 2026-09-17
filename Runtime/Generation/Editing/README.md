@@ -21,6 +21,8 @@ player / gameplay system
                                                         +----> IWorldChangeBatchListener
                                                                    |
                                                                    +----> IWorldChangeRenderer
+                                                                                 |
+                                                                                 +----> WorldTilemapRenderer
 ```
 
 ## Responsibilities
@@ -48,6 +50,7 @@ player / gameplay system
 - `WorldChangeObserverJournal` — decorates a journal with per-cell and logical-batch notifications.
 - `IWorldChangeRenderer` — presentation contract that consumes canonical changes without owning world state.
 - `WorldChangeRenderObserver` — connects the observable journal to an `IWorldChangeRenderer` and manages both subscriptions.
+- `WorldTilemapRenderer` — concrete Unity Tilemap adapter that also implements `IWorldChunkSink` for streaming integration.
 
 ## Change tracking
 
@@ -102,5 +105,19 @@ using (var observer = new WorldChangeRenderObserver(journal, renderer))
 ```
 
 `Render(WorldCellChange)` is used for direct edits. `RenderBatch(WorldChangeBatch)` is used for transaction commits, preventing the common error where a multi-cell operation causes one rendering pass per cell. A concrete implementation can translate these contracts into Tilemap updates, mesh invalidation, VFX, UI refreshes, or another presentation technology without changing the world-generation or editing layers.
+
+`WorldTilemapRenderer` provides the first concrete adapter. It accepts a `UnityEngine.Tilemaps.Tilemap`, a chunk size, and a `WorldTile` to `TileBase` mapping. As an `IWorldChunkSink`, `Load()` paints a complete generated chunk and `Unload()` clears only that chunk's bounds. As an `IWorldChangeRenderer`, direct edits update one position while logical batches use `Tilemap.SetTiles()` and coalesce repeated positions to the latest `After.Tile` state.
+
+Example streaming wiring:
+
+```csharp
+var tilemapRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles);
+var streaming = new WorldPersistentChunkStreamingController(
+    persistence,
+    planner,
+    tilemapRenderer);
+```
+
+The same adapter can be attached to `WorldChangeRenderObserver` to keep streamed presentation and edit presentation on the same Tilemap without making the generation or editing layers depend on Unity rendering types.
 
 No rendering adapter owns canonical world state. `IWorldChunkAccess` remains the state boundary and `WorldCellChange` remains the shared data contract.

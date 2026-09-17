@@ -7,7 +7,7 @@
 - Added minimum-footprint and minimum-clearance aware spacing so generated plan layouts do not overlap occupied node regions.
 - Added deterministic semantic port anchors with stable left/right/bottom side assignment and ordinal port ordering.
 - Added regression coverage for input-order independence, clearance-aware spacing, deterministic layer advancement, and connection-driven port anchoring.
-- Added world-plan layout architecture documentation.
+- Added world-plan layout architecture documentation and Unity `.meta` metadata for the new runtime/test assets.
 - Bumped the package version to 0.1.97.
 
 ## [0.1.96] - 2026-09-17
@@ -60,7 +60,12 @@
 
 ## [0.1.91] - 2026-09-17
 
-- Added `WorldPlanLayout` deterministic world-space layout primitives and a first-pass constraint-aware solver.
+- Added `WorldFeaturePlacementQueryContext` and `IWorldFeaturePlacementQuerySource` for deterministic feature discovery without constructing a `GeneratedChunk`.
+- Added `WorldFeaturePlacementIndex` with cached chunk queries, world-space point containment queries, rectangle intersection queries, de-duplication, and explicit invalidation.
+- Updated `DeterministicWorldFeaturePlacementSource` to support both generation-context and lightweight query-context discovery.
+- Added regression coverage for query caching, negative-coordinate floor division, cross-chunk de-duplication, and cache invalidation.
+- Updated feature and package documentation to expose feature querying as a world-level gameplay/runtime boundary.
+- Bumped the package version to 0.1.91.
 
 ## [0.1.90] - 2026-09-17
 

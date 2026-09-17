@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.64] - 2026-09-17
+
+- Added `IWorldPresentationRegionImpactResolver` so one world change can invalidate multiple presentation regions without coupling the core to chunk or streaming implementations.
+- Added `SingleRegionPresentationImpactResolver` to preserve the existing one-region resolver behavior and constructor compatibility.
+- Updated `WorldPresentationDirtyRegionSet` to coalesce changes independently per impacted region while preserving deterministic first-seen region and position ordering.
+- Updated `WorldPresentationRegionFlushCoordinator` with an impact-resolver constructor so boundary-sensitive presentation can flush all affected regions.
+- Added regression coverage for multi-region invalidation, shared-region coalescing, zero-impact changes, and multi-region coordinator flushing.
+- Bumped the package version to 0.1.64.
+- Incremented package version for this update.
+
 ## [0.1.62] - 2026-09-17
 
 - Added `WorldPresentationFlushCoordinator` as the presentation orchestration boundary between world-change notifications and rendering.
@@ -63,7 +73,7 @@
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
 - Added Unity `.meta` files for the new overlay runtime and tests.
-- Bumped the package version to 0.1.57.
+- Bumped package version to 0.1.57.
 - Incremented package version for this update.
 
 ## [0.1.56] - 2026-09-17
@@ -73,14 +83,13 @@
 - Updated the Tilemap preview to compose topology, resource, and structure layers over terrain fallback.
 - Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
 - Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
-- Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped the package version to 0.1.56.
+- Bumped package version to 0.1.56.
 - Incremented package version for this update.
 
 ## [0.1.55] - 2026-09-17
 
 - Fixed Unity test compilation error CS0104 by explicitly qualifying `UnityEngine.Object` in `WorldCellVisualLayerCatalogTests`.
-- Bumped the package version to 0.1.55.
+- Bumped package version to 0.1.55.
 - Incremented package version for this update.
 
 ## [0.1.54] - 2026-09-17

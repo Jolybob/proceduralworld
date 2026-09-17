@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Jolybob.ProceduralWorld
 {
@@ -15,19 +16,21 @@ namespace Jolybob.ProceduralWorld
     /// Deterministically discovers owner chunks whose possible feature footprints can intersect
     /// the requested chunk, then delegates anchor generation to <see cref="WorldFeaturePlacementPlanner"/>.
     /// </summary>
-    public sealed class DeterministicWorldFeaturePlacementSource : IWorldFeaturePlacementSource
+    public sealed class DeterministicWorldFeaturePlacementSource :
+        IWorldFeaturePlacementSource,
+        IWorldFeaturePlacementQuerySource
     {
         private readonly IWorldFeaturePlacementDefinition[] definitions;
         private readonly WorldRandomDomain randomDomain;
 
         public DeterministicWorldFeaturePlacementSource(
-            System.Collections.Generic.IEnumerable<IWorldFeaturePlacementDefinition> definitions,
+            IEnumerable<IWorldFeaturePlacementDefinition> definitions,
             WorldRandomDomain randomDomain)
         {
             if (definitions == null)
                 throw new ArgumentNullException(nameof(definitions));
 
-            this.definitions = new System.Collections.Generic.List<IWorldFeaturePlacementDefinition>(definitions).ToArray();
+            this.definitions = new List<IWorldFeaturePlacementDefinition>(definitions).ToArray();
             if (this.definitions.Length == 0)
                 throw new ArgumentException("Feature placement definitions cannot be empty.", nameof(definitions));
 
@@ -44,10 +47,21 @@ namespace Jolybob.ProceduralWorld
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
+
+            Collect(
+                new WorldFeaturePlacementQueryContext(
+                    context.Seed,
+                    context.Chunk.Size,
+                    context.ChunkCoordinate),
+                output);
+        }
+
+        public void Collect(WorldFeaturePlacementQueryContext context, WorldFeaturePlacementSet output)
+        {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
 
-            int chunkSize = context.Chunk.Size;
+            int chunkSize = context.ChunkSize;
             var planner = new WorldFeaturePlacementPlanner(context.Seed);
 
             for (int i = 0; i < definitions.Length; i++)

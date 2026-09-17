@@ -8,13 +8,20 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void MarkGroupsChangesByRegionAndPreservesRegionOrder()
         {
-            var dirty = new WorldPresentationDirtyRegionSet(new FixedRegionResolver());
+            var resolver = new FixedRegionResolver();
+            var firstPosition = new WorldPosition(1, 1);
+            var secondPosition = new WorldPosition(2, 2);
+            var thirdPosition = new WorldPosition(3, 3);
+            resolver.Set(firstPosition, 1);
+            resolver.Set(secondPosition, 1);
+            resolver.Set(thirdPosition, 2);
+            var dirty = new WorldPresentationDirtyRegionSet(resolver);
             var cell = new GeneratedCell(WorldTile.Deep, 0);
             var empty = new GeneratedCell(WorldTile.Empty, 0);
 
-            dirty.Mark(new WorldCellChange(new WorldPosition(1, 1), cell, empty, WorldEditOperationKind.SetTile));
-            dirty.Mark(new WorldCellChange(new WorldPosition(2, 2), cell, empty, WorldEditOperationKind.SetTile));
-            dirty.Mark(new WorldCellChange(new WorldPosition(3, 3), cell, empty, WorldEditOperationKind.SetTile));
+            dirty.Mark(new WorldCellChange(firstPosition, cell, empty, WorldEditOperationKind.SetTile));
+            dirty.Mark(new WorldCellChange(secondPosition, cell, empty, WorldEditOperationKind.SetTile));
+            dirty.Mark(new WorldCellChange(thirdPosition, cell, empty, WorldEditOperationKind.SetTile));
 
             IReadOnlyList<WorldPresentationDirtyRegionBatch> batches = dirty.Drain();
 
@@ -28,10 +35,12 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void MarkCoalescesWithinEachRegion()
         {
-            var dirty = new WorldPresentationDirtyRegionSet(new FixedRegionResolver());
+            var resolver = new FixedRegionResolver();
+            var position = new WorldPosition(1, 1);
+            resolver.Set(position, 1);
+            var dirty = new WorldPresentationDirtyRegionSet(resolver);
             var cell = new GeneratedCell(WorldTile.Deep, 0);
             var empty = new GeneratedCell(WorldTile.Empty, 0);
-            var position = new WorldPosition(1, 1);
 
             dirty.Mark(new WorldCellChange(position, cell, empty, WorldEditOperationKind.SetTile));
             dirty.Mark(new WorldCellChange(position, empty, cell, WorldEditOperationKind.SetCell));
@@ -48,9 +57,12 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void DrainClearsAllRegions()
         {
-            var dirty = new WorldPresentationDirtyRegionSet(new FixedRegionResolver());
+            var resolver = new FixedRegionResolver();
+            var position = new WorldPosition(1, 1);
+            resolver.Set(position, 1);
+            var dirty = new WorldPresentationDirtyRegionSet(resolver);
             var cell = new GeneratedCell(WorldTile.Deep, 0);
-            dirty.Mark(new WorldCellChange(new WorldPosition(1, 1), cell, cell, WorldEditOperationKind.SetCell));
+            dirty.Mark(new WorldCellChange(position, cell, cell, WorldEditOperationKind.SetCell));
 
             dirty.Drain();
 
@@ -70,9 +82,16 @@ namespace Jolybob.ProceduralWorld.Tests
 
         private sealed class FixedRegionResolver : IWorldPresentationRegionResolver
         {
+            private readonly Dictionary<WorldPosition, int> regions = new Dictionary<WorldPosition, int>();
+
+            public void Set(WorldPosition position, int regionId)
+            {
+                regions[position] = regionId;
+            }
+
             public int ResolveRegion(WorldPosition position)
             {
-                return position.X < 3 ? 1 : 2;
+                return regions[position];
             }
         }
     }

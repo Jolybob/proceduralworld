@@ -17,8 +17,10 @@ namespace Jolybob.ProceduralWorld.Tilemap
         [SerializeField, Min(1)] private int chunksRadius = 2;
         [SerializeField] private bool generateOnStart = true;
         [SerializeField] private bool centerCameraOnWorld = true;
+        [SerializeField] private bool frameCameraOnWorld = true;
 
         private UnityTilemap tilemap;
+        private TilemapRenderer tilemapRenderer;
         private WorldTilemapRenderer worldRenderer;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
         private readonly Dictionary<CellTopology, TileBase> topologyTiles = new Dictionary<CellTopology, TileBase>();
@@ -62,26 +64,47 @@ namespace Jolybob.ProceduralWorld.Tilemap
             }
 
             if (centerCameraOnWorld && Camera.main != null)
-                Camera.main.transform.position = new Vector3(0f, 0f, Camera.main.transform.position.z);
+                CenterCamera(Camera.main);
         }
 
         private void EnsureTilemap()
         {
             tilemap = GetComponent<UnityTilemap>();
-            if (tilemap != null)
+            if (tilemap == null)
+            {
+                var grid = GetComponent<Grid>();
+                if (grid == null)
+                    gameObject.AddComponent<Grid>();
+
+                tilemap = gameObject.AddComponent<UnityTilemap>();
+            }
+
+            tilemapRenderer = GetComponent<TilemapRenderer>();
+            if (tilemapRenderer == null)
+                tilemapRenderer = gameObject.AddComponent<TilemapRenderer>();
+
+            tilemapRenderer.enabled = true;
+            tilemapRenderer.sortOrder = TilemapRenderer.SortOrder.BottomLeft;
+        }
+
+        private void CenterCamera(Camera camera)
+        {
+            var cameraPosition = camera.transform.position;
+            cameraPosition.x = 0f;
+            cameraPosition.y = 0f;
+
+            if (cameraPosition.z >= -0.1f)
+                cameraPosition.z = -10f;
+
+            camera.transform.position = cameraPosition;
+
+            if (!frameCameraOnWorld || !camera.orthographic)
                 return;
 
-            var grid = GetComponent<Grid>();
-            if (grid == null)
-                grid = gameObject.AddComponent<Grid>();
-
-            tilemap = GetComponent<UnityTilemap>();
-            if (tilemap == null)
-                tilemap = gameObject.AddComponent<UnityTilemap>();
-
-            var renderer = GetComponent<TilemapRenderer>();
-            if (renderer == null)
-                renderer = gameObject.AddComponent<TilemapRenderer>();
+            var diameter = (chunksRadius * 2 + 1) * settings.chunkSize;
+            var halfHeight = diameter * 0.5f;
+            var halfWidth = halfHeight * camera.aspect;
+            camera.orthographicSize = Mathf.Max(halfHeight, halfWidth);
         }
 
         private void BuildRuntimeTiles()

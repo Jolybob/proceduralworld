@@ -1,6 +1,6 @@
 {
   "name": "com.jolybob.proceduralworld",
-  "version": "0.1.94",
+  "version": "0.1.95",
   "displayName": "Procedural World",
   "description": "A modular, deterministic 2D procedural world generation framework for Unity.",
   "unity": "6000.0",

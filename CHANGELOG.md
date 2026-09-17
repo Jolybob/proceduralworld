@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.95] - 2026-09-17
+
+- Fixed Unity 6 `WorldPlanGraphWindow` editor compilation errors caused by using the inaccessible `UnityEngine.UIElements.Toolbar` type; the editor now uses a plain `VisualElement` toolbar container.
+- Qualified GraphView manipulator registration with `this.AddManipulator(...)` so Unity's `VisualElementExtensions.AddManipulator` extension is resolved correctly.
+- Updated world-plan graph ports to use Unity 6's generic `Port.Create<Edge>(...)` factory and removed the redundant custom edge connector listener.
+- Preserved graph editing, typed-port compatibility filtering, connection persistence, node movement, deletion, validation, and framing behaviour.
+- Bumped the package version to 0.1.95.
+
 ## [0.1.94] - 2026-09-17
 
 - Added a typed world-plan graph runtime model with deterministic node and connection ordering.

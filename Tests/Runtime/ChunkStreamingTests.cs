@@ -6,17 +6,27 @@ namespace Jolybob.ProceduralWorld.Tests
     public class ChunkStreamingTests
     {
         [Test]
-        public void PlannerLoadsExpectedSquareInStableOrder()
+        public void PlannerLoadsExpectedSquareInNearestFirstOrder()
         {
             var planner = new ChunkStreamingPlanner(1);
             ChunkStreamingDelta delta = planner.Update(new ChunkCoord(0, 0));
 
             Assert.AreEqual(9, delta.ToLoad.Count);
             Assert.AreEqual(0, delta.ToUnload.Count);
-            Assert.AreEqual(new ChunkCoord(-1, -1), delta.ToLoad[0]);
-            Assert.AreEqual(new ChunkCoord(0, -1), delta.ToLoad[1]);
-            Assert.AreEqual(new ChunkCoord(1, -1), delta.ToLoad[2]);
-            Assert.AreEqual(new ChunkCoord(1, 1), delta.ToLoad[8]);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new ChunkCoord(0, 0),
+                    new ChunkCoord(-1, 0),
+                    new ChunkCoord(1, 0),
+                    new ChunkCoord(0, -1),
+                    new ChunkCoord(0, 1),
+                    new ChunkCoord(-1, -1),
+                    new ChunkCoord(1, -1),
+                    new ChunkCoord(-1, 1),
+                    new ChunkCoord(1, 1)
+                },
+                delta.ToLoad);
         }
 
         [Test]

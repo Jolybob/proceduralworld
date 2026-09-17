@@ -115,8 +115,6 @@ namespace Jolybob.ProceduralWorld.Tilemap
             cameraPosition.x = 0f;
             cameraPosition.y = 0f;
 
-            // This component is a 2D Tilemap preview. Keep the preview camera looking straight
-            // at the XY plane instead of inheriting an arbitrary 3D sample-scene orientation.
             cameraTransform.rotation = Quaternion.identity;
 
             if (cameraPosition.z >= -0.1f)
@@ -127,8 +125,6 @@ namespace Jolybob.ProceduralWorld.Tilemap
             if (!frameCameraOnWorld)
                 return;
 
-            // Force the preview into a predictable 2D framing mode. This avoids a perspective
-            // camera showing only the sample scene skybox while the generated Tilemap is on XY.
             camera.orthographic = true;
 
             var diameter = (chunksRadius * 2 + 1) * settings.chunkSize;
@@ -150,9 +146,9 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
             if (topologyTiles.Count == 0)
             {
-                // Empty topology is the absence of a topology override. Terrain must remain visible
-                // through the fallback catalog for the normal generated cells.
-                topologyTiles[CellTopology.Solid] = tiles[WorldTile.Deep];
+                // Solid is the default topology for generated terrain. Leave it unmapped here so
+                // the terrain catalog remains the authoritative visual for normal solid cells.
+                // Only explicit topology changes override terrain in this preview.
                 topologyTiles[CellTopology.Water] = CreateTile("Water", new Color(0.08f, 0.42f, 0.85f, 0.9f));
                 topologyTiles[CellTopology.Lava] = CreateTile("Lava", new Color(0.9f, 0.22f, 0.04f, 0.95f));
                 topologyTiles[CellTopology.Chasm] = CreateTile("Chasm", new Color(0.04f, 0.03f, 0.05f, 1f));

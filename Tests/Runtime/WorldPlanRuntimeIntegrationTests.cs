@@ -74,21 +74,11 @@ namespace Jolybob.ProceduralWorld.Tests
                 1,
                 new WorldPlanPortDefinition[0]);
 
-            var entranceType = new WorldPlanNodeTypeDefinition(
-                "entrance",
-                "Entrance",
-                "Dungeon",
-                4,
-                4,
-                1,
-                new WorldPlanPortDefinition[0]);
-
             return new WorldPlanGraphDefinition(
-                new[] { entranceType, roomType },
+                new[] { roomType },
                 new[]
                 {
-                    new WorldPlanNodeDefinition("room_a", "room", "Room A"),
-                    new WorldPlanNodeDefinition("entry", "entrance", "Entry")
+                    new WorldPlanNodeDefinition("room_a", "room", "Room A")
                 },
                 Array.Empty<WorldPlanConnectionDefinition>());
         }
@@ -101,7 +91,7 @@ namespace Jolybob.ProceduralWorld.Tests
             Assert.IsTrue(runtime.Succeeded);
             Assert.IsNotNull(runtime.Plan);
             Assert.IsNotNull(runtime.Layout);
-            Assert.AreEqual(2, runtime.Layout.Nodes.Count);
+            Assert.AreEqual(1, runtime.Layout.Nodes.Count);
             Assert.AreEqual(0, runtime.Realization.Count);
         }
 

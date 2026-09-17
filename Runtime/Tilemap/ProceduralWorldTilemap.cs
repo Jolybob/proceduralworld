@@ -120,7 +120,8 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
             if (topologyTiles.Count == 0)
             {
-                topologyTiles[CellTopology.Empty] = tiles[WorldTile.Empty];
+                // Empty topology is the absence of a topology override. Terrain must remain visible
+                // through the fallback catalog for the normal generated cells.
                 topologyTiles[CellTopology.Solid] = tiles[WorldTile.Deep];
                 topologyTiles[CellTopology.Water] = CreateTile("Water", new Color(0.08f, 0.42f, 0.85f, 0.9f));
                 topologyTiles[CellTopology.Lava] = CreateTile("Lava", new Color(0.9f, 0.22f, 0.04f, 0.95f));

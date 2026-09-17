@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.46] - 2026-09-17
+
+- Added `MacroRegionDefinition` and immutable `MacroRegionCatalog` for authorable large-scale radial/sector world layouts.
+- Added `IPositionAwareRegionResolver` so region resolvers can use deterministic world-space coordinates without breaking existing field-only resolvers.
+- Added `RadialSectorRegionResolver` with radial bounds, angular sectors, deterministic boundary noise, radial/angular warping, priorities, stable overlap resolution, and fallback regions.
+- Added `macroRegionsEnabled` to `WorldGenerationSettings`; the default generator can now opt into macro-region layout while preserving the existing threshold resolver by default.
+- Added regression coverage for resolver determinism, sector selection, fallback behavior, and generator integration.
+- Bumped the package version to 0.1.46.
+- Incremented package version for this update.
+
 ## [0.1.45] - 2026-09-17
 
 - Added explicit `ChunkStreamingState` lifecycle states for scheduled streaming: `Inactive`, `Pending`, and `Loaded`.

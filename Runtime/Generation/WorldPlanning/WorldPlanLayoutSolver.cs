@@ -13,6 +13,7 @@ namespace Jolybob.ProceduralWorld
         {
             public readonly List<List<WorldPlanNode>> Layers = new List<List<WorldPlanNode>>();
             public int Width;
+            public int Height;
         }
 
         public WorldPlanLayoutResult Solve(WorldPlan plan, WorldPlanLayoutSettings settings = null)
@@ -113,7 +114,6 @@ namespace Jolybob.ProceduralWorld
                 Component component = components[componentIndex];
                 var layerWidths = new int[component.Layers.Count];
                 var layerHeights = new int[component.Layers.Count];
-                int componentHeight = 0;
 
                 for (int layer = 0; layer < component.Layers.Count; layer++)
                 {
@@ -131,22 +131,16 @@ namespace Jolybob.ProceduralWorld
 
                     layerWidths[layer] = width;
                     layerHeights[layer] = height;
-                    component.Width = Math.Max(component.Width, width);
+                    component.Width = checked(component.Width + (layer == 0 ? 0 : settings.NodeSpacing) + width);
+                    component.Height = Math.Max(component.Height, height);
                 }
 
-                for (int layer = 0; layer < layerHeights.Length; layer++)
-                {
-                    componentHeight = checked(componentHeight + layerHeights[layer]);
-                    if (layer + 1 < layerHeights.Length)
-                        componentHeight = checked(componentHeight + settings.NodeSpacing);
-                }
-
-                int layerY = 0;
+                int layerX = 0;
                 for (int layer = 0; layer < component.Layers.Count; layer++)
                 {
                     List<WorldPlanNode> layerNodes = component.Layers[layer];
-                    int rowOffsetX = (component.Width - layerWidths[layer]) / 2;
-                    int x = checked((int)(componentCursorX + rowOffsetX));
+                    int rowOffsetY = (component.Height - layerHeights[layer]) / 2;
+                    int y = rowOffsetY;
                     for (int i = 0; i < layerNodes.Count; i++)
                     {
                         WorldPlanNode node = layerNodes[i];
@@ -155,9 +149,9 @@ namespace Jolybob.ProceduralWorld
                         int height = node.Type.MinimumHeight;
                         int occupiedWidth = GetOccupiedWidth(node);
                         int occupiedHeight = GetOccupiedHeight(node);
-                        int yOffset = (layerHeights[layer] - occupiedHeight) / 2;
-                        int nodeX = checked(x + clearance);
-                        int nodeY = checked(layerY + yOffset + clearance);
+                        int rowOffset = (layerWidths[layer] - occupiedWidth) / 2;
+                        int nodeX = checked((int)(componentCursorX + layerX + rowOffset + clearance));
+                        int nodeY = checked(y + clearance);
 
                         nodeLayouts.Add(new WorldPlanNodeLayout(
                             node.Id,
@@ -166,10 +160,10 @@ namespace Jolybob.ProceduralWorld
                             height,
                             clearance));
 
-                        x = checked(x + occupiedWidth + settings.NodeSpacing);
+                        y = checked(y + occupiedHeight + settings.NodeSpacing);
                     }
 
-                    layerY = checked(layerY + layerHeights[layer] + settings.NodeSpacing);
+                    layerX = checked(layerX + layerWidths[layer] + settings.NodeSpacing);
                 }
 
                 componentCursorX = checked(componentCursorX + component.Width + settings.ComponentSpacing);

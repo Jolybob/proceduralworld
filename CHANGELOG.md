@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.48] - 2026-09-17
+
+- Fixed the topology generation contract so `ChasmPass` compiles against the canonical `WorldGenerationSettings` and `GeneratedCell` APIs.
+- Added canonical `CellTopology` state to generated cells with `SetTopology`, including the `Chasm` flag.
+- Added chasm settings to `WorldGenerationSettings` and integrated `ChasmPass` into the default generation pipeline.
+- Updated cave carving to keep topology state synchronized with empty tiles.
+- Updated persistence equality and hashing to include topology state.
+- Fixed the chasm minimum-distance calculation to use integer arithmetic without an invalid float-to-long conversion.
+- Bumped the package version to 0.1.48.
+- Incremented package version for this update.
+
 ## [0.1.47] - 2026-09-17
 
 - Added missing Unity `.meta` files for the topology folder, topology scripts/documentation, and topology runtime tests.

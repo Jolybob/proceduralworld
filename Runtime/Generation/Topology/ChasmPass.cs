@@ -65,7 +65,7 @@ namespace Jolybob.ProceduralWorld
         private bool CanCreateChasm(int worldX, int worldY)
         {
             long squaredDistance = (long)worldX * worldX + (long)worldY * worldY;
-            long minimumSquared = (long)minimumDistance * minimumDistance;
+            long minimumSquared = (long)minimumDistance * (long)minimumDistance;
             return squaredDistance >= minimumSquared;
         }
     }

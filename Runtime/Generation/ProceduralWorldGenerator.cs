@@ -28,6 +28,13 @@ namespace Jolybob.ProceduralWorld
         [Min(0f)] public float caveMinimumDistance = 24f;
         public int caveSeedOffset = 303;
 
+        [Header("Topology / Chasms")]
+        public bool chasmsEnabled = false;
+        [Min(0.001f)] public float chasmCellSize = 80f;
+        [Min(0f)] public float chasmWidth = 5f;
+        [Min(0f)] public float chasmMinimumDistance = 240f;
+        public int chasmSeedOffset = 1703;
+
         [Header("Resources")]
         public bool resourcesEnabled = false;
 
@@ -208,6 +215,7 @@ namespace Jolybob.ProceduralWorld
                 .Add(new RegionBiomePass(resolver))
                 .Add(new TerrainPass(regions, terrains))
                 .Add(new CavePass(settings))
+                .Add(new ChasmPass(settings))
                 .Add(new ResourcePass(resources))
                 .Add(new StructurePass(structures))
                 .Add(new WorldPostProcessPass(postProcess));

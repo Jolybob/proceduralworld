@@ -9,6 +9,7 @@ namespace Jolybob.ProceduralWorld
         Carved = 1 << 0,
         Reserved = 1 << 1,
         HasResource = 1 << 2,
-        HasStructure = 1 << 3
+        HasStructure = 1 << 3,
+        Chasm = 1 << 4
     }
 }

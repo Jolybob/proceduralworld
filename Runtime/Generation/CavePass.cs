@@ -55,7 +55,7 @@ namespace Jolybob.ProceduralWorld
                         continue;
 
                     var cell = context.Chunk.GetCell(x, y);
-                    cell.Tile = WorldTile.Empty;
+                    cell.SetTopology(CellTopology.Empty, WorldTile.Empty);
                     cell.Flags |= GeneratedCellFlags.Carved;
                     context.Chunk.SetCell(x, y, cell);
                 }

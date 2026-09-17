@@ -80,13 +80,15 @@ namespace Jolybob.ProceduralWorld
                    left.Structure == right.Structure &&
                    left.Tile == right.Tile &&
                    left.Biome == right.Biome &&
-                   left.Flags == right.Flags;
+                   left.Flags == right.Flags &&
+                   left.Topology == right.Topology;
         }
 
         public static int GetCellHashCode(GeneratedCell cell)
         {
             int first = HashCode.Combine(cell.Region, cell.Terrain, cell.Resource, cell.Structure);
-            return HashCode.Combine(first, cell.Tile, cell.Biome, cell.Flags);
+            int second = HashCode.Combine(cell.Tile, cell.Biome, cell.Flags, cell.Topology);
+            return HashCode.Combine(first, second);
         }
     }
 }

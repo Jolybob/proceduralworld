@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.56] - 2026-09-17
+
+- Added `ResourceWorldCellVisualLayer` for resource-specific presentation with flag-gated fallthrough.
+- Added `StructureWorldCellVisualLayer` for structure-specific presentation with flag-gated fallthrough.
+- Updated the Tilemap preview to compose topology, resource, and structure layers over terrain fallback.
+- Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
+- Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
+- Added Unity `.meta` files for the new visual-layer runtime and tests.
+- Bumped the package version to 0.1.56.
+- Incremented package version for this update.
+
 ## [0.1.55] - 2026-09-17
 
 - Fixed Unity test compilation error CS0104 by explicitly qualifying `UnityEngine.Object` in `WorldCellVisualLayerCatalogTests`.

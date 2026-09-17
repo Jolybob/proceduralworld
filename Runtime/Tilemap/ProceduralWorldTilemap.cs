@@ -21,6 +21,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
         private UnityTilemap tilemap;
         private WorldTilemapRenderer worldRenderer;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
+        private readonly Dictionary<CellTopology, TileBase> topologyTiles = new Dictionary<CellTopology, TileBase>();
 
         private void Start()
         {
@@ -34,7 +35,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
             EnsureTilemap();
             BuildRuntimeTiles();
             tilemap.ClearAllTiles();
-            worldRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles);
+            worldRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles, topologyTiles);
 
             var generator = new ProceduralWorldGenerator(seed, settings);
 
@@ -72,14 +73,23 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
         private void BuildRuntimeTiles()
         {
-            if (tiles.Count > 0)
-                return;
+            if (tiles.Count == 0)
+            {
+                tiles[WorldTile.Core] = CreateTile("Core", new Color(0.95f, 0.75f, 0.25f));
+                tiles[WorldTile.Inner] = CreateTile("Inner", new Color(0.45f, 0.30f, 0.65f));
+                tiles[WorldTile.Mid] = CreateTile("Mid", new Color(0.25f, 0.55f, 0.75f));
+                tiles[WorldTile.Deep] = CreateTile("Deep", new Color(0.18f, 0.24f, 0.30f));
+                tiles[WorldTile.Empty] = CreateTile("Empty", new Color(0f, 0f, 0f, 0f));
+            }
 
-            tiles[WorldTile.Core] = CreateTile("Core", new Color(0.95f, 0.75f, 0.25f));
-            tiles[WorldTile.Inner] = CreateTile("Inner", new Color(0.45f, 0.30f, 0.65f));
-            tiles[WorldTile.Mid] = CreateTile("Mid", new Color(0.25f, 0.55f, 0.75f));
-            tiles[WorldTile.Deep] = CreateTile("Deep", new Color(0.18f, 0.24f, 0.30f));
-            tiles[WorldTile.Empty] = CreateTile("Empty", new Color(0f, 0f, 0f, 0f));
+            if (topologyTiles.Count == 0)
+            {
+                topologyTiles[CellTopology.Empty] = tiles[WorldTile.Empty];
+                topologyTiles[CellTopology.Solid] = tiles[WorldTile.Deep];
+                topologyTiles[CellTopology.Water] = CreateTile("Water", new Color(0.08f, 0.42f, 0.85f, 0.9f));
+                topologyTiles[CellTopology.Lava] = CreateTile("Lava", new Color(0.9f, 0.22f, 0.04f, 0.95f));
+                topologyTiles[CellTopology.Chasm] = CreateTile("Chasm", new Color(0.04f, 0.03f, 0.05f, 1f));
+            }
         }
 
         private TileBase CreateTile(string tileName, Color color)

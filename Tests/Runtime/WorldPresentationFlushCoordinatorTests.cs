@@ -8,7 +8,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void FlushCoalescesDirectChangesAndPreservesOrder()
         {
-            var journal = new WorldChangeObserverJournal(new WorldChangeJournal());
+            var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
             var renderer = new RecordingRenderer();
             var coordinator = new WorldPresentationFlushCoordinator(journal, renderer);
             var cell = new GeneratedCell(WorldTile.Deep, 0);
@@ -34,7 +34,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void FlushDoesNothingWhenClean()
         {
-            var journal = new WorldChangeObserverJournal(new WorldChangeJournal());
+            var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
             var renderer = new RecordingRenderer();
             var coordinator = new WorldPresentationFlushCoordinator(journal, renderer);
 
@@ -46,7 +46,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void FlushCoalescesLogicalBatchNotifications()
         {
-            var journal = new WorldChangeObserverJournal(new WorldChangeJournal());
+            var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
             var renderer = new RecordingRenderer();
             var coordinator = new WorldPresentationFlushCoordinator(journal, renderer);
             var cell = new GeneratedCell(WorldTile.Deep, 0);
@@ -71,7 +71,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void DisposeStopsNotificationsAndClearsPendingChanges()
         {
-            var journal = new WorldChangeObserverJournal(new WorldChangeJournal());
+            var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
             var renderer = new RecordingRenderer();
             var coordinator = new WorldPresentationFlushCoordinator(journal, renderer);
             var cell = new GeneratedCell(WorldTile.Deep, 0);

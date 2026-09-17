@@ -23,16 +23,16 @@ DETERMINISTIC WORLD FIELDS
                  v
         world-space placements
                  |
-                 v
-          CHUNK MATERIALIZER
-                 |
-                 v
-          GeneratedChunk data
-          /        |        \
-         v         v         v
-    STREAMING  PERSISTENCE  GAMEPLAY
-         \         |         /
-          +-------+--------+
+        +--------+---------+
+        |                  |
+        v                  v
+   MATERIALIZATION      QUERIES
+        |                  |
+        v                  v
+   CHUNK DATA       placement index/cache
+        |
+        v
+   STREAMING / PERSISTENCE / GAMEPLAY
                   |
                   v
           CHANGE / EVENT LAYER
@@ -43,7 +43,7 @@ DETERMINISTIC WORLD FIELDS
 
 The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Current implementation — 0.1.90
+## Current implementation — 0.1.91
 
 The runtime provides:
 
@@ -53,7 +53,8 @@ The runtime provides:
 - caves, liquids, chasms, and topology passes;
 - clustered deterministic resource deposits;
 - a generic world-space feature placement kernel;
-- cross-chunk structure placement built on that generic kernel;
+- cached world-space feature queries independent of chunk materialization;
+- cross-chunk structure placement built on the generic kernel;
 - ordered post-process generation;
 - deterministic chunk streaming and persistence-aware streaming;
 - world access and controlled edit services;
@@ -102,7 +103,21 @@ feature definition
       -> local materialization
 ```
 
-`IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource` form the reusable kernel. Structures adapt their existing API to this kernel rather than owning a parallel placement implementation.
+`IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource` form the reusable planning kernel.
+
+The query side is deliberately separate:
+
+```text
+IWorldFeaturePlacementQuerySource
+              |
+              v
+WorldFeaturePlacementIndex
+       /          |          \
+    chunk       point       area
+    query       query       query
+```
+
+The index plans each queried chunk once, caches the deterministic placement set, and can answer world-space point or rectangle queries without generating the corresponding `GeneratedChunk`. Repeated queries reuse cached planning results until explicitly invalidated.
 
 ## Determinism
 
@@ -158,6 +173,8 @@ Persistence stores the sparse divergence between the deterministic base world an
 
 Gameplay should use `IWorldChunkAccess` and `WorldEditService` instead of reaching into chunk storage.
 
+Feature gameplay systems can additionally use `WorldFeaturePlacementIndex` for deterministic point, area, and chunk placement queries without coupling queries to renderer residency.
+
 Successful mutations produce `WorldCellChange` records through `IWorldChangeJournal`. Transactions can publish one logical `WorldChangeBatch`, allowing rendering, networking, analytics, UI, or other observers to react at the appropriate granularity.
 
 ## Presentation
@@ -174,7 +191,7 @@ Runtime
   deterministic fields
   regions / terrain
   topology
-  feature planning
+  feature planning + queries
   generation
   streaming contracts
   persistence contracts
@@ -207,6 +224,7 @@ canonical world data
   -> resource deposits
   -> generic world feature placement
   -> cross-chunk structure placement
+  -> deterministic feature queries / caching
   -> connectivity / graph generation
   -> points of interest / landmarks
   -> generation scheduling and budgets
@@ -232,6 +250,7 @@ The primary public boundaries include:
 - `IWorldFeaturePlacementDefinition`
 - `WorldFeaturePlacement` / `WorldFeaturePlacementSet`
 - `IWorldFeaturePlacementSource` / `WorldFeaturePlacementPlanner`
+- `IWorldFeaturePlacementQuerySource` / `WorldFeaturePlacementIndex`
 - `IWorldGenerationPass` / `WorldGenerationPipeline`
 - `IStructurePlacementSource` / `StructurePlacementPlanner`
 - `IWorldChunkSink` / `ChunkStreamingPlanner`
@@ -250,7 +269,7 @@ The package contains an EditMode test assembly under `Tests/Runtime`.
 
 For Git-installed packages, enable the package in the consuming project's `testables` list, then run the EditMode tests from Unity's Test Runner.
 
-The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, streaming, persistence, editing, history, notifications, and presentation boundaries.
+The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, feature query caching and spatial queries, streaming, persistence, editing, history, notifications, and presentation boundaries.
 
 ## Install
 
@@ -260,7 +279,7 @@ In Unity 6, install from Git using:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-The package manifest currently declares version `0.1.90`.
+The package manifest currently declares version `0.1.91`.
 
 ## Scope
 

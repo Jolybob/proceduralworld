@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.74] - 2026-09-17
+
+- Added `IWorldPresentationRegionDemandSource` for independent, pull-based region demand providers.
+- Added `WorldPresentationRegionDemandSourceCoordinator` to register, replace, refresh, unregister, and clear demand sources deterministically.
+- Kept aggregation, planning, residency, and lifecycle execution separated behind existing architecture boundaries.
+- Added regression coverage for source registration, replacement, unregistration, shared demand, and clearing.
+- Added Unity `.meta` files for the new runtime and test assets.
+- Bumped the package version to 0.1.74.
+- Incremented package version for this update.
+
 ## [0.1.73] - 2026-09-17
 
 - Integrated `WorldPresentationRegionDemandAggregator` into `WorldPresentationRegionDemandCoordinator` so multiple independent demand sources reconcile through the existing planner and residency layers.

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.110] - 2026-09-18
+
+- Added deterministic `WorldPlanSelector` and weighted `WorldPlanCandidate` selection using world seed, stable selection salt, canonical candidate IDs, enable flags, and required tags.
+- Integrated authored world-plan candidate catalogs into `ProceduralWorldDefinitionAsset` while preserving the existing single-graph fallback.
+- Added regression coverage for order-independent selection, tag filtering, disabled/zero-weight candidates, and empty catalogs.
+- Added deterministic world-plan selection architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.110.
+
 ## [0.1.109] - 2026-09-18
 
 - Fixed the resumable checkpoint regression test to match the documented zero-based initial execution step (`Start` = step 0).

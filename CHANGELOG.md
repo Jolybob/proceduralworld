@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.104] - 2026-09-17
+
+- Added persistent `WorldGenerationWorkStatus` state for pending, running, completed, and failed generation work.
+- Changed the dependency-aware graph so dequeued work remains in the graph as `Running` until explicitly completed or failed; dependency edges therefore survive execution budgets.
+- Added `Complete`, `Fail`, `Retry`, status counters, and status queries for deterministic execution lifecycle management.
+- Updated the dependency scheduler runner to mark successful executor calls completed and failed calls failed before propagating the exception.
+- Added failed-dependency diagnostics and deterministic retry behavior.
+- Added regression coverage for multi-budget phase execution, running prerequisites, failed work, retry, and persistent dependency state.
+- Hardened cycle diagnostics so running prerequisites are reported as blocked work rather than falsely classified as dependency cycles.
+- Bumped the package version to 0.1.104.
+
 ## [0.1.103] - 2026-09-17
 
 - Added `WorldGenerationWorkKey` so generation work is identified by `(chunk, phase)` rather than chunk alone.

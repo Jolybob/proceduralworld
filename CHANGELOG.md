@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.21] - 2026-09-17
+
+- Added `IWorldPostProcessStep` for composable, ordered world-data modifications after the main generation passes.
+- Added `WorldPostProcessPipeline` with deterministic ordering by step `Order`.
+- Added `WorldPostProcessContext` with chunk access, world-coordinate helpers, settings access, and a step-isolated deterministic random stream.
+- Added `WorldPostProcessPass` at order `900` so post-processing has a stable insertion point after structures and before future streaming/persistence stages.
+- Added a new `ProceduralWorldGenerator` constructor overload for injecting a post-process pipeline while preserving all existing constructor signatures.
+- Kept the default post-process stage empty so existing generated output remains unchanged unless a project explicitly adds modifications.
+- Added deterministic, ordering, and salted-stream regression tests for post-processing.
+- Changed the Tilemap preview and primary deterministic test seed from `97531` to `86420` for this architecture update.
+- Added post-process architecture documentation and usage examples.
+- Bumped the package version to 0.1.21.
+- Incremented package version for this update.
+
 ## [0.1.20] - 2026-09-17
 
 - Added canonical `StructureId` state to generated cells.

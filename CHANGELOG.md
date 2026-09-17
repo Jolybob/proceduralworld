@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.36] - 2026-09-17
+
+- Added `WorldTilemapRenderer` as the first concrete Unity presentation adapter implementing both `IWorldChunkSink` and `IWorldChangeRenderer`.
+- Chunk loads now render directly into a Tilemap and chunk unloads clear only the unloaded chunk bounds.
+- Direct world edits update a single Tilemap position through the canonical `After.Tile` state.
+- Transaction-scale rendering uses `Tilemap.SetTiles()` and coalesces repeated positions to the latest state in the logical batch.
+- Missing `WorldTile` to `TileBase` mappings fail fast with a clear `KeyNotFoundException` instead of silently producing an invalid presentation.
+- Updated `ProceduralWorldTilemap` to use the reusable `WorldTilemapRenderer` instead of maintaining a second chunk-rendering implementation.
+- Added Tilemap integration tests for chunk coordinate mapping, unload clearing, direct cell updates, batch coalescing, and missing mappings.
+- Updated the package test assembly to reference the Tilemap rendering assembly.
+- Changed the architecture preview and rendering test seed from `149863` to `161729`.
+- Updated root and editing architecture documentation with the concrete Tilemap adapter and streaming wiring.
+- Bumped the package version to 0.1.36.
+- Incremented package version for this update.
+
 ## [0.1.35] - 2026-09-17
 
 - Added `IWorldChangeRenderer` as a presentation boundary for converting canonical world changes into rendering or other presentation updates.

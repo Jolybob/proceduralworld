@@ -105,14 +105,31 @@ namespace Jolybob.ProceduralWorld.Tests
         {
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(43017, settings);
-            var store = new InMemoryWorldChunkStore();
+            var store = new MismatchedStore();
             var persistence = new WorldChunkPersistenceService(generator, store);
-            store.Save(new WorldChunkSaveData(
-                new ChunkCoord(9, 9),
-                new[] { new WorldCellModification(0, 0, new GeneratedCell(WorldTile.Core, 1)) }));
 
             Assert.Throws<System.InvalidOperationException>(
                 () => persistence.LoadChunk(new ChunkCoord(8, 9)));
+        }
+
+        private sealed class MismatchedStore : IWorldChunkStore
+        {
+            public bool TryLoad(ChunkCoord coordinate, out WorldChunkSaveData data)
+            {
+                data = new WorldChunkSaveData(
+                    new ChunkCoord(9, 9),
+                    new[] { new WorldCellModification(0, 0, new GeneratedCell(WorldTile.Core, 1)) });
+                return true;
+            }
+
+            public void Save(WorldChunkSaveData data)
+            {
+            }
+
+            public bool Delete(ChunkCoord coordinate)
+            {
+                return false;
+            }
         }
     }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.101] - 2026-09-17
+
+- Added `WorldRealizationEdit`, `WorldRealizationBatch`, and `WorldRealizationMap` as the deterministic world-space boundary between semantic intent and chunk materialization.
+- Added source traceability, operation kinds, priorities, stable canonical ordering, conflict detection, removal, point/chunk/rectangle queries, and negative-coordinate indexing.
+- Added `IWorldPlanRealizationSource` and `WorldPlanRealizer` to convert lowered world-plan feature placements into renderer/gameplay-independent world edits.
+- Added regression coverage for deterministic batches, negative coordinates, same-kind conflicts, different-layer coexistence, and deduplicated rectangle queries.
+- Added world-realization architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.101.
+
 ## [0.1.100] - 2026-09-17
 
 - Added `WorldReservation` and `WorldReservationMap` as a deterministic world-space coordination layer for claimed, protected, occupied, or otherwise reserved areas.

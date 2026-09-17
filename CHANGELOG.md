@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.67] - 2026-09-17
+
+- Added `WorldPresentationRegionResidencyCoordinator` to make presentation-region load state explicit and idempotent.
+- Prevented duplicate region loads and unloads through tracked residency state.
+- Added deterministic reverse-load-order clearing so dependent presentation state can be released predictably.
+- Kept residency orchestration framework-neutral and independent from concrete streaming or Tilemap implementations.
+- Added regression coverage for idempotent transitions, deterministic clearing, and disposal behavior.
+- Added Unity `.meta` files for the residency runtime and tests.
+- Bumped the package version to 0.1.67.
+- Incremented package version for this update.
+
 ## [0.1.66] - 2026-09-17
 
 - Added `IWorldPresentationRegionLifecycle` as a framework-neutral load/unload boundary for region presentation and future chunk streaming.

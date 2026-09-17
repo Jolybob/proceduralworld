@@ -59,11 +59,12 @@ namespace Jolybob.ProceduralWorld.Tests
 
             Assert.AreEqual(1, runner.Run(1, "worker", 0, 10));
             Assert.AreEqual(WorldGenerationWorkStatus.Running, graph.GetStatus(Key(0, 0)));
-            Assert.AreEqual(1, executor.Received[0].Step);
+            Assert.AreEqual(0, executor.Received[0].Step);
 
             Assert.AreEqual(1, runner.Run(1, "worker", 1, 10));
             Assert.AreEqual(WorldGenerationWorkStatus.Completed, graph.GetStatus(Key(0, 0)));
             Assert.AreEqual(2, executor.Received.Count);
+            Assert.AreEqual(1, executor.Received[1].Step);
             Assert.AreEqual(1, executor.Received[1].CompletedUnits);
         }
 

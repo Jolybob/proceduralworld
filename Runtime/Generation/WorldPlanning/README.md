@@ -1,10 +1,10 @@
 # World Planning Runtime
 
-This module contains the typed semantic world-plan graph, deterministic compiler, reusable hierarchical subgraph expansion, and world-space layout layer.
+This module contains the typed semantic world-plan graph, deterministic compiler, reusable hierarchical subgraph expansion, world-space layout, runtime lowering, and chunk-facing realization boundary.
 
 The plan layer sits between authored semantic intent and world-space feature/materialization systems.
 
-Current runtime types:
+Current runtime types include:
 
 - `WorldPlanGraphDefinition`
 - `WorldPlanNodeTypeDefinition`
@@ -23,6 +23,15 @@ Current runtime types:
 - `WorldPlanLayoutPort`
 - `WorldPlanLayout`
 - `WorldPlanLayoutSolver`
+- `WorldPlanFeatureLoweringSettings`
+- `WorldPlanFeatureLowerer`
+- `WorldPlanFeaturePlacement`
+- `WorldPlanRealizer`
+- `WorldPlanRuntimeSettings`
+- `WorldPlanRuntimeBuilder`
+- `WorldPlanRuntime`
+- `IWorldPlanChunkGenerator`
+- `WorldPlanChunkGeneration`
 - `WorldPlan`
 
 ## Hierarchical plans
@@ -73,25 +82,83 @@ Node minimum width, height, and clearance are treated as occupied layout constra
 
 Port anchors are placed on node perimeters using semantic connection direction and stable port ordering. Connected sources use the right side, connected targets use the left side, and unconnected bidirectional ports use the bottom side.
 
+## Runtime plan program
+
+`WorldPlanRuntimeBuilder` is now the authoritative orchestration boundary for plan-driven generation:
+
+```text
+WorldPlanGraphDefinition
+        |
+        v
+WorldPlanSubgraphCompiler
+        |
+        v
+WorldPlanCompiler
+        |
+        v
+WorldPlanLayoutSolver
+        |
+        +----> WorldPlanFeatureLowerer (optional)
+        |             |
+        |             v
+        |        WorldPlanRealizer (optional)
+        |             |
+        |             v
+        +------> WorldRealizationMap
+                         |
+                         v
+                  chunk intersection query
+```
+
+The builder executes these stages once per world runtime, rather than recreating semantic planning inside each chunk. Feature lowering remains optional because feature catalogs and realization semantics are application-owned extension points.
+
+`WorldPlanRuntime` indexes realization edits by chunk only as an acceleration structure. World coordinates remain the authoritative identity and no chunk-local copy of the semantic plan is created.
+
+The plan runtime carries an explicit `ChunkSize`. Lowering settings must use that same chunk size, and a generator rejects a supplied plan runtime whose chunk size differs from `WorldGenerationSettings.chunkSize`. This prevents cross-boundary realization lookups from silently using a different execution grid.
+
+## Chunk-generation integration
+
+`ProceduralWorldGenerator` implements `IWorldPlanChunkGenerator` when supplied with a `WorldPlanRuntime`. The same runtime is also exposed on `WorldGenerationContext` so custom generation passes can inspect the global plan while they materialize a chunk.
+
+The chunk boundary is intentionally explicit:
+
+```text
+WorldPlanRuntime
+      |
+      +-- global plan/layout/realization truth
+      |
+      v
+WorldGenerationContext.WorldPlan
+      |
+      +-- custom materialization pass
+      |
+      v
+GeneratedChunk
+```
+
+Consumers that only have `IWorldChunkGenerator` can use `WorldPlanChunkGeneration.TryCollectRealizationEdits(...)` to detect and query the optional plan capability without coupling to `ProceduralWorldGenerator`.
+
 ## Determinism
 
-Expansion and layout both canonicalize their inputs by stable semantic identifiers. Reordering serialized graph lists does not change scoped IDs, node footprints, or port anchors.
+Expansion, compilation, layout, lowering, realization ordering, and chunk indexing all canonicalize their inputs by stable semantic identifiers and world coordinates. Reordering serialized graph lists does not change scoped IDs, node footprints, port anchors, or realization lookup results.
 
-Canvas positions and Unity authoring objects are not part of the runtime plan or runtime layout representation.
+Canvas positions and Unity authoring objects are not part of the deterministic runtime plan or runtime layout representation.
+
+## Authoring boundary
+
+`ProceduralWorldDefinitionAsset` can now reference a `WorldPlanGraphAsset`. The graph is compiled and laid out with the world definition's seed when the generator is created, using the authored world chunk size for plan indexing. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
 
 ## Runtime boundary
 
-The runtime planning module has no dependency on `UnityEditor`, GraphView, Tilemap, GameObjects, or scene hierarchies. Authoring assets compile into plain runtime definitions, then into a `WorldPlan`, then into a world-space `WorldPlanLayout`.
+The runtime planning module has no dependency on `UnityEditor`, GraphView, Tilemap, GameObjects, or scene hierarchies. Authoring assets compile into plain runtime definitions, then into a `WorldPlan`, then into world-space plan data shared by chunk generation.
 
-The next realization stages can consume the layout without creating a chunk-local planning layer:
+The remaining materialization stages can consume the same world-space truth without creating a chunk-local planning layer:
 
 ```text
-WorldPlanLayout
+WorldPlanRuntime
     |
     +----> terrain-aware feasibility
-    +----> feature-placement lowering
+    +----> feature placement
     +----> world-space corridor/path planning
-    |
-    v
-chunk-local materialization
+    +----> chunk-local materialization
 ```

@@ -6,8 +6,8 @@ namespace Jolybob.ProceduralWorld.Authoring
 {
     /// <summary>
     /// Unity-authored world definition that assembles the framework's data-only catalogs,
-    /// macro layout, and generation settings into a deterministic chunk generator.
-    /// The asset contains no Tilemap or presentation dependency.
+    /// macro layout, optional semantic world plan, and generation settings into a deterministic
+    /// chunk generator. The asset contains no Tilemap or presentation dependency.
     /// </summary>
     [CreateAssetMenu(
         fileName = "ProceduralWorldDefinition",
@@ -66,26 +66,34 @@ namespace Jolybob.ProceduralWorld.Authoring
         [Header("Terrain")]
         [SerializeField] private List<TerrainProfileEntry> terrainProfiles = new List<TerrainProfileEntry>();
 
+        [Header("Semantic World Plan")]
+        [SerializeField] private WorldPlanGraphAsset worldPlanGraph;
+
         public int Seed => seed;
 
         public WorldGenerationSettings Settings => settings;
 
         public RegionLayoutMode LayoutMode => regionLayout;
 
+        public WorldPlanGraphAsset WorldPlanGraph => worldPlanGraph;
+
         /// <summary>
-        /// Creates a generator using the authored catalogs and region layout.
-        /// Resource, structure, topology, and post-process catalogs retain their framework defaults
-        /// until a future authoring layer supplies them explicitly.
+        /// Creates a generator using the authored catalogs and region layout. When a semantic
+        /// world-plan graph is assigned, it is compiled and laid out once at generator creation;
+        /// chunk generation receives the same immutable plan runtime through its context.
+        /// Feature lowering/materialization still remains an explicit runtime policy boundary.
         /// </summary>
         public ProceduralWorldGenerator CreateGenerator()
         {
+            WorldGenerationSettings resolvedSettings = settings ?? new WorldGenerationSettings();
             RegionCatalog regions = BuildRegionCatalog();
             TerrainCatalog terrains = BuildTerrainCatalog();
             IRegionResolver resolver = BuildRegionResolver();
+            WorldPlanRuntime worldPlan = BuildWorldPlanRuntime(resolvedSettings.chunkSize);
 
             return new ProceduralWorldGenerator(
                 seed,
-                settings ?? new WorldGenerationSettings(),
+                resolvedSettings,
                 null,
                 null,
                 null,
@@ -95,7 +103,19 @@ namespace Jolybob.ProceduralWorld.Authoring
                 null,
                 null,
                 null,
-                resolver);
+                resolver,
+                worldPlan);
+        }
+
+        private WorldPlanRuntime BuildWorldPlanRuntime(int chunkSize)
+        {
+            if (worldPlanGraph == null)
+                return null;
+
+            return new WorldPlanRuntimeBuilder().Build(
+                seed,
+                worldPlanGraph.BuildDefinition(),
+                new WorldPlanRuntimeSettings(chunkSize: chunkSize));
         }
 
         private RegionCatalog BuildRegionCatalog()

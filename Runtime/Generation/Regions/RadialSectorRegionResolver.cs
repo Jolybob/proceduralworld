@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
@@ -11,10 +12,10 @@ namespace Jolybob.ProceduralWorld
     public sealed class RadialSectorRegionResolver : IPositionAwareRegionResolver
     {
         private const float TwoPi = 6.28318530717958647692f;
-        private const float HalfPi = 1.57079632679489661923f;
 
         private readonly MacroRegionCatalog catalog;
-        private readonly INoiseField boundaryField;
+        private readonly INoiseField customBoundaryField;
+        private readonly Dictionary<RegionId, INoiseField> boundaryFields;
         private readonly float seedRotation;
         private readonly RegionId fallbackRegion;
 
@@ -27,13 +28,24 @@ namespace Jolybob.ProceduralWorld
         {
             this.catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             this.fallbackRegion = fallbackRegion;
-            this.boundaryField = boundaryField ?? new SeededPerlinNoiseField(
-                seed,
-                0.01f,
-                1f,
-                3,
-                0.5f,
-                2f);
+            this.customBoundaryField = boundaryField;
+            boundaryFields = new Dictionary<RegionId, INoiseField>();
+
+            if (boundaryField == null)
+            {
+                for (int i = 0; i < catalog.Definitions.Count; i++)
+                {
+                    MacroRegionDefinition definition = catalog.Definitions[i];
+                    boundaryFields[definition.Id] = new SeededPerlinNoiseField(
+                        seed + definition.Id.Value * 7919,
+                        definition.BoundaryNoiseScale,
+                        1f,
+                        3,
+                        0.5f,
+                        2f);
+                }
+            }
+
             seedRotation = NormalizeAngle(seedRotationRadians + SeedRotation(seed));
         }
 
@@ -90,9 +102,8 @@ namespace Jolybob.ProceduralWorld
             if (definition.BoundaryWarp <= 0f)
                 return radius;
 
-            float normalizedNoise = 0.5f + boundaryField.Sample(
-                position.X,
-                position.Y) * 0.5f;
+            INoiseField field = GetBoundaryField(definition);
+            float normalizedNoise = 0.5f + field.Sample(position.X, position.Y) * 0.5f;
             float radialOffset = (normalizedNoise * 2f - 1f) * definition.BoundaryWarp;
             return radius + radialOffset;
         }
@@ -108,7 +119,8 @@ namespace Jolybob.ProceduralWorld
             float warpedAngle = angle;
             if (definition.AngularWarp > 0f)
             {
-                float warpNoise = 0.5f + boundaryField.Sample(
+                INoiseField field = GetBoundaryField(definition);
+                float warpNoise = 0.5f + field.Sample(
                     position.X + 7919,
                     position.Y - 104729) * 0.5f;
                 float offset = (warpNoise * 2f - 1f) * definition.AngularWarp;
@@ -119,6 +131,14 @@ namespace Jolybob.ProceduralWorld
                 RadiansToDegrees(warpedAngle),
                 RadiansToDegrees(definition.CenterAngle)));
             return delta <= RadiansToDegrees(definition.AngularWidth * 0.5f);
+        }
+
+        private INoiseField GetBoundaryField(MacroRegionDefinition definition)
+        {
+            if (customBoundaryField != null)
+                return customBoundaryField;
+
+            return boundaryFields[definition.Id];
         }
 
         private static float GetAngularDistance(float a, float b)

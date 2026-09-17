@@ -1,332 +1,276 @@
 # Procedural World for Unity
 
-A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
+A modular, deterministic 2D procedural-world framework for Unity 6.
 
-## Current architecture — 0.1.36
+`com.jolybob.proceduralworld` is designed around one architectural rule:
 
-The generation stack is intentionally separated by responsibility:
+> **World coordinates define the truth; chunks define the execution and storage boundary.**
+
+The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, and gameplay access remain separate systems.
+
+## Architecture
 
 ```text
-seed + settings
-      |
-      v
-  field layer
-      |
-      +----> environment fields -> region resolver -> RegionId
-      |
-      +----> cave fields -------> cave modifier -> cell flags / terrain changes
-      |
-      v
- canonical generated cell data
-      |
-      +----> TerrainId
-      +----> ResourceId
-      +----> StructureId
-      +----> post-process pipeline
-      +----> chunk streaming planner/controller
-      +----> persistence
-      +----> world access / editing
-      +----> change tracking / history
-      +----> change notifications / logical batches
-      +----> rendering boundaries / Tilemap adapter
-      +----> presentation adapters
+                         WORLD DEFINITION
+                                |
+                    seed + generation version
+                                |
+                                v
+                    deterministic world fields
+                                |
+          +---------------------+----------------------+
+          |                     |                      |
+          v                     v                      v
+      geography              terrain              features
+      / regions              / topology            / landmarks
+          |                     |                      |
+          +---------------------+----------------------+
+                                |
+                                v
+                    WORLD GENERATION PLAN
+                                |
+                 world-space feature identities
+                                |
+                                v
+                       CHUNK MATERIALIZER
+                                |
+                         GeneratedChunk
+                    /            |             \
+                   /             |              \
+                  v              v               v
+             STREAMING       PERSISTENCE       GAMEPLAY
+                  |               |               |
+                  +---------------+---------------+
+                                  |
+                                  v
+                         CHANGE / EVENT LAYER
+                                  |
+                     history / observers / batches
+                                  |
+                                  v
+                         PRESENTATION ADAPTERS
+                         Tilemap / ECS / custom
 ```
 
-`GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
+The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation. The world-access layer exposes only currently loaded state to gameplay. The change journal records successful mutations as before/after state transitions. World edit history groups those transitions into named undo/redo entries. The notification layer supports both per-cell reactive updates and transaction-scale logical batches without replacing the journal as the history source of truth. The rendering layer now has a concrete Unity Tilemap adapter that can act as both a streaming sink and a change renderer.
+## Current implementation — 0.1.87
 
-## Main extension points
+The current runtime already provides:
 
-- `INoiseField` — deterministic scalar fields
-- `IEnvironmentFieldProvider` — reusable environmental sampling
-- `ICaveFieldProvider` — reusable cave-density sampling
-- `IRegionResolver` — converts environmental samples into stable region IDs
-- `RegionCatalog` / `RegionDefinition` — stable region data definitions
-- `TerrainCatalog` / `TerrainDefinition` — stable terrain data definitions
-- `ResourceCatalog` / `ResourceDefinition` — stable resource data definitions
-- `StructureCatalog` / `StructureDefinition` — stable structure data definitions
-- `IWorldRandom` / `WorldRandomService` — deterministic subsystem random streams
-- `IWorldGenerationPass` — ordered generation stages
-- `WorldGenerationPipeline` — composes generation passes
-- `IWorldPostProcessStep` — ordered final world-data modifications
-- `WorldPostProcessPipeline` — composes post-process steps with isolated random streams
-- `WorldPostProcessContext` — exposes chunk data and step-scoped deterministic services
-- `WorldPostProcessPass` — inserts the post-process pipeline into the main generation pipeline
-- `IWorldChunkSink` — receives streaming load/unload operations
-- `ChunkStreamingPlanner` — computes deterministic active-chunk deltas
-- `ChunkStreamingDelta` — describes loads and unloads for one update
-- `WorldChunkStreamingController` — connects chunk planning to deterministic generation
-- `WorldPersistentChunkStreamingController` — connects streaming to persistence-aware load/save lifecycle and implements active-world access
-- `IWorldChunkAccess` — narrow read/write boundary for currently loaded chunks
-- `WorldChunkCoordinates` — deterministic world-to-chunk/local coordinate conversion
-- `WorldEditService` — gameplay-facing controlled world mutation API
-- `WorldEditTransaction` — isolated multi-edit workflow with commit/rollback semantics
-- `WorldEditOperationKind` — classifies mutation types
-- `WorldCellChange` — captures complete before/after cell state for one edit
-- `IWorldChangeJournal` — backend-neutral change-history boundary
-- `IWorldChangeBatchJournal` — optional logical-batch publication capability
-- `InMemoryWorldChangeJournal` — test/prototype change journal
-- `WorldEditHistoryEntry` — named group of changes used for undo/redo
-- `WorldEditHistory` — grouped undo/redo history over journal changes
-- `IWorldChangeListener` — reactive consumer boundary for successful world changes
-- `IWorldChangeBatchListener` — reactive consumer boundary for grouped logical changes
-- `WorldChangeBatch` — immutable snapshot of related cell changes
-- `WorldChangeObserverJournal` — observable journal decorator with per-cell and batch subscriptions
-- `IWorldChangeRenderer` — presentation boundary for direct and grouped world changes
-- `WorldChangeRenderObserver` — bridges journal notifications into a renderer
-- `WorldTilemapRenderer` — concrete Unity Tilemap adapter for chunk streaming and world-change rendering
-- `WorldCellModification` — one persisted cell override
-- `WorldChunkSaveData` — sparse chunk save representation
-- `IWorldChunkStore` — backend-neutral persistence contract
-- `WorldChunkPersistenceService` — regenerates, compares, saves, and restores chunks
-- `InMemoryWorldChunkStore` — test/prototype persistence backend
-- `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
+- deterministic scalar, environment, and cave fields;
+- region catalogs and world-space region layouts;
+- terrain catalogs and canonical generated-cell state;
+- caves, liquids, chasms, and topology passes;
+- clustered deterministic resource deposits;
+- world-space structure placement that can cross chunk boundaries;
+- ordered post-process generation;
+- deterministic chunk streaming and persistence-aware streaming;
+- world access and controlled edit services;
+- transactions, change journals, grouped undo/redo history, and change observers;
+- a Unity Tilemap presentation adapter;
+- an optional Unity authoring assembly with `ProceduralWorldDefinitionAsset`.
 
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
+The core generated state is data-only. Presentation assets and runtime GameObjects are adapters around that state.
 
-## World editing, change tracking, history, transactions, notifications, and rendering
+## Core data model
 
-Gameplay should mutate loaded cells through `WorldEditService` rather than reaching into streaming internals. The service exposes named operations for tiles, resources, structures, and complete cell replacement. A mutation is recorded only after the underlying world access accepts it, and no-op edits are not journaled.
+`GeneratedCell` is the canonical per-cell result. The primary identifiers are:
 
-`IWorldChangeJournal` receives `WorldCellChange` records containing the exact world position, complete `Before` and `After` `GeneratedCell` state, and the operation kind. `WorldEditHistory` consumes those records without coupling history to persistence or rendering. Multiple journal records can be committed under one name and then undone or redone as a single history entry. Undo applies grouped changes in reverse order; redo reapplies them in forward order. A new committed edit after undo invalidates the redo branch.
+- `RegionId`
+- `TerrainId`
+- `ResourceId`
+- `StructureId`
 
-`WorldEditTransaction` keeps the same mutation API but records into a private local journal. `Commit()` closes the transaction and publishes all successful changes to the target journal. When that journal also supports `IWorldChangeBatchJournal`, the commit is published as one logical batch instead of one notification per cell. `Rollback()` restores the changed cells to their original states without publishing transaction changes. The transaction is immediately closed after either successful completion path and rejects later operations.
+The older `Biome` and `Tile` fields are retained as compatibility mirrors.
 
-`WorldChangeObserverJournal` decorates any `IWorldChangeJournal`. `Subscribe()` continues to publish individual changes to `IWorldChangeListener` implementations. `SubscribeBatch()` adds a higher-level boundary for systems such as rendering invalidation, multiplayer transport, UI, analytics, or audio that want to react once per logical operation. Batch publication preserves the exact per-cell records in the wrapped journal while observers receive one immutable `WorldChangeBatch` snapshot.
+A `GeneratedChunk` owns only the cells for one chunk coordinate. World-space systems can inspect or plan features beyond that boundary, but materialization writes only the requested chunk.
 
-`WorldChangeRenderObserver` bridges these notification contracts into `IWorldChangeRenderer`. Direct edits call `Render(WorldCellChange)`, while transaction commits call `RenderBatch(WorldChangeBatch)`, preventing transaction-scale updates from being rendered once per cell and once as a batch.
+## Generation pipeline
 
-`WorldTilemapRenderer` is the first concrete presentation adapter. It implements both `IWorldChunkSink` and `IWorldChangeRenderer`, so the same adapter can render generated chunks as they stream in, clear them as they stream out, apply individual edit changes, and apply transaction batches through `Tilemap.SetTiles`. Batch rendering coalesces repeated positions and keeps the latest state for each cell.
+The default generation pipeline is intentionally composable:
 
-Example:
-
-```csharp
-var sourceJournal = new InMemoryWorldChangeJournal();
-var journal = new WorldChangeObserverJournal(sourceJournal);
-
-var tiles = new Dictionary<WorldTile, TileBase>
-{
-    { WorldTile.Empty, emptyTile },
-    { WorldTile.Deep, deepTile },
-    { WorldTile.Mid, midTile },
-    { WorldTile.Inner, innerTile },
-    { WorldTile.Core, coreTile }
-};
-
-var renderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles);
-var renderObserver = new WorldChangeRenderObserver(journal, renderer);
-var persistence = new WorldChunkPersistenceService(
-    new ProceduralWorldGenerator(161729, settings),
-    store);
-var streaming = new WorldPersistentChunkStreamingController(
-    persistence,
-    new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3),
-    renderer);
-
-streaming.Update(new ChunkCoord(10, -4));
-
-var transaction = new WorldEditTransaction(streaming, settings.chunkSize, journal);
-transaction.TrySetTile(new WorldPosition(641, -255), WorldTile.Core);
-transaction.TrySetTile(new WorldPosition(642, -255), WorldTile.Core);
-transaction.Commit();
-
-renderObserver.Dispose();
+```text
+RegionBiomePass
+      -> TerrainPass
+      -> CavePass
+      -> TopologyPass
+      -> ResourcePass
+      -> StructurePlacementPass
+      -> WorldPostProcessPass
 ```
 
-`WorldTilemapRenderer` does not own the world state. It only translates canonical chunks and world changes into Tilemap operations. Production projects can provide a different `IWorldChunkSink` or `IWorldChangeRenderer` for SpriteRenderers, ECS, custom meshes, or other presentation systems.
+Each stage is an `IWorldGenerationPass`, so a project can replace one subsystem without replacing the whole generator.
 
-## Resource layer
+Large features follow a separate planning/materialization model:
 
-Resources are generated as data, not rendered objects. `ResourcePass` selects eligible cells by canonical region and terrain IDs, uses a dedicated deterministic Resources stream per resource type, respects per-resource spawn probability and per-chunk limits, and marks occupied cells with `GeneratedCellFlags.HasResource`.
-
-Resources are disabled by default. Enable `WorldGenerationSettings.resourcesEnabled` when a project wants procedural resource placement.
-
-## Structure layer
-
-Structures are generated as deterministic multi-cell footprints. `StructurePass` selects anchors using the Structures random domain plus the structure ID as a salt, validates the entire footprint before placement, prevents overlap with caves, resources, or other structures, and records occupancy through `GeneratedCell.Structure` and `GeneratedCellFlags.HasStructure`.
-
-Structures are disabled by default. Enable `WorldGenerationSettings.structuresEnabled` when a project wants procedural structure placement.
-
-## Post-process layer
-
-Post-process steps run after caves, resources, and structures and are intentionally independent from rendering. `WorldPostProcessPipeline` sorts steps by `Order` and executes them through `WorldPostProcessPass` at order `900` in the default generation pipeline.
-
-Each `IWorldPostProcessStep` supplies a stable `Salt`. `WorldPostProcessContext.Random` creates a deterministic stream using the world seed, chunk coordinate, the `PostProcess` random domain, and that salt. This lets one modification step change without perturbing unrelated post-process randomness.
-
-The default generator includes an empty post-process stage, so projects can inject world modifications without replacing the rest of the generation pipeline.
-
-## Chunk streaming layer
-
-Streaming is deliberately separate from generation and rendering. `ChunkStreamingPlanner` tracks the currently active chunk coordinates and computes the load/unload delta around a center chunk. `loadRadius` defines the required active square, while an optional larger `unloadRadius` adds hysteresis so nearby movement does not immediately unload edge chunks.
-
-`WorldChunkStreamingController` connects the planner to `ProceduralWorldGenerator` and an `IWorldChunkSink`. Newly requested coordinates are generated exactly through the normal deterministic generator; unload operations only notify the sink.
-
-`WorldPersistentChunkStreamingController` adds the world lifecycle boundary on top of this: loads use `WorldChunkPersistenceService.LoadChunk`, unloaded chunks are saved before the sink is notified, and `Reset()` saves and unloads all currently loaded chunks. It also implements `IWorldChunkAccess`, allowing gameplay services to read and mutate only active chunks without depending on streaming implementation details.
-
-A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable Y-then-X order, making scheduling and tests deterministic.
-
-Example:
-
-```csharp
-var generator = new ProceduralWorldGenerator(161729, settings);
-var store = new InMemoryWorldChunkStore();
-var persistence = new WorldChunkPersistenceService(generator, store);
-var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
-var streaming = new WorldPersistentChunkStreamingController(persistence, planner, sink);
-var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
-var edits = new WorldEditService(streaming, settings.chunkSize, journal);
-var history = new WorldEditHistory(streaming, journal);
-
-streaming.Update(new ChunkCoord(10, -4));
-edits.TrySetTile(new WorldPosition(641, -255), WorldTile.Core);
-history.Commit("Player edit");
+```text
+feature definition
+      -> deterministic planner
+      -> world-space placement
+      -> relevant chunk intersection
+      -> local materialization
 ```
 
-See `Runtime/Generation/Streaming/README.md` for the complete streaming contract.
+The structure system is the first implementation of this model. A `StructurePlacement` is independent of which chunks happen to be loaded, while `StructurePlacementPass` writes only its local footprint.
 
-## Persistence layer
+## Determinism
 
-Persistence does not replace procedural generation. `WorldChunkPersistenceService` always regenerates the requested chunk from the normal deterministic generator, then applies any stored cell overrides. When saving, it regenerates the same base chunk and stores only cells whose current state differs.
+For a fixed world definition, seed, generation version, and world coordinate, generation should produce the same result regardless of chunk load order.
 
-This makes untouched procedural terrain reproducible while player edits remain persistent. `IWorldChunkStore` is intentionally backend-neutral; a project can implement disk files, databases, cloud storage, or platform-specific persistence without changing generation code.
-
-`WorldChunkSaveData.FormatVersion` provides an explicit migration point for future save-format changes.
-
-Example:
-
-```csharp
-var generator = new ProceduralWorldGenerator(161729, settings);
-var store = new InMemoryWorldChunkStore();
-var persistence = new WorldChunkPersistenceService(generator, store);
-
-GeneratedChunk chunk = persistence.LoadChunk(new ChunkCoord(10, -4));
-GeneratedCell cell = chunk.GetCell(5, 5);
-cell.SetResource(new ResourceId(12));
-chunk.SetCell(5, 5, cell);
-
-persistence.SaveChunk(chunk);
-```
-
-The in-memory store is intended for tests and prototypes. Production projects should provide their own `IWorldChunkStore` implementation.
-
-## Running package tests
-
-This package contains an EditMode test assembly under `Tests/Runtime`. Its assembly definition is configured as a Unity test assembly, but Git-installed package tests must also be enabled by the consuming Unity project.
-
-Open your project's `Packages/manifest.json` and add the package name to the top-level `testables` array:
-
-```json
-{
-  "dependencies": {
-    "com.jolybob.proceduralworld": "https://github.com/Jolybob/proceduralworld.git"
-  },
-  "testables": [
-    "com.jolybob.proceduralworld"
-  ]
-}
-```
-
-Keep your project's existing dependencies and add only the `testables` entry; do not replace the whole manifest with the example above.
-
-Then let Unity re-import the package, reopen **Window > General > Test Runner**, select **EditMode**, and use **Run All**.
-
-For a locally embedded package, tests are considered testable automatically.
-
-The seed-difference regression test compares the seeded environment field across multiple world positions rather than requiring two different seeds to cross a coarse region/terrain threshold in one specific chunk. This keeps the test aligned with deterministic field behavior without making an unsupported assumption about region boundaries.
-
-## Cave layer
-
-Caves are implemented as an independent post-terrain modifier. They are disabled by default so existing worlds retain their previous generated output.
-
-Enable them through `WorldGenerationSettings.cavesEnabled` and configure `caveScale`, `caveThreshold`, `caveMinimumDistance`, and `caveSeedOffset`.
-
-`GeneratedCellFlags.Carved` records that a cell was modified by cave generation, while the rendering adapter only consumes the resulting cell state.
-
-## Deterministic random streams
-
-A generation pass can request an isolated stream:
+Random streams are isolated by domain and stable salt so unrelated systems do not accidentally perturb one another.
 
 ```csharp
 IWorldRandom random = context.Random.Create(
     context.ChunkCoordinate,
     WorldRandomDomain.Structures,
     structure.Id.Value);
-
-if (random.Chance(0.01f))
-{
-    // deterministic structure placement
-}
 ```
 
-The same world seed, chunk coordinate, domain, and salt produce the same sequence. Different domains and salts are intentionally independent.
+World-space coordinate conversion must use floor-division semantics for negative coordinates.
 
-## Install from Git
+## World definition and authoring
 
-In a Unity 6 project:
+`ProceduralWorldDefinitionAsset` provides the beginning of the authored world-definition layer.
 
-1. Open **Window > Package Manager**.
-2. Click **+**.
-3. Choose **Install package from git URL...**.
-4. Enter:
+Create one with:
+
+**Assets > Create > Procedural World > World Definition**
+
+The current asset can define the seed, generation settings, regions, terrains, and threshold/radial macro-region layouts. The target architecture extends this same concept to resource rules, structure rules, topology, feature placement, and generation metadata.
+
+At runtime:
+
+```csharp
+var generator = definition.CreateGenerator();
+```
+
+The authoring assembly depends only on the runtime generation assembly, keeping it independent from the Tilemap presentation adapter.
+
+See [`Runtime/Authoring/README.md`](Runtime/Authoring/README.md) for the authoring example.
+
+## Streaming and persistence
+
+Streaming controls residency, not world identity.
+
+```text
+interest source
+     -> streaming planner
+     -> load / unload delta
+     -> persistence-aware loader
+     -> deterministic generator + saved overrides
+     -> loaded world state
+```
+
+Persistence stores the sparse divergence between the deterministic base world and player-authored changes. The target architecture also requires generation-version metadata so an old world can be interpreted against the recipe that created it.
+
+## Gameplay and change tracking
+
+Gameplay should use `IWorldChunkAccess` and `WorldEditService` instead of reaching into chunk storage.
+
+Successful mutations produce `WorldCellChange` records through `IWorldChangeJournal`. Transactions can publish one logical `WorldChangeBatch`, allowing rendering, networking, analytics, UI, or other observers to react at the appropriate granularity.
+
+## Presentation
+
+The generation core does not require a Tilemap.
+
+`WorldTilemapRenderer` is one presentation adapter implementing the relevant streaming and change-rendering contracts. Projects can supply their own adapters for SpriteRenderers, ECS, custom meshes, debug views, or network replicas.
+
+## Package layering target
+
+The package is intended to converge on these conceptual boundaries:
+
+```text
+Runtime
+  core data
+  deterministic fields
+  regions / terrain
+  topology
+  feature planning
+  generation
+  streaming contracts
+  persistence contracts
+
+Authoring
+  ScriptableObject world definitions
+  configuration and validation data
+
+Tilemap
+  Unity Tilemap presentation adapter
+
+Editor
+  inspectors
+  world previews
+  diagnostics
+  authoring tooling
+```
+
+This prevents presentation dependencies from leaking into the deterministic world-generation core.
+
+## Target roadmap
+
+The next architectural stages are deliberately world-scale:
+
+```text
+canonical world data
+  -> deterministic fields
+  -> geography / regions / terrain
+  -> caves / topology
+  -> resource deposits
+  -> world-space structure placement
+  -> generic cross-chunk feature framework
+  -> connectivity / graph generation
+  -> points of interest / landmarks
+  -> generation scheduling and budgets
+  -> background-safe generation
+  -> generation-versioned persistence
+  -> authoring / preview / diagnostics tooling
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full target model and success criteria.
+
+## Extension points
+
+The primary public boundaries include:
+
+- `INoiseField`
+- `IEnvironmentFieldProvider`
+- `ICaveFieldProvider`
+- `IRegionResolver` / `IRegionLayout`
+- `RegionCatalog` / `RegionDefinition`
+- `TerrainCatalog` / `TerrainDefinition`
+- `ResourceCatalog` / `ResourceDefinition`
+- `StructureCatalog` / `StructureDefinition`
+- `IWorldGenerationPass` / `WorldGenerationPipeline`
+- `IStructurePlacementSource` / `StructurePlacementPlanner`
+- `IWorldChunkSink` / `ChunkStreamingPlanner`
+- `IWorldChunkAccess` / `WorldEditService`
+- `IWorldChangeJournal` / `WorldEditHistory`
+- `IWorldChangeListener` / `IWorldChangeBatchListener`
+- `IWorldChangeRenderer` / `WorldTilemapRenderer`
+- `IWorldChunkStore` / `WorldChunkPersistenceService`
+- `ProceduralWorldGenerator`
+
+The existing `ProceduralWorldGenerator(seed, settings)` API remains available for straightforward integrations.
+
+## Testing
+
+The package contains an EditMode test assembly under `Tests/Runtime`.
+
+For Git-installed packages, enable the package in the consuming project's `testables` list, then run the EditMode tests from Unity's Test Runner.
+
+The repository's source-level regression suite covers deterministic generation contracts, world-coordinate behavior, resource deposits, structure placement, streaming, persistence, editing, history, notifications, and presentation boundaries.
+
+## Install
+
+In Unity 6, install from Git using:
 
 ```text
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-## First test in the Universal 2D template
+The package manifest currently declares version `0.1.87`.
 
-1. Create a new Unity 6 project with the **Universal 2D** template.
-2. Install this package using the URL above.
-3. In the Hierarchy create an empty GameObject named `ProceduralWorld`.
-4. Add the component:
-   `Procedural World > Procedural World Tilemap`.
-5. Press Play.
+## Scope
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `161729` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
-
-## Custom fields and catalogs
-
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, persistence backends through `IWorldChunkStore`, gameplay access through `IWorldChunkAccess`, mutation history through `IWorldChangeJournal`, undo/redo through `WorldEditHistory`, reactive consumers through `IWorldChangeListener` or `IWorldChangeBatchListener`, and presentation through `IWorldChangeRenderer`.
-
-## Roadmap
-
-The architecture is intended to grow in this order:
-
-```text
-fields
-  -> regions / biomes
-  -> terrain layers
-  -> caves
-  -> resources
-  -> structures
-  -> post-process
-  -> chunk streaming
-  -> persistence
-  -> persistence-aware streaming lifecycle
-  -> world access / editing
-  -> change tracking
-  -> grouped undo / redo history
-  -> transactions
-  -> change notifications
-  -> logical change batching
-  -> rendering boundaries
-  -> concrete render adapters
-```
-
-Planned extension points include:
-
-- richer biome and region definitions
-- Voronoi and domain-warped fields
-- cellular-automata cave refinement
-- terrain layers and material selection
-- richer resource distribution and clustering
-- richer structure placement and WFC
-- editor-facing world modification tools
-- history transaction merging and bounded history memory
-- streaming prioritization and asynchronous generation hooks
-- durable storage implementations built on `IWorldChunkStore`
-- save migration tooling
-- editor world preview
-- Jobs/Burst implementations
-- additional render adapters
+The runtime package intentionally does not own game-specific systems such as combat, inventory, quests, UI, player input, prefab orchestration, or network transport. Those systems should consume the stable world-data and service interfaces exposed by the package.

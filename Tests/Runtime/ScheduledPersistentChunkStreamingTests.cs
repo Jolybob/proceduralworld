@@ -77,7 +77,7 @@ namespace Jolybob.ProceduralWorld.Tests
             GeneratedCell original;
             Assert.IsTrue(controller.TryGetCell(position, out original));
             GeneratedCell modified = original;
-            modified.SetTile(WorldTile.Core);
+            modified.SetTerrain(modified.Terrain, WorldTile.Core);
             Assert.IsTrue(controller.SetCell(position, modified));
 
             controller.Update(new ChunkCoord(2, 0));

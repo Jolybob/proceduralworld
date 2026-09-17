@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.61] - 2026-09-17
+
+- Fixed `WorldPresentationDirtySetTests` to use `WorldTile` values that are actually defined by the package.
+- Removed invalid `WorldTile.Wall` and `WorldTile.Floor` test references that caused Unity compilation errors CS0117.
+- Preserved the incremental presentation dirty-set implementation and its regression coverage.
+- Bumped the package version to 0.1.61.
+- Incremented package version for this update.
+
 ## [0.1.60] - 2026-09-17
 
 - Added `WorldPresentationDirtySet` as a presentation-side change accumulator for incremental rendering.
@@ -44,7 +52,7 @@
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
 - Added Unity `.meta` files for the new overlay runtime and tests.
-- Bumped package version to 0.1.57.
+- Bumped the package version to 0.1.57.
 - Incremented package version for this update.
 
 ## [0.1.56] - 2026-09-17
@@ -55,7 +63,7 @@
 - Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
 - Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
 - Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped package version to 0.1.56.
+- Bumped the package version to 0.1.56.
 - Incremented package version for this update.
 
 ## [0.1.55] - 2026-09-17
@@ -71,7 +79,7 @@
 - Added `TopologyWorldCellVisualLayer` so topology presentation is a reusable layer instead of renderer-specific logic.
 - Updated the Tilemap preview to compose topology over terrain through the visual-layer architecture.
 - Added regression coverage for layer ordering, fallthrough, and fallback resolution.
-- Added Unity `.meta` files for the new visual-layer runtime and tests.
+- Added Unity `.meta` files for the new visual-layer runtime and catalog.
 - Bumped package version to 0.1.54.
 - Incremented package version for this update.
 

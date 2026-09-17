@@ -6,47 +6,67 @@ A modular, deterministic 2D procedural-world framework for Unity 6.
 
 > **World coordinates define the truth; chunks define the execution and storage boundary.**
 
-The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, gameplay access, connectivity, and presentation remain separate systems.
+A second rule follows from that boundary:
+
+> **Semantic world intent is planned before world geometry is materialized.**
+
+The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, world plans, streaming, persistence, gameplay access, connectivity, and presentation remain separate systems.
 
 ## Architecture
 
 ```text
-WORLD DEFINITION
-      |
-      v
-DETERMINISTIC WORLD FIELDS
-      |
-      +----> REGIONS / TERRAIN / TOPOLOGY
-      |
-      +----> WORLD FEATURE PLANNING
-                 |
-                 v
-        world-space placements
-            /          \
-           v            v
-   MATERIALIZATION    QUERIES
-        |               |
-        v               v
-   CHUNK DATA     placement index/cache
-                        |
-                        v
-               CONNECTIVITY GRAPH
-                        |
-                        v
-   STREAMING / PERSISTENCE / GAMEPLAY
-                  |
-                  v
-          CHANGE / EVENT LAYER
-                  |
-                  v
-        PRESENTATION ADAPTERS
+                 AUTHORING / CUSTOMIZATION
+                           |
+              node graph + inspectors + templates
+                           |
+                           v
+                    WORLD DEFINITION
+                           |
+                           v
+             DETERMINISTIC WORLD FIELDS
+                           |
+          +----------------+----------------+
+          |                                 |
+          v                                 v
+   REGIONS / TERRAIN                  WORLD PLAN GRAPH
+          |                          nodes / ports / edges
+          |                                 |
+          |                                 v
+          |                        WORLD PLAN COMPILER
+          |                                 |
+          +----------------+----------------+
+                           |
+                           v
+                  WORLD-SPACE REALIZATION
+                           |
+           +---------------+---------------+
+           |                               |
+           v                               v
+   FEATURE PLACEMENTS                 WORLD PATHS
+           |                         / corridors
+           +---------------+---------------+
+                           |
+                           v
+                    CHUNK MATERIALIZER
+                           |
+                           v
+                    GENERATED CHUNKS
+                           |
+          +----------------+----------------+
+          |                |                |
+          v                v                v
+      Rendering       Persistence       Gameplay
+      adapters        + overrides       + queries
+                           |
+                           v
+                   CHANGE / EVENT LAYER
 ```
 
-The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md).
+The detailed target architecture, layering rules, determinism contract, coordinate rules, authoring model, node graph design, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md), and the graph implementation contract is in [`docs/WORLD_PLAN_GRAPH.md`](docs/WORLD_PLAN_GRAPH.md).
 
-## Current implementation — 0.1.93
+## Current implementation — 0.1.94
 
-The runtime provides:
+The runtime currently provides:
 
 - deterministic scalar, environment, and cave fields;
 - region catalogs and world-space region layouts;
@@ -56,121 +76,147 @@ The runtime provides:
 - a generic world-space feature placement kernel;
 - cached world-space feature queries independent of chunk materialization;
 - a deterministic world connectivity graph over feature placements;
-- cross-chunk structure placement built on the generic kernel;
-- ordered post-process generation;
+- cross-chunk structure placement built on the generic placement kernel;
+- a typed world-plan graph model with node types, semantic ports, connection kinds, and properties;
+- deterministic world-plan compilation with canonical ordering and structural validation;
+- a Unity-authored `WorldPlanGraphAsset` that separates editor canvas state from runtime graph semantics;
+- a Unity node graph editor with custom-port rendering, compatibility filtering, node movement, connection creation/removal, validation, framing, and asset-backed undo/save behavior;
 - deterministic chunk streaming and persistence-aware streaming;
 - world access and controlled edit services;
 - transactions, change journals, grouped undo/redo history, and change observers;
 - a Unity Tilemap presentation adapter;
 - an optional Unity authoring assembly with `ProceduralWorldDefinitionAsset`.
 
-The generated state is data-only. Presentation assets and runtime GameObjects are adapters around that state.
+The graph foundation is intentionally one step ahead of the final world-plan pipeline: hierarchical expansion, deterministic layout/constraint solving, feature lowering, and world-space corridor generation remain the next runtime increments.
 
-## Core data model
+## World-plan graph
 
-`GeneratedCell` is the canonical per-cell result. The primary identifiers are:
-
-- `RegionId`
-- `TerrainId`
-- `ResourceId`
-- `StructureId`
-
-The older `Biome` and `Tile` fields are retained as compatibility mirrors.
-
-A `GeneratedChunk` owns only the cells for one chunk coordinate. World-space systems can inspect or plan features beyond that boundary, but materialization writes only the requested chunk.
-
-## Generation pipeline
-
-The default generation pipeline is intentionally composable:
+The world-plan graph is a typed semantic layer between authored rules and world-space geometry.
 
 ```text
-RegionBiomePass
-      -> TerrainPass
-      -> CavePass
-      -> TopologyPass
-      -> ResourcePass
-      -> StructurePlacementPass
-      -> WorldPostProcessPass
+node type definition
+        |
+        +-- semantic ports
+        +-- property schema
+        +-- footprint / clearance metadata
+        |
+        v
+node instances
+        |
+        +-- stable node ID
+        +-- properties
+        +-- editor canvas position
+        |
+        v
+semantic connections
+        |
+        v
+WorldPlanCompiler
+        |
+        +-- canonical ordering
+        +-- node / port resolution
+        +-- structural validation
+        |
+        v
+WorldPlan
 ```
 
-Each stage is an `IWorldGenerationPass`, so a project can replace one subsystem without replacing the whole generator.
+Canvas positions are intentionally not part of the runtime `WorldPlan` definition. Designers can reorganize the editor graph without changing deterministic world semantics.
 
-Large features use a separate planning/materialization model:
+Ports can be input, output, or bidirectional. Connections are classified as `Required`, `Optional`, or `Derived`. Semantic port types are checked during validation and graph connection filtering.
+
+## Feature and world planning
+
+Large features are represented as immutable world-space placements before any chunk is written:
 
 ```text
 feature definition
-      -> deterministic owner-chunk planner
-      -> world-space placement
-      -> relevant chunk intersection
+      -> owner-chunk planning
+      -> WorldFeaturePlacement
+      -> placement index / queries
+      -> relevant chunk intersections
       -> local materialization
 ```
 
-`IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource` form the reusable planning kernel.
-
-The query side is deliberately separate:
+World plans build on that primitive rather than introducing a parallel chunk-local system:
 
 ```text
-IWorldFeaturePlacementQuerySource
-              |
-              v
-WorldFeaturePlacementIndex
-       /          |          \
-    chunk       point       area
-    query       query       query
+WorldPlan node
+      -> feature placement
+      -> semantic ports
+      -> future world path / corridor
 ```
 
-The index plans each queried chunk once, caches the deterministic placement set, and can answer world-space point or rectangle queries without generating the corresponding `GeneratedChunk`. Repeated queries reuse cached planning results until explicitly invalidated.
-
-The connectivity side is also independent from chunk residency:
-
-```text
-world-space placements
-        |
-        v
-WorldConnectivityGraphBuilder
-        |
-        v
-WorldConnectivityGraph
-   /             \
- nodes           edges
-```
-
-The graph builder produces deterministic node IDs, distance-bounded edges, a sparse forest backbone, redundant short links, and connected-component information. It can build directly from a world-space rectangle query through `WorldFeaturePlacementIndex`.
+The existing connectivity graph remains a derived world-space relationship layer. Semantic plan connections express intent and are validated before geometry is materialized.
 
 ## Determinism
 
 For a fixed world definition, seed, generation version, and world coordinate, generation should produce the same result regardless of chunk load order.
 
-Random streams are isolated by domain and stable salt so unrelated systems do not accidentally perturb one another.
+World-plan compilation additionally requires stable semantic identity:
 
-```csharp
-IWorldRandom random = context.Random.Create(
-    context.ChunkCoordinate,
-    WorldRandomDomain.Structures,
-    structure.Id.Value);
+```text
+same graph definition
++ same generation seed
++ same stable node / port IDs
+= same runtime plan ordering and relationships
 ```
 
-World-space coordinate conversion must use floor-division semantics for negative coordinates. Connectivity graph construction does not consume mutable random state; it derives its results entirely from sorted world-space placements and deterministic settings.
+The editor UI is not part of deterministic inputs. Moving a node on the canvas changes authoring metadata only.
 
-## World definition and authoring
+Random streams are isolated by subsystem and stable salt. Connectivity graph construction is deterministic from sorted world-space placements and does not consume mutable random state.
 
-`ProceduralWorldDefinitionAsset` provides the beginning of the authored world-definition layer.
+## Authoring and customization
 
-Create one with:
+Create a world-plan graph asset with:
 
-**Assets > Create > Procedural World > World Definition**
+**Assets > Create > Procedural World > World Plan Graph**
 
-The current asset can define the seed, generation settings, regions, terrains, and threshold/radial macro-region layouts. The target architecture extends this same concept to resource rules, structure rules, topology, feature placement, and generation metadata.
+Define node types in the asset inspector. A node type can specify:
 
-At runtime:
+- stable type ID and display metadata;
+- category;
+- minimum footprint and clearance;
+- typed input/output/bidirectional ports;
+- semantic port types;
+- required ports;
+- multi-connection policy;
+- custom property keys.
 
-```csharp
-var generator = definition.CreateGenerator();
+Open **Window > Procedural World > World Plan Graph** or press **Open Node Graph** from the asset inspector.
+
+The graph editor supports moving nodes, adding nodes from custom node types, creating compatible connections, deleting nodes/connections, validation, framing, and asset-backed undo/save behavior.
+
+## Runtime boundary
+
+The editor graph does not instantiate GameObjects and does not become a Unity scene hierarchy.
+
+The intended boundary is:
+
+```text
+Editor UI
+   |
+   v
+WorldPlanGraphAsset
+   |
+   v
+WorldPlanGraphDefinition
+   |
+   v
+WorldPlanCompiler
+   |
+   v
+WorldPlan
+   |
+   +----> layout / constraint solver
+   +----> feature placement lowering
+   +----> path / corridor planning
+   |
+   v
+world-space generation
 ```
 
-The authoring assembly depends only on the runtime generation assembly, keeping it independent from the Tilemap presentation adapter.
-
-See [`Runtime/Authoring/README.md`](Runtime/Authoring/README.md) for the authoring example.
+The current 0.1.94 implementation reaches the compiler/runtime-plan stage. Layout solving, feature lowering, and corridor planning remain the next runtime increments.
 
 ## Streaming and persistence
 
@@ -185,55 +231,17 @@ interest source
      -> loaded world state
 ```
 
-Persistence stores the sparse divergence between the deterministic base world and player-authored changes. The target architecture also requires generation-version metadata so an old world can be interpreted against the recipe that created it.
+World plans and large feature relationships must remain stable regardless of streaming order.
 
-## Gameplay and change tracking
-
-Gameplay should use `IWorldChunkAccess` and `WorldEditService` instead of reaching into chunk storage.
-
-Feature gameplay systems can use `WorldFeaturePlacementIndex` for deterministic point, area, and chunk placement queries without coupling queries to renderer residency. Connectivity systems can consume those placements through `WorldConnectivityGraphBuilder` without requiring the connected chunks to be resident.
-
-Successful mutations produce `WorldCellChange` records through `IWorldChangeJournal`. Transactions can publish one logical `WorldChangeBatch`, allowing rendering, networking, analytics, UI, or other observers to react at the appropriate granularity.
+Persistence stores sparse player-authored divergence from the deterministic base world plus generation metadata, rather than storing the editor graph as live scene state.
 
 ## Presentation
 
 The generation core does not require a Tilemap.
 
-`WorldTilemapRenderer` is one presentation adapter. Projects can supply their own adapters for SpriteRenderers, ECS, custom meshes, debug views, or network replicas.
-
-## Package layering target
-
-```text
-Runtime
-  core data
-  deterministic fields
-  regions / terrain
-  topology
-  feature planning + queries
-  connectivity / graph data
-  generation
-  streaming contracts
-  persistence contracts
-
-Authoring
-  ScriptableObject world definitions
-  configuration and validation data
-
-Tilemap
-  Unity Tilemap presentation adapter
-
-Editor
-  inspectors
-  world previews
-  diagnostics
-  authoring tooling
-```
-
-This prevents presentation dependencies from leaking into the deterministic world-generation core.
+`WorldTilemapRenderer` is one presentation adapter. Projects can supply adapters for SpriteRenderers, ECS, custom meshes, debug views, or network replicas.
 
 ## Target roadmap
-
-The current architectural sequence is:
 
 ```text
 canonical world data
@@ -243,65 +251,24 @@ canonical world data
   -> resource deposits
   -> generic world feature placement
   -> cross-chunk structure placement
-  -> deterministic feature queries / caching
+  -> feature queries / caching
   -> connectivity / graph generation
-  -> points of interest / landmarks
+  -> typed world-plan graph foundation       <-- implemented 0.1.94
+  -> customizable node/port authoring UI      <-- implemented 0.1.94
+  -> hierarchical plan templates / subgraphs
+  -> deterministic plan expansion
+  -> deterministic plan layout / constraints
+  -> feature-placement lowering
+  -> world-space paths / corridors
+  -> points of interest / landmarks from plans
   -> generation scheduling and budgets
   -> background-safe generation
   -> generation-versioned persistence
-  -> authoring / preview / diagnostics tooling
+  -> richer authoring / preview / diagnostics
 ```
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md) for the world-scale target model and connectivity boundary.
-
-## Extension points
-
-The primary public boundaries include:
-
-- `INoiseField`
-- `IEnvironmentFieldProvider`
-- `ICaveFieldProvider`
-- `IRegionResolver` / `IRegionLayout`
-- `RegionCatalog` / `RegionDefinition`
-- `TerrainCatalog` / `TerrainDefinition`
-- `ResourceCatalog` / `ResourceDefinition`
-- `StructureCatalog` / `StructureDefinition`
-- `IWorldFeaturePlacementDefinition`
-- `WorldFeaturePlacement` / `WorldFeaturePlacementSet`
-- `IWorldFeaturePlacementSource` / `WorldFeaturePlacementPlanner`
-- `IWorldFeaturePlacementQuerySource` / `WorldFeaturePlacementIndex`
-- `WorldConnectivityNode` / `WorldConnectivityEdge` / `WorldConnectivityGraph`
-- `WorldConnectivitySettings` / `WorldConnectivityGraphBuilder`
-- `IWorldGenerationPass` / `WorldGenerationPipeline`
-- `IStructurePlacementSource` / `StructurePlacementPlanner`
-- `IWorldChunkSink` / `ChunkStreamingPlanner`
-- `IWorldChunkAccess` / `WorldEditService`
-- `IWorldChangeJournal` / `WorldEditHistory`
-- `IWorldChangeListener` / `IWorldChangeBatchListener`
-- `IWorldChangeRenderer` / `WorldTilemapRenderer`
-- `IWorldChunkStore` / `WorldChunkPersistenceService`
-- `ProceduralWorldGenerator`
-
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available for straightforward integrations.
-
-## Testing
-
-The package contains an EditMode test assembly under `Tests/Runtime`.
-
-For Git-installed packages, enable the package in the consuming project's `testables` list, then run the EditMode tests from Unity's Test Runner.
-
-The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, feature query caching and spatial queries, deterministic connectivity graphs, streaming, persistence, editing, history, notifications, and presentation boundaries.
-
-## Install
-
-In Unity 6, install from Git using:
-
-```text
-https://github.com/Jolybob/proceduralworld.git
-```
-
-The package manifest currently declares version `0.1.93`.
 
 ## Scope
 
-The runtime package intentionally does not own game-specific systems such as combat, inventory, quests, UI, player input, prefab orchestration, or network transport. Those systems should consume the stable world-data and service interfaces exposed by the package.
+The runtime package intentionally does not own combat, inventory, quests, UI, player input, prefab orchestration, network transport, or a game-specific save-file format.
+
+The node graph editor is package tooling; the core generation runtime remains independent from the editor and presentation layers.

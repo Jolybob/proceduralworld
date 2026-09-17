@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.87] - 2026-09-17
+
+- Added `StructurePlacement` as an immutable world-space structure identity with an explicit owner chunk and intersectable footprint.
+- Added `StructurePlacementSet` for deterministic unique placement collection.
+- Added `IStructurePlacementSource` so structure planning is decoupled from chunk materialization.
+- Added `StructurePlacementPlanner` for deterministic owner-chunk anchor generation and reusable placement planning.
+- Added `DeterministicStructurePlacementSource` to discover placements from neighboring owner chunks whose footprints intersect the requested chunk.
+- Reworked structure materialization into `StructurePlacementPass`, which stamps only the local intersection of each world-space footprint.
+- Preserved the existing `StructurePass` API as a compatibility wrapper over the new placement architecture.
+- Updated the default generation pipeline to use `StructurePlacementPass`.
+- Added regression coverage for cross-chunk footprints, negative chunk coordinates, and chunk-local materialization.
+- Bumped the package version to 0.1.87.
+
 ## [0.1.86] - 2026-09-17
 
 - Added configurable resource deposit sizes with `DepositSizeMin` and `DepositSizeMax`.
@@ -30,7 +43,7 @@
 
 - Fixed `WorldPresentationRegionDemandChange` snapshots to own an immutable copy of the demanded-region sequence.
 - Prevented disposal cleanup from publishing a final demand-change notification.
-- Preserved deterministic reconciliation, load/unload ordering, and normal demand notifications.
+- Preserved deterministic load/unload ordering and normal demand notifications.
 - Bumped the package version to 0.1.83.
 - Incremented package version for this update.
 

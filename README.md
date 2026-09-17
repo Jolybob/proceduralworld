@@ -6,7 +6,7 @@ A modular, deterministic 2D procedural-world framework for Unity 6.
 
 > **World coordinates define the truth; chunks define the execution and storage boundary.**
 
-The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, gameplay access, and presentation remain separate systems.
+The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, gameplay access, connectivity, and presentation remain separate systems.
 
 ## Architecture
 
@@ -22,16 +22,17 @@ DETERMINISTIC WORLD FIELDS
                  |
                  v
         world-space placements
-                 |
-        +--------+---------+
-        |                  |
-        v                  v
-   MATERIALIZATION      QUERIES
-        |                  |
-        v                  v
-   CHUNK DATA       placement index/cache
-        |
-        v
+            /          \
+           v            v
+   MATERIALIZATION    QUERIES
+        |               |
+        v               v
+   CHUNK DATA     placement index/cache
+                        |
+                        v
+               CONNECTIVITY GRAPH
+                        |
+                        v
    STREAMING / PERSISTENCE / GAMEPLAY
                   |
                   v
@@ -41,9 +42,9 @@ DETERMINISTIC WORLD FIELDS
         PRESENTATION ADAPTERS
 ```
 
-The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md).
 
-## Current implementation — 0.1.91
+## Current implementation — 0.1.92
 
 The runtime provides:
 
@@ -54,6 +55,7 @@ The runtime provides:
 - clustered deterministic resource deposits;
 - a generic world-space feature placement kernel;
 - cached world-space feature queries independent of chunk materialization;
+- a deterministic world connectivity graph over feature placements;
 - cross-chunk structure placement built on the generic kernel;
 - ordered post-process generation;
 - deterministic chunk streaming and persistence-aware streaming;
@@ -119,6 +121,22 @@ WorldFeaturePlacementIndex
 
 The index plans each queried chunk once, caches the deterministic placement set, and can answer world-space point or rectangle queries without generating the corresponding `GeneratedChunk`. Repeated queries reuse cached planning results until explicitly invalidated.
 
+The connectivity side is also independent from chunk residency:
+
+```text
+world-space placements
+        |
+        v
+WorldConnectivityGraphBuilder
+        |
+        v
+WorldConnectivityGraph
+   /             \
+ nodes           edges
+```
+
+The graph builder produces deterministic node IDs, distance-bounded edges, a sparse forest backbone, redundant short links, and connected-component information. It can build directly from a world-space rectangle query through `WorldFeaturePlacementIndex`.
+
 ## Determinism
 
 For a fixed world definition, seed, generation version, and world coordinate, generation should produce the same result regardless of chunk load order.
@@ -132,7 +150,7 @@ IWorldRandom random = context.Random.Create(
     structure.Id.Value);
 ```
 
-World-space coordinate conversion must use floor-division semantics for negative coordinates.
+World-space coordinate conversion must use floor-division semantics for negative coordinates. Connectivity graph construction does not consume mutable random state; it derives its results entirely from sorted world-space placements and deterministic settings.
 
 ## World definition and authoring
 
@@ -173,7 +191,7 @@ Persistence stores the sparse divergence between the deterministic base world an
 
 Gameplay should use `IWorldChunkAccess` and `WorldEditService` instead of reaching into chunk storage.
 
-Feature gameplay systems can additionally use `WorldFeaturePlacementIndex` for deterministic point, area, and chunk placement queries without coupling queries to renderer residency.
+Feature gameplay systems can use `WorldFeaturePlacementIndex` for deterministic point, area, and chunk placement queries without coupling queries to renderer residency. Connectivity systems can consume those placements through `WorldConnectivityGraphBuilder` without requiring the connected chunks to be resident.
 
 Successful mutations produce `WorldCellChange` records through `IWorldChangeJournal`. Transactions can publish one logical `WorldChangeBatch`, allowing rendering, networking, analytics, UI, or other observers to react at the appropriate granularity.
 
@@ -192,6 +210,7 @@ Runtime
   regions / terrain
   topology
   feature planning + queries
+  connectivity / graph data
   generation
   streaming contracts
   persistence contracts
@@ -233,7 +252,7 @@ canonical world data
   -> authoring / preview / diagnostics tooling
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full target model and success criteria.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md) for the world-scale target model and connectivity boundary.
 
 ## Extension points
 
@@ -251,6 +270,8 @@ The primary public boundaries include:
 - `WorldFeaturePlacement` / `WorldFeaturePlacementSet`
 - `IWorldFeaturePlacementSource` / `WorldFeaturePlacementPlanner`
 - `IWorldFeaturePlacementQuerySource` / `WorldFeaturePlacementIndex`
+- `WorldConnectivityNode` / `WorldConnectivityEdge` / `WorldConnectivityGraph`
+- `WorldConnectivitySettings` / `WorldConnectivityGraphBuilder`
 - `IWorldGenerationPass` / `WorldGenerationPipeline`
 - `IStructurePlacementSource` / `StructurePlacementPlanner`
 - `IWorldChunkSink` / `ChunkStreamingPlanner`
@@ -269,7 +290,7 @@ The package contains an EditMode test assembly under `Tests/Runtime`.
 
 For Git-installed packages, enable the package in the consuming project's `testables` list, then run the EditMode tests from Unity's Test Runner.
 
-The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, feature query caching and spatial queries, streaming, persistence, editing, history, notifications, and presentation boundaries.
+The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, feature query caching and spatial queries, deterministic connectivity graphs, streaming, persistence, editing, history, notifications, and presentation boundaries.
 
 ## Install
 
@@ -279,7 +300,7 @@ In Unity 6, install from Git using:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-The package manifest currently declares version `0.1.91`.
+The package manifest currently declares version `0.1.92`.
 
 ## Scope
 

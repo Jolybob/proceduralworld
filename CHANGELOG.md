@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.92] - 2026-09-17
+
+- Added `WorldConnectivityNode`, `WorldConnectivityEdge`, and `WorldConnectivityGraph` as world-space graph primitives independent from chunk residency and rendering.
+- Added `WorldConnectivitySettings` and `WorldConnectivityGraphBuilder` for deterministic sparse connectivity generation over feature placements.
+- Added uniform-grid candidate discovery, deterministic forest construction, redundant short-link generation, connected-component queries, and world-rectangle integration through `WorldFeaturePlacementIndex`.
+- Hardened graph spatial bucketing and distance arithmetic for negative and extreme world coordinates.
+- Added regression coverage for deterministic input-order independence, connected backbones, degree caps, negative coordinates, and feature-index integration.
+- Added world connectivity architecture documentation and Unity `.meta` files.
+- Bumped the package version to 0.1.92.
+
 ## [0.1.91] - 2026-09-17
 
 - Added `WorldFeaturePlacementQueryContext` and `IWorldFeaturePlacementQuerySource` for deterministic feature discovery without constructing a `GeneratedChunk`.

@@ -47,32 +47,28 @@ The reusable placement kernel introduced in `0.1.90` is the intended foundation 
                                 |
                  deterministic feature identities
                                 |
-                                v
-                       CHUNK MATERIALIZER
-                                |
-                         GeneratedChunk
-                                |
-        +-----------------------+-----------------------+
-        |                       |                       |
-        v                       v                       v
-     RENDERING              PERSISTENCE              GAMEPLAY
+                     +----------+----------+
+                     |                     |
+                     v                     v
+              CHUNK MATERIALIZER      WORLD GRAPH/QUERIES
+                     |                     |
+               GeneratedChunk       placements / connectivity
+                     |                     |
+        +------------+--------------------+----------------+
+        |                         |                       |
+        v                         v                       v
+     RENDERING                PERSISTENCE              GAMEPLAY
      adapters               save overrides           world access
      Tilemap                chunk storage            edits
      sprites                world metadata           simulation
      ECS/custom             migrations               queries
-        |                       |                       |
-        +-----------------------+-----------------------+
-                                v
-                       CHANGE / EVENT LAYER
-                                |
+        |                         |                       |
+        +-------------------------+-----------------------+
+                                  v
+                         CHANGE / EVENT LAYER
+                                  |
                     cell changes + logical batches
-                                |
-                    +-----------+-----------+
-                    |                       |
-                    v                       v
-                 history               observers
-                 undo/redo              networking
-                 transactions           analytics
+                    history + observers + transactions
 ```
 
 ## Layers
@@ -200,7 +196,55 @@ Structures are the first feature type adapted to this kernel. `StructureDefiniti
 
 This architecture is intentionally generic so deposits, rivers, roads, chasms, landmark complexes, and points of interest can reuse the same ownership and cross-chunk mechanics rather than each inventing a separate chunk-boundary solution.
 
-### 6. Generation pipeline
+### 6. World feature queries
+
+Feature discovery is a world-level query boundary, separate from chunk generation and renderer residency.
+
+The runtime query model is:
+
+```text
+IWorldFeaturePlacementQuerySource
+              |
+              v
+WorldFeaturePlacementIndex
+       /          |          \
+    chunk       point       area
+    query       query       query
+```
+
+`WorldFeaturePlacementIndex` caches deterministic placement sets by chunk coordinate and exposes point containment and inclusive world-rectangle intersection queries. Querying does not require constructing the corresponding `GeneratedChunk`.
+
+The index is intentionally session-scoped: generation rules remain the source of truth, while cached query results can be invalidated explicitly when a caller changes the planning environment or replaces the source.
+
+This creates a stable bridge between deterministic generation and future gameplay systems such as landmark lookup, proximity checks, POI discovery, and world simulation.
+
+### 7. World connectivity graph
+
+Connectivity is a world-data layer built over feature placements rather than over resident chunks.
+
+```text
+world-space placements
+        |
+        v
+WorldConnectivityGraphBuilder
+        |
+        v
+WorldConnectivityGraph
+   /             \
+ nodes           edges
+```
+
+`WorldConnectivityNode` retains its source `WorldFeaturePlacement`. `WorldConnectivityEdge` represents an undirected world-space relation with deterministic endpoint ordering and squared distance. `WorldConnectivityGraph` exposes neighbor queries and connected-component counting.
+
+`WorldConnectivityGraphBuilder` first orders placements canonically, discovers nearby candidates through a uniform world-space bucket grid, builds a deterministic sparse forest where degree budgets allow, then adds short redundant links. Graph construction consumes no mutable random stream.
+
+The builder can consume an explicit placement list or `WorldFeaturePlacementIndex` over an inclusive world rectangle. This keeps an unbounded procedural world from becoming one implicit graph and lets gameplay ask for connectivity only in the region it currently cares about.
+
+The graph does not itself carve terrain, spawn prefabs, or run pathfinding. It provides stable world-space relations for later points of interest, landmarks, roads, navigation topology, and simulation systems.
+
+See [`CONNECTIVITY.md`](CONNECTIVITY.md) for the detailed connectivity contract.
+
+### 8. Generation pipeline
 
 The generation pipeline should remain an ordered transformation of canonical data.
 
@@ -222,7 +266,7 @@ The important distinction is that **planning may inspect neighboring world coord
 
 `WorldGenerationPipeline` should remain composable so games can replace one subsystem without replacing the generator itself.
 
-### 7. Chunk boundary policy
+### 9. Chunk boundary policy
 
 A chunk is an implementation boundary, never a gameplay boundary.
 
@@ -238,7 +282,7 @@ The materializer must therefore reason in world coordinates and convert to local
 
 Negative chunk coordinates must follow mathematical floor division semantics rather than language truncation semantics.
 
-### 8. Streaming
+### 10. Streaming
 
 Streaming decides **which chunks are resident**, not how the world exists.
 
@@ -266,7 +310,7 @@ The current `ChunkStreamingPlanner`, `WorldChunkStreamingController`, and `World
 
 Future streaming work should add scheduling, priorities, generation budgets, cancellation, and background-safe work without moving gameplay rules into the streaming controller.
 
-### 9. Persistence
+### 11. Persistence
 
 Persistence stores **player-authored divergence from deterministic generation**.
 
@@ -286,7 +330,7 @@ The existing `WorldChunkPersistenceService` already regenerates a base chunk and
 
 The next architectural requirement is versioned generation metadata. A save should be tied to the generation recipe that produced it, so changing a world algorithm cannot silently reinterpret old saves.
 
-### 10. Gameplay world access
+### 12. Gameplay world access
 
 Gameplay must interact with an explicit world-access boundary rather than directly modifying chunk storage.
 
@@ -294,13 +338,14 @@ Target responsibilities:
 
 - read loaded cells;
 - query world-space state;
+- query feature placements and connectivity without coupling to renderer residency;
 - mutate loaded state through controlled operations;
 - reject operations outside the active-world boundary;
 - produce journaled changes.
 
 The current `IWorldChunkAccess` and `WorldEditService` are the intended foundation.
 
-### 11. Change tracking and events
+### 13. Change tracking and events
 
 World changes are data events, not rendering callbacks.
 
@@ -328,7 +373,7 @@ world edit / simulation mutation
 
 The existing journal, transaction, history, observer, and batch interfaces are aligned with this goal.
 
-### 12. Presentation
+### 14. Presentation
 
 Presentation is an adapter over canonical world state.
 
@@ -365,6 +410,8 @@ seed + owner chunk + domain + stable feature ID
 
 The generic feature planner keeps placement randomness in the owner's coordinate domain. A structure adapter uses `WorldRandomDomain.Structures`; future feature types should use their own stable random domains so unrelated systems do not perturb one another.
 
+Connectivity graph construction is deterministic from sorted world-space placements and does not consume mutable random state.
+
 ## Coordinate contract
 
 World-space is authoritative.
@@ -383,7 +430,7 @@ chunkX = floor(worldX / N)
 chunkY = floor(worldY / N)
 ```
 
-The generic placement source explicitly protects this boundary because world features must behave identically across positive and negative coordinate space.
+The generic placement source and connectivity spatial index explicitly protect this boundary because world features and graph queries must behave identically across positive and negative coordinate space.
 
 ## Authoring contract
 
@@ -404,6 +451,7 @@ world definition
    +-- structures
    +-- topology
    +-- feature rules
+   +-- connectivity rules
 ```
 
 At runtime, a definition becomes a generator/configuration graph. Presentation references should remain outside the generation assemblies whenever possible.
@@ -419,7 +467,8 @@ Jolybob.ProceduralWorld.Runtime
     Regions
     Terrain
     Topology
-    Feature planning
+    Feature planning and queries
+    Connectivity / graph data
     Generation
     Streaming contracts
     Persistence contracts
@@ -459,8 +508,8 @@ FEATURE SYSTEM
   |
 WORLD SCALE
   |
-  +-- deterministic cross-chunk feature queries
-  +-- connectivity / graph passes
+  +-- deterministic cross-chunk feature queries  <-- implemented in 0.1.91
+  +-- connectivity / graph passes  <-- implemented in 0.1.92
   +-- points of interest / landmarks
   |
 RUNTIME
@@ -486,6 +535,7 @@ TOOLING
   +-- world-definition editor
   +-- region/terrain preview
   +-- feature preview
+  +-- connectivity diagnostics
   +-- deterministic seed inspector
   +-- generation diagnostics
 ```
@@ -518,10 +568,11 @@ The target architecture is considered healthy when a project can:
 5. change one generation subsystem without perturbing unrelated deterministic random streams;
 6. persist player edits without storing the entire procedural world;
 7. load an old world using the generation version it was authored against;
-8. preview and inspect world generation from authoring tools without requiring gameplay systems.
+8. query and connect world features without requiring those chunks to be resident;
+9. preview and inspect world generation from authoring tools without requiring gameplay systems.
 
 ## Current implementation status
 
-Implemented foundations include deterministic fields, region layouts and resolvers, terrain catalogs, caves/topology, clustered resource deposits, the generic world-space feature placement kernel, world-space cross-chunk structure placement, post-process pipelines, chunk streaming, persistence, world access/editing, change journals/history/transactions, and a Tilemap presentation adapter.
+Implemented foundations include deterministic fields, region layouts and resolvers, terrain catalogs, caves/topology, clustered resource deposits, the generic world-space feature placement kernel, world-space cross-chunk structure placement, deterministic feature queries and caching, the world connectivity graph, post-process pipelines, chunk streaming, persistence, world access/editing, change journals/history/transactions, and a Tilemap presentation adapter.
 
 The items in this document under **Target roadmap** are architectural direction unless they are explicitly represented by the current runtime APIs. The goal is to keep the package moving toward a world-scale procedural system without coupling future capabilities to today's chunk-local implementation details.

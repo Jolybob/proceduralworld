@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.54] - 2026-09-17
+
+- Added `IWorldCellVisualLayer` for independently composable visual overrides.
+- Added `WorldCellVisualLayerCatalog` for deterministic order-based layer composition with a required fallback resolver.
+- Added `TopologyWorldCellVisualLayer` so topology presentation is a reusable layer instead of renderer-specific logic.
+- Updated the Tilemap preview to compose topology over terrain through the visual-layer architecture.
+- Added regression coverage for layer ordering, fallthrough, and fallback resolution.
+- Added Unity `.meta` files for the new visual-layer runtime and tests.
+- Bumped the package version to 0.1.54.
+- Incremented package version for this update.
+
 ## [0.1.53] - 2026-09-17
 
 - Added `IWorldCellVisualResolver` to decouple Tilemap rendering from visual selection.

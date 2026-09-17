@@ -15,8 +15,8 @@ namespace Jolybob.ProceduralWorld
 
         public int MinX => Anchor.X;
         public int MinY => Anchor.Y;
-        public int MaxX => Anchor.X + Definition.Width - 1;
-        public int MaxY => Anchor.Y + Definition.Height - 1;
+        public int MaxX => checked(Anchor.X + Definition.Width - 1);
+        public int MaxY => checked(Anchor.Y + Definition.Height - 1);
 
         public StructurePlacement(
             StructureDefinition definition,
@@ -26,6 +26,13 @@ namespace Jolybob.ProceduralWorld
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             Anchor = anchor;
             OwnerChunk = ownerChunk;
+
+            long maxX = (long)anchor.X + definition.Width - 1L;
+            long maxY = (long)anchor.Y + definition.Height - 1L;
+            if (maxX > int.MaxValue || maxX < int.MinValue)
+                throw new OverflowException("Structure footprint exceeds the supported world X coordinate range.");
+            if (maxY > int.MaxValue || maxY < int.MinValue)
+                throw new OverflowException("Structure footprint exceeds the supported world Y coordinate range.");
         }
 
         public bool Contains(WorldPosition position)

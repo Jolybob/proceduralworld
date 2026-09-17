@@ -149,7 +149,6 @@ namespace Jolybob.ProceduralWorld
         {
             public readonly int X;
             public readonly int Y;
-
             public SpatialBucket(int x, int y) { X = x; Y = y; }
             public bool Equals(SpatialBucket other) => X == other.X && Y == other.Y;
             public override bool Equals(object obj) => obj is SpatialBucket other && Equals(other);
@@ -161,7 +160,6 @@ namespace Jolybob.ProceduralWorld
             public readonly int A;
             public readonly int B;
             public readonly long Distance;
-
             public CandidateEdge(int a, int b, long distance) { A = a; B = b; Distance = distance; }
         }
 
@@ -209,7 +207,10 @@ namespace Jolybob.ProceduralWorld
         {
             if (placements == null) throw new ArgumentNullException(nameof(placements));
 
-            var ordered = new List<WorldFeaturePlacement>(placements);
+            var unique = new WorldFeaturePlacementSet();
+            for (int i = 0; i < placements.Count; i++) unique.Add(placements[i]);
+
+            var ordered = new List<WorldFeaturePlacement>(unique.Placements);
             ordered.Sort(ComparePlacements);
 
             var graph = new WorldConnectivityGraph();
@@ -229,8 +230,7 @@ namespace Jolybob.ProceduralWorld
                 if (degree[candidate.A] >= settings.MaximumConnectionsPerNode
                     || degree[candidate.B] >= settings.MaximumConnectionsPerNode)
                     continue;
-                if (!components.Union(candidate.A, candidate.B))
-                    continue;
+                if (!components.Union(candidate.A, candidate.B)) continue;
 
                 graph.AddEdge(candidate.A, candidate.B, candidate.Distance);
                 degree[candidate.A]++;
@@ -292,7 +292,6 @@ namespace Jolybob.ProceduralWorld
                         long by = (long)bucket.Y + y;
                         if (bx < int.MinValue || bx > int.MaxValue || by < int.MinValue || by > int.MaxValue)
                             continue;
-
                         if (!buckets.TryGetValue(new SpatialBucket((int)bx, (int)by), out List<int> neighborMembers))
                             continue;
 

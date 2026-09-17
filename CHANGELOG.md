@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.62] - 2026-09-17
+
+- Added `WorldPresentationFlushCoordinator` as the presentation orchestration boundary between world-change notifications and rendering.
+- Coalesced direct and logical-batch change notifications through `WorldPresentationDirtySet` before rendering.
+- Added deterministic single-batch flushing with empty-flush no-op behavior and explicit lifecycle disposal.
+- Kept the coordinator independent from Tilemap and concrete visual channels so existing `IWorldChangeRenderer` implementations remain reusable.
+- Added regression coverage for direct-change coalescing, logical batches, clean flushes, and disposal.
+- Added Unity `.meta` files for the presentation coordinator runtime and tests.
+- Bumped the package version to 0.1.62.
+- Incremented package version for this update.
+
 ## [0.1.61] - 2026-09-17
 
 - Fixed `WorldPresentationDirtySetTests` to use `WorldTile` values that are actually defined by the package.

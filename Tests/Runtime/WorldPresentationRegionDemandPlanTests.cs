@@ -10,7 +10,7 @@ namespace Jolybob.ProceduralWorld.Tests
             var planner = new WorldPresentationRegionDemandPlanner();
             var plan = planner.CreatePlan(new[] { 2, 5, 9 }, new[] { 9, 4, 4, 7 });
 
-            CollectionAssert.AreEqual(new[] { 7, 4 }, plan.RegionsToLoad);
+            CollectionAssert.AreEqual(new[] { 4, 7 }, plan.RegionsToLoad);
             CollectionAssert.AreEqual(new[] { 5, 2 }, plan.RegionsToUnload);
         }
 

@@ -77,17 +77,39 @@ namespace Jolybob.ProceduralWorld
         public override string ToString() => Value.ToString();
     }
 
+    public readonly struct StructureId : IEquatable<StructureId>
+    {
+        public readonly byte Value;
+
+        public StructureId(byte value) => Value = value;
+
+        public bool Equals(StructureId other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is StructureId other && Equals(other);
+        public override int GetHashCode() => Value.GetHashCode();
+        public static bool operator ==(StructureId left, StructureId right) => left.Equals(right);
+        public static bool operator !=(StructureId left, StructureId right) => !left.Equals(right);
+        public override string ToString() => Value.ToString();
+    }
+
     public struct GeneratedCell
     {
         public RegionId Region;
         public TerrainId Terrain;
         public ResourceId Resource;
+        public StructureId Structure;
         public WorldTile Tile;
         public byte Biome;
         public GeneratedCellFlags Flags;
 
         public GeneratedCell(WorldTile tile, byte biome)
-            : this(new RegionId(biome), new TerrainId((byte)tile), default(ResourceId), tile, biome, GeneratedCellFlags.None)
+            : this(
+                new RegionId(biome),
+                new TerrainId((byte)tile),
+                default(ResourceId),
+                default(StructureId),
+                tile,
+                biome,
+                GeneratedCellFlags.None)
         {
         }
 
@@ -95,6 +117,7 @@ namespace Jolybob.ProceduralWorld
             RegionId region,
             TerrainId terrain,
             ResourceId resource,
+            StructureId structure,
             WorldTile tile,
             byte biome,
             GeneratedCellFlags flags = GeneratedCellFlags.None)
@@ -102,6 +125,7 @@ namespace Jolybob.ProceduralWorld
             Region = region;
             Terrain = terrain;
             Resource = resource;
+            Structure = structure;
             Tile = tile;
             Biome = biome;
             Flags = flags;
@@ -129,6 +153,18 @@ namespace Jolybob.ProceduralWorld
         {
             Resource = default(ResourceId);
             Flags &= ~GeneratedCellFlags.HasResource;
+        }
+
+        public void SetStructure(StructureId structure)
+        {
+            Structure = structure;
+            Flags |= GeneratedCellFlags.HasStructure;
+        }
+
+        public void ClearStructure()
+        {
+            Structure = default(StructureId);
+            Flags &= ~GeneratedCellFlags.HasStructure;
         }
     }
 

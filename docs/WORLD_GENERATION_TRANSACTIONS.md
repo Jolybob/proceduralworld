@@ -86,7 +86,7 @@ The package does not assume a particular save format or filesystem layout.
 
 ## Relationship to streaming
 
-Core Keeper's documented world generation progressively materializes procedural terrain and scenery as players reach new areas, while generated world state is persisted in the world save. The transaction layer applies the same architectural separation without making Unity chunk residency the source of truth: streaming decides when work is executed, while world coordinates and committed realization edits remain authoritative. citeturn148802search0turn148802search2
+Core Keeper's documented world generation progressively materializes procedural terrain and scenery as players reach new areas, while generated world state is persisted in the world save. The transaction layer applies the same architectural separation without making Unity chunk residency the source of truth: streaming decides when work is executed, while world coordinates and committed realization edits remain authoritative.
 
 ## Compatibility
 

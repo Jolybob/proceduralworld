@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.25
+## Current architecture — 0.1.27
 
 The generation stack is intentionally separated by responsibility:
 
@@ -55,6 +55,7 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `ChunkStreamingPlanner` — computes deterministic active-chunk deltas
 - `ChunkStreamingDelta` — describes loads and unloads for one update
 - `WorldChunkStreamingController` — connects chunk planning to deterministic generation
+- `WorldPersistentChunkStreamingController` — connects streaming to persistence-aware load/save lifecycle
 - `WorldCellModification` — one persisted cell override
 - `WorldChunkSaveData` — sparse chunk save representation
 - `IWorldChunkStore` — backend-neutral persistence contract
@@ -90,19 +91,23 @@ Streaming is deliberately separate from generation and rendering. `ChunkStreamin
 
 `WorldChunkStreamingController` connects the planner to `ProceduralWorldGenerator` and an `IWorldChunkSink`. Newly requested coordinates are generated exactly through the normal deterministic generator; unload operations only notify the sink.
 
+`WorldPersistentChunkStreamingController` adds the world lifecycle boundary on top of this: loads use `WorldChunkPersistenceService.LoadChunk`, unloaded chunks are saved before the sink is notified, and `Reset()` saves and unloads all currently loaded chunks. This keeps player edits persistent without coupling the generator to a storage backend.
+
 A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable Y-then-X order, making scheduling and tests deterministic.
 
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(43017, settings);
+var generator = new ProceduralWorldGenerator(60427, settings);
+var store = new InMemoryWorldChunkStore();
+var persistence = new WorldChunkPersistenceService(generator, store);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
-var streaming = new WorldChunkStreamingController(generator, planner, sink);
+var streaming = new WorldPersistentChunkStreamingController(persistence, planner, sink);
 
 streaming.Update(new ChunkCoord(10, -4));
 ```
 
-See `Runtime/Generation/Streaming/README.md` for the complete contract.
+See `Runtime/Generation/Streaming/README.md` for the complete streaming contract.
 
 ## Persistence layer
 
@@ -115,7 +120,7 @@ This makes untouched procedural terrain reproducible while player edits remain p
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(43017, settings);
+var generator = new ProceduralWorldGenerator(60427, settings);
 var store = new InMemoryWorldChunkStore();
 var persistence = new WorldChunkPersistenceService(generator, store);
 
@@ -202,7 +207,7 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `43017` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `60427` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
@@ -222,6 +227,7 @@ fields
   -> post-process
   -> chunk streaming
   -> persistence
+  -> persistence-aware streaming lifecycle
   -> rendering adapters
 ```
 

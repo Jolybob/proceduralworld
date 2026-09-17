@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.45] - 2026-09-17
+
+- Added explicit `ChunkStreamingState` lifecycle states for scheduled streaming: `Inactive`, `Pending`, and `Loaded`.
+- Added `IChunkGenerationScheduler.Contains` so schedulers can expose whether a coordinate is currently waiting for generation without consuming the request.
+- Added `GetState(ChunkCoord)` to scheduled and scheduled-persistent controllers for deterministic lifecycle inspection by gameplay, UI, and orchestration code.
+- Scheduled controllers now track loaded coordinates explicitly, keeping pending work and completed activation separate from the planner's active set.
+- Added regression coverage for pending, loaded, and inactive transitions plus scheduler membership inspection.
+- Preserved the existing generation, persistence, sink, and scheduling behavior and constructor APIs.
+- Changed the preview seed from `258947` to `281604`.
+- Bumped the package version to 0.1.45.
+- Incremented package version for this update.
+
 ## [0.1.44] - 2026-09-17
 
 - Fixed the scheduled persistence regression tests that could accidentally write the same tile value as deterministic generation and therefore produce no persisted modification.

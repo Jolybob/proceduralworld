@@ -153,7 +153,8 @@ namespace Jolybob.ProceduralWorld
             ResourceCatalog resources,
             StructureCatalog structures,
             WorldPostProcessPipeline postProcess,
-            TopologyPipeline topology = null)
+            TopologyPipeline topology = null,
+            IRegionResolver regionResolver = null)
         {
             this.seed = seed;
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -187,7 +188,8 @@ namespace Jolybob.ProceduralWorld
                 this.structures,
                 postProcess ?? new WorldPostProcessPipeline(),
                 this.topology,
-                settings);
+                settings,
+                regionResolver);
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
@@ -217,14 +219,19 @@ namespace Jolybob.ProceduralWorld
             StructureCatalog structures,
             WorldPostProcessPipeline postProcess,
             TopologyPipeline topology,
-            WorldGenerationSettings settings)
+            WorldGenerationSettings settings,
+            IRegionResolver regionResolver = null)
         {
-            IRegionResolver resolver = settings.macroRegionsEnabled
-                ? new RadialSectorRegionResolver(
-                    MacroRegionCatalog.CreateDefault(),
-                    seed,
-                    new RegionId(0))
-                : new ThresholdRegionResolver();
+            IRegionResolver resolver = regionResolver;
+            if (resolver == null)
+            {
+                resolver = settings.macroRegionsEnabled
+                    ? new RadialSectorRegionResolver(
+                        MacroRegionCatalog.CreateDefault(),
+                        seed,
+                        new RegionId(0))
+                    : new ThresholdRegionResolver();
+            }
 
             return new WorldGenerationPipeline()
                 .Add(new RegionBiomePass(resolver))

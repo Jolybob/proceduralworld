@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.70] - 2026-09-17
+
+- Fixed a Unity asset GUID collision caused by duplicate `WorldPresentationRegionResidencyCoordinator.cs` and `WorldPresentationRegionResidency.cs` source assets sharing the same GUID.
+- Kept `WorldPresentationRegionResidency.cs` as the canonical source owner and moved the public `LoadedRegions` read-only snapshot onto that canonical asset.
+- Removed the duplicate residency source and duplicate `.meta` file so Unity Package Manager can import the package without ignoring the residency asset.
+- Bumped the package version to 0.1.70.
+- Incremented package version for this update.
+
 ## [0.1.69] - 2026-09-17
 
 - Added `WorldPresentationRegionDemandPlanner` as a pure, framework-neutral boundary that computes region load/unload transitions without performing lifecycle work.
@@ -20,25 +28,4 @@
 - Restored the 0.1.67 residency runtime and regression coverage on the architecture branch so the published lifecycle/residency contract remains internally complete.
 - Added Unity `.meta` files for the demand runtime and tests.
 - Bumped the package version to 0.1.68.
-- Incremented package version for this update.
-
-## [0.1.67] - 2026-09-17
-
-- Added `WorldPresentationRegionResidencyCoordinator` to make presentation-region load state explicit and idempotent.
-- Prevented duplicate region loads and unloads through tracked residency state.
-- Added deterministic reverse-load-order clearing so dependent presentation state can be released predictably.
-- Kept residency orchestration framework-neutral and independent from concrete streaming or Tilemap implementations.
-- Added regression coverage for idempotent transitions, deterministic clearing, and disposal behavior.
-- Added Unity `.meta` files for the residency runtime and tests.
-- Bumped the package version to 0.1.67.
-- Incremented package version for this update.
-
-## [0.1.66] - 2026-09-17
-
-- Added `IWorldPresentationRegionLifecycle` as a framework-neutral load/unload boundary for region presentation and future chunk streaming.
-- Added `WorldPresentationRegionLifecycleCoordinator` to guard region lifecycle operations with explicit disposal semantics.
-- Kept lifecycle orchestration independent from generation, Tilemap, and concrete streaming implementations.
-- Added regression coverage for region identity forwarding and post-disposal no-op behavior.
-- Added Unity `.meta` files for the lifecycle runtime and tests.
-- Bumped the package version to 0.1.66.
 - Incremented package version for this update.

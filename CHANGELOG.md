@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.58] - 2026-09-17
+
+- Added `WorldCellVisualState` as a presentation-only flag set for transient cell states such as selection, hover, damage, and interaction.
+- Added `IWorldCellVisualStateProvider` and `WorldCellVisualStateStore` so transient visual state remains external to generated world data.
+- Added position-aware overlay resolution through `IWorldCellVisualOverlayContextLayer` while preserving the legacy overlay-layer contract.
+- Added `WorldCellVisualStateOverlayLayer` for state-driven Tilemap overlays without modifying `GeneratedCell`.
+- Updated `WorldTilemapOverlayRenderer` to pass world-position context during chunk, direct-change, and batch rendering.
+- Added regression coverage for state defaults, clearing, state-driven resolution, fallthrough, and contextual catalog compatibility.
+- Added Unity `.meta` files for the new visual-state runtime and tests.
+- Bumped the package version to 0.1.58.
+- Incremented package version for this update.
+
 ## [0.1.57] - 2026-09-17
 
 - Added `IWorldCellVisualOverlayLayer` for supplementary presentation such as overlays, decals, and cell states without changing `GeneratedCell`.

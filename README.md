@@ -6,64 +6,54 @@ A modular, deterministic 2D procedural-world framework for Unity 6.
 
 > **World coordinates define the truth; chunks define the execution and storage boundary.**
 
-The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, and gameplay access remain separate systems.
+The package is intended for large, persistent 2D worlds where terrain, caves, resources, structures, topology, streaming, persistence, gameplay access, and presentation remain separate systems.
 
 ## Architecture
 
 ```text
-                         WORLD DEFINITION
-                                |
-                    seed + generation version
-                                |
-                                v
-                    deterministic world fields
-                                |
-          +---------------------+----------------------+
-          |                     |                      |
-          v                     v                      v
-      geography              terrain              features
-      / regions              / topology            / landmarks
-          |                     |                      |
-          +---------------------+----------------------+
-                                |
-                                v
-                    WORLD GENERATION PLAN
-                                |
-                 world-space feature identities
-                                |
-                                v
-                       CHUNK MATERIALIZER
-                                |
-                         GeneratedChunk
-                    /            |             \
-                   /             |              \
-                  v              v               v
-             STREAMING       PERSISTENCE       GAMEPLAY
-                  |               |               |
-                  +---------------+---------------+
-                                  |
-                                  v
-                         CHANGE / EVENT LAYER
-                                  |
-                     history / observers / batches
-                                  |
-                                  v
-                         PRESENTATION ADAPTERS
-                         Tilemap / ECS / custom
+WORLD DEFINITION
+      |
+      v
+DETERMINISTIC WORLD FIELDS
+      |
+      +----> REGIONS / TERRAIN / TOPOLOGY
+      |
+      +----> WORLD FEATURE PLANNING
+                 |
+                 v
+        world-space placements
+                 |
+                 v
+          CHUNK MATERIALIZER
+                 |
+                 v
+          GeneratedChunk data
+          /        |        \
+         v         v         v
+    STREAMING  PERSISTENCE  GAMEPLAY
+         \         |         /
+          +-------+--------+
+                  |
+                  v
+          CHANGE / EVENT LAYER
+                  |
+                  v
+        PRESENTATION ADAPTERS
 ```
 
 The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Current implementation — 0.1.87
+## Current implementation — 0.1.90
 
-The current runtime already provides:
+The runtime provides:
 
 - deterministic scalar, environment, and cave fields;
 - region catalogs and world-space region layouts;
 - terrain catalogs and canonical generated-cell state;
 - caves, liquids, chasms, and topology passes;
 - clustered deterministic resource deposits;
-- world-space structure placement that can cross chunk boundaries;
+- a generic world-space feature placement kernel;
+- cross-chunk structure placement built on that generic kernel;
 - ordered post-process generation;
 - deterministic chunk streaming and persistence-aware streaming;
 - world access and controlled edit services;
@@ -71,7 +61,7 @@ The current runtime already provides:
 - a Unity Tilemap presentation adapter;
 - an optional Unity authoring assembly with `ProceduralWorldDefinitionAsset`.
 
-The core generated state is data-only. Presentation assets and runtime GameObjects are adapters around that state.
+The generated state is data-only. Presentation assets and runtime GameObjects are adapters around that state.
 
 ## Core data model
 
@@ -102,17 +92,17 @@ RegionBiomePass
 
 Each stage is an `IWorldGenerationPass`, so a project can replace one subsystem without replacing the whole generator.
 
-Large features follow a separate planning/materialization model:
+Large features use a separate planning/materialization model:
 
 ```text
 feature definition
-      -> deterministic planner
+      -> deterministic owner-chunk planner
       -> world-space placement
       -> relevant chunk intersection
       -> local materialization
 ```
 
-The structure system is the first implementation of this model. A `StructurePlacement` is independent of which chunks happen to be loaded, while `StructurePlacementPass` writes only its local footprint.
+`IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource` form the reusable kernel. Structures adapt their existing API to this kernel rather than owning a parallel placement implementation.
 
 ## Determinism
 
@@ -174,11 +164,9 @@ Successful mutations produce `WorldCellChange` records through `IWorldChangeJour
 
 The generation core does not require a Tilemap.
 
-`WorldTilemapRenderer` is one presentation adapter implementing the relevant streaming and change-rendering contracts. Projects can supply their own adapters for SpriteRenderers, ECS, custom meshes, debug views, or network replicas.
+`WorldTilemapRenderer` is one presentation adapter. Projects can supply their own adapters for SpriteRenderers, ECS, custom meshes, debug views, or network replicas.
 
 ## Package layering target
-
-The package is intended to converge on these conceptual boundaries:
 
 ```text
 Runtime
@@ -209,7 +197,7 @@ This prevents presentation dependencies from leaking into the deterministic worl
 
 ## Target roadmap
 
-The next architectural stages are deliberately world-scale:
+The current architectural sequence is:
 
 ```text
 canonical world data
@@ -217,8 +205,8 @@ canonical world data
   -> geography / regions / terrain
   -> caves / topology
   -> resource deposits
-  -> world-space structure placement
-  -> generic cross-chunk feature framework
+  -> generic world feature placement
+  -> cross-chunk structure placement
   -> connectivity / graph generation
   -> points of interest / landmarks
   -> generation scheduling and budgets
@@ -241,6 +229,9 @@ The primary public boundaries include:
 - `TerrainCatalog` / `TerrainDefinition`
 - `ResourceCatalog` / `ResourceDefinition`
 - `StructureCatalog` / `StructureDefinition`
+- `IWorldFeaturePlacementDefinition`
+- `WorldFeaturePlacement` / `WorldFeaturePlacementSet`
+- `IWorldFeaturePlacementSource` / `WorldFeaturePlacementPlanner`
 - `IWorldGenerationPass` / `WorldGenerationPipeline`
 - `IStructurePlacementSource` / `StructurePlacementPlanner`
 - `IWorldChunkSink` / `ChunkStreamingPlanner`
@@ -259,7 +250,7 @@ The package contains an EditMode test assembly under `Tests/Runtime`.
 
 For Git-installed packages, enable the package in the consuming project's `testables` list, then run the EditMode tests from Unity's Test Runner.
 
-The repository's source-level regression suite covers deterministic generation contracts, world-coordinate behavior, resource deposits, structure placement, streaming, persistence, editing, history, notifications, and presentation boundaries.
+The repository's regression suite covers deterministic generation, world-coordinate behavior, resource deposits, generic and structure feature placement, streaming, persistence, editing, history, notifications, and presentation boundaries.
 
 ## Install
 
@@ -269,7 +260,7 @@ In Unity 6, install from Git using:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-The package manifest currently declares version `0.1.87`.
+The package manifest currently declares version `0.1.90`.
 
 ## Scope
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.29] - 2026-09-17
+
+- Added `WorldEditOperationKind` to classify gameplay/world mutations without coupling them to presentation or persistence.
+- Added `WorldCellChange` containing world position plus complete before/after generated-cell state.
+- Added `IWorldChangeJournal` as a backend-neutral boundary for change history, replay, networking, analytics, or undo/redo systems.
+- Added `InMemoryWorldChangeJournal` for tests and prototypes.
+- Updated `WorldEditService` so successful mutations are recorded after the underlying world access accepts them.
+- Suppressed no-op edits from the journal and ensured failed edits never create change records.
+- Added regression tests covering cell changes, no-op suppression, named edit operations, and failed edits.
+- Updated the architecture preview seed from `71593` to `82641` for this revision.
+- Added dedicated world-editing/change-tracking documentation.
+- Bumped the package version to 0.1.29.
+- Incremented package version for this update.
+
 ## [0.1.28] - 2026-09-17
 
 - Added `IWorldChunkAccess` as the narrow read/write boundary for currently loaded world chunks.
@@ -22,12 +36,4 @@
 - Updated the Tilemap preview seed from `51746` to `60427` for this architecture update.
 - Updated streaming and package architecture documentation with the persistence-aware lifecycle.
 - Bumped the package version to 0.1.27.
-- Incremented package version for this update.
-
-## [0.1.26] - 2026-09-17
-
-- Fixed Unity compilation compatibility in `WorldCellModification.GetHashCode` by removing the unsupported 9-argument `HashCode.Combine` call.
-- Replaced it with stable two-stage hash composition compatible with the Unity/.NET profile used by the package.
-- Changed the Tilemap preview and primary test seed from `43017` to `51746` for this fix revision.
-- Bumped the package version to 0.1.26.
 - Incremented package version for this update.

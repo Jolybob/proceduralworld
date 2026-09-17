@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.48] - 2026-09-17
+
+- Added `WorldGenerationProfile` as a Unity-authored ScriptableObject entry point for reusable procedural worlds.
+- Added serialized authoring entries for world settings, macro regions, regions, terrain, resources, and structures.
+- Added `CreateGenerator(seed)` to build immutable runtime catalogs and a deterministic generation pipeline from an authoring profile.
+- Added `TryValidate(out error)` for catalog and macro-region configuration validation before chunk generation.
+- Added explicit macro fallback-region configuration and seed-rotation controls.
+- Added world-authoring documentation and EditMode regression coverage.
+- Bumped the package version to 0.1.48.
+
 ## [0.1.47] - 2026-09-17
 
 - Added canonical `CellTopology` state to generated cells with Solid, Empty, Water, Lava, and Chasm values.

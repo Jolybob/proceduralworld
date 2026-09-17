@@ -1,1 +1,0 @@
-The world-plan graph editor uses Unity 6 GraphView APIs. Editor UI uses standard UI Toolkit VisualElement controls for the toolbar. Graph manipulators are registered with `this.AddManipulator(...)`, and graph ports use the generic `Port.Create<Edge>(...)` factory.

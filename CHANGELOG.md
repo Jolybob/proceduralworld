@@ -62,7 +62,7 @@
 - Updated `WorldTilemapOverlayRenderer` to pass world-position context during chunk, direct-change, and batch rendering.
 - Added regression coverage for state defaults, clearing, state-driven resolution, fallthrough, and contextual catalog compatibility.
 - Added Unity `.meta` files for the new visual-state runtime and tests.
-- Bumped package version to 0.1.58.
+- Bumped the package version to 0.1.58.
 - Incremented package version for this update.
 
 ## [0.1.57] - 2026-09-17
@@ -72,7 +72,6 @@
 - Added `WorldTilemapOverlayRenderer` as an independent Tilemap sink/renderer for supplementary visuals, keeping the base terrain renderer isolated.
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
-- Added Unity `.meta` files for the new overlay runtime and tests.
 - Added Unity `.meta` files for the new overlay runtime and tests.
 - Bumped package version to 0.1.57.
 - Incremented package version for this update.
@@ -91,7 +90,7 @@
 ## [0.1.55] - 2026-09-17
 
 - Fixed Unity test compilation error CS0104 by explicitly qualifying `UnityEngine.Object` in `WorldCellVisualLayerCatalogTests`.
-- Bumped package version to 0.1.55.
+- Bumped the package version to 0.1.55.
 - Incremented package version for this update.
 
 ## [0.1.54] - 2026-09-17

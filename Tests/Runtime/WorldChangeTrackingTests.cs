@@ -7,7 +7,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void EditServiceRecordsSuccessfulCellChanges()
         {
-            const int seed = 82641;
+            const int seed = 93417;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -35,7 +35,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void NoOpEditDoesNotCreateAChange()
         {
-            const int seed = 82641;
+            const int seed = 93417;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -55,7 +55,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void NamedEditOperationsRecordBeforeAndAfterState()
         {
-            const int seed = 82641;
+            const int seed = 93417;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -68,7 +68,10 @@ namespace Jolybob.ProceduralWorld.Tests
             var edits = new WorldEditService(access, settings.chunkSize, journal);
             var position = new WorldPosition(1, 1);
 
-            Assert.IsTrue(edits.TrySetTile(position, WorldTile.Core));
+            Assert.IsTrue(edits.TryGetCell(position, out GeneratedCell initial));
+            WorldTile targetTile = initial.Tile == WorldTile.Core ? WorldTile.Inner : WorldTile.Core;
+
+            Assert.IsTrue(edits.TrySetTile(position, targetTile));
             Assert.IsTrue(edits.TrySetResource(position, new ResourceId(9)));
             Assert.IsTrue(edits.TryClearResource(position));
             Assert.IsTrue(edits.TrySetStructure(position, new StructureId(7)));
@@ -89,7 +92,7 @@ namespace Jolybob.ProceduralWorld.Tests
         {
             var access = new WorldPersistentChunkStreamingController(
                 new WorldChunkPersistenceService(
-                    new ProceduralWorldGenerator(82641, new WorldGenerationSettings { chunkSize = 4 }),
+                    new ProceduralWorldGenerator(93417, new WorldGenerationSettings { chunkSize = 4 }),
                     new InMemoryWorldChunkStore()),
                 new ChunkStreamingPlanner(0),
                 new NullSink());

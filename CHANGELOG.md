@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.71] - 2026-09-17
+
+- Fixed the deterministic demand planner regression test to match the planner's documented first-seen demand order.
+- Preserved reverse current-residency order for unload operations.
+- Bumped the package version to 0.1.71.
+- Incremented package version for this update.
+
 ## [0.1.70] - 2026-09-17
 
 - Fixed a Unity asset GUID collision caused by duplicate `WorldPresentationRegionResidencyCoordinator.cs` and `WorldPresentationRegionResidency.cs` source assets sharing the same GUID.

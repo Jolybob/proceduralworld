@@ -85,14 +85,15 @@ namespace Jolybob.ProceduralWorld.Authoring
         /// </summary>
         public ProceduralWorldGenerator CreateGenerator()
         {
+            WorldGenerationSettings resolvedSettings = settings ?? new WorldGenerationSettings();
             RegionCatalog regions = BuildRegionCatalog();
             TerrainCatalog terrains = BuildTerrainCatalog();
             IRegionResolver resolver = BuildRegionResolver();
-            WorldPlanRuntime worldPlan = BuildWorldPlanRuntime();
+            WorldPlanRuntime worldPlan = BuildWorldPlanRuntime(resolvedSettings.chunkSize);
 
             return new ProceduralWorldGenerator(
                 seed,
-                settings ?? new WorldGenerationSettings(),
+                resolvedSettings,
                 null,
                 null,
                 null,
@@ -106,7 +107,7 @@ namespace Jolybob.ProceduralWorld.Authoring
                 worldPlan);
         }
 
-        private WorldPlanRuntime BuildWorldPlanRuntime()
+        private WorldPlanRuntime BuildWorldPlanRuntime(int chunkSize)
         {
             if (worldPlanGraph == null)
                 return null;
@@ -114,7 +115,7 @@ namespace Jolybob.ProceduralWorld.Authoring
             return new WorldPlanRuntimeBuilder().Build(
                 seed,
                 worldPlanGraph.BuildDefinition(),
-                WorldPlanRuntimeSettings.Default);
+                new WorldPlanRuntimeSettings(chunkSize: chunkSize));
         }
 
         private RegionCatalog BuildRegionCatalog()

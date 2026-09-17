@@ -92,6 +92,18 @@ namespace Jolybob.ProceduralWorld
         {
         }
 
+        // Compatibility overload: custom region/terrain catalogs without a custom environment field provider.
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            RegionCatalog regions,
+            TerrainCatalog terrains,
+            StructureCatalog structures)
+            : this(seed, settings, pipeline, null, null, regions, terrains, null, structures, null, null, null)
+        {
+        }
+
         public ProceduralWorldGenerator(
             int seed,
             WorldGenerationSettings settings,

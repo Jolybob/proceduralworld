@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.43] - 2026-09-17
+
+- Fixed scheduling regression tests that referenced APIs not present in the canonical world model (`GeneratedCell.SetTile` and `InMemoryWorldChunkStore.Contains`).
+- Updated tile mutation coverage to use the existing `GeneratedCell.SetTerrain` API while preserving the expected rendered tile state.
+- Updated persistence assertions to use the existing `IWorldChunkStore.TryLoad` contract instead of adding a test-only store API.
+- Kept the runtime API unchanged; the correction is isolated to tests and package integration validation.
+- Changed the preview seed from `231509` to `243731`.
+- Bumped the package version to 0.1.43.
+- Incremented package version for this update.
+
 ## [0.1.42] - 2026-09-17
 
 - Fixed a duplicate `WorldScheduledPersistentChunkStreamingController` definition that caused Unity compilation errors when both scheduled-persistent source files were imported.
@@ -38,7 +48,7 @@
 - Added `ChunkGenerationRequest` with explicit integer priority and deterministic insertion ordering.
 - Added `BudgetedChunkGenerationService` so callers can cap generation work per update without introducing worker-thread or Unity-object access concerns.
 - Added `WorldScheduledChunkStreamingController` to separate activation planning from generation execution while preserving deterministic load order.
-- Pending generation work is cancelled when streaming unloads a coordinate before it has been generated.
+- Pending generation work is cancelled when streaming moves far enough away that the planner unloads the coordinate before it has been generated.
 - Preserved `WorldChunkStreamingController` as the immediate-generation compatibility path.
 - Added regression tests for scheduler priority, stable ordering, duplicate coalescing, cancellation, generation budgets, and scheduled streaming movement.
 - Changed the preview seed from `184667` to `196423`.

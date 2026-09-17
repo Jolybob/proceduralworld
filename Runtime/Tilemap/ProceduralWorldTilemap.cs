@@ -22,6 +22,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
         private UnityTilemap tilemap;
         private TilemapRenderer tilemapRenderer;
         private WorldTilemapRenderer worldRenderer;
+        private Material runtimeTilemapMaterial;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
         private readonly Dictionary<CellTopology, TileBase> topologyTiles = new Dictionary<CellTopology, TileBase>();
         private readonly Dictionary<ResourceId, TileBase> resourceTiles = new Dictionary<ResourceId, TileBase>();
@@ -85,25 +86,54 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
             tilemapRenderer.enabled = true;
             tilemapRenderer.sortOrder = TilemapRenderer.SortOrder.BottomLeft;
+            tilemapRenderer.sortingLayerName = "Default";
+            tilemapRenderer.sortingOrder = 0;
+
+            if (runtimeTilemapMaterial == null)
+            {
+                var shader = Shader.Find("Sprites/Default");
+                if (shader == null)
+                    shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+
+                if (shader != null)
+                {
+                    runtimeTilemapMaterial = new Material(shader)
+                    {
+                        name = "ProceduralWorld_RuntimeTilemapMaterial"
+                    };
+                }
+            }
+
+            if (runtimeTilemapMaterial != null)
+                tilemapRenderer.sharedMaterial = runtimeTilemapMaterial;
         }
 
         private void CenterCamera(Camera camera)
         {
-            var cameraPosition = camera.transform.position;
+            var cameraTransform = camera.transform;
+            var cameraPosition = cameraTransform.position;
             cameraPosition.x = 0f;
             cameraPosition.y = 0f;
+
+            // This component is a 2D Tilemap preview. Keep the preview camera looking straight
+            // at the XY plane instead of inheriting an arbitrary 3D sample-scene orientation.
+            cameraTransform.rotation = Quaternion.identity;
 
             if (cameraPosition.z >= -0.1f)
                 cameraPosition.z = -10f;
 
-            camera.transform.position = cameraPosition;
+            cameraTransform.position = cameraPosition;
 
-            if (!frameCameraOnWorld || !camera.orthographic)
+            if (!frameCameraOnWorld)
                 return;
+
+            // Force the preview into a predictable 2D framing mode. This avoids a perspective
+            // camera showing only the sample scene skybox while the generated Tilemap is on XY.
+            camera.orthographic = true;
 
             var diameter = (chunksRadius * 2 + 1) * settings.chunkSize;
             var halfHeight = diameter * 0.5f;
-            var halfWidth = halfHeight * camera.aspect;
+            var halfWidth = halfHeight * Mathf.Max(camera.aspect, 0.01f);
             camera.orthographicSize = Mathf.Max(halfHeight, halfWidth);
         }
 

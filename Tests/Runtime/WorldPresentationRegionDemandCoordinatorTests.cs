@@ -108,6 +108,56 @@ namespace Jolybob.ProceduralWorld.Tests
             CollectionAssert.DoesNotContain(lifecycle.LoadedRegions, 9);
         }
 
+        [Test]
+        public void DemandChangedPublishesDeterministicSnapshot()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+            var received = new List<IReadOnlyList<int>>();
+
+            coordinator.DemandChanged += change => received.Add(change.DemandedRegions);
+            coordinator.SetDemandedRegions(new[] { 7, 4, 7, 2 });
+            coordinator.SetDemandedRegions(new[] { 2, 9 });
+
+            Assert.AreEqual(2, received.Count);
+            CollectionAssert.AreEqual(new[] { 7, 4, 2 }, received[0]);
+            CollectionAssert.AreEqual(new[] { 2, 9 }, received[1]);
+            CollectionAssert.AreEqual(new[] { 2, 9 }, coordinator.DemandedRegions);
+        }
+
+        [Test]
+        public void DemandChangeSnapshotRemainsStableAfterLaterReconciliation()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+            IReadOnlyList<int> received = null;
+
+            coordinator.DemandChanged += change => received = change.DemandedRegions;
+            coordinator.SetDemandedRegions(new[] { 1, 3 });
+            coordinator.SetDemandedRegions(new[] { 8 });
+
+            CollectionAssert.AreEqual(new[] { 1, 3 }, received);
+        }
+
+        [Test]
+        public void DisposedCoordinatorDoesNotPublishFurtherChanges()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+            var notifications = 0;
+
+            coordinator.DemandChanged += _ => notifications++;
+            coordinator.SetDemandedRegions(new[] { 2 });
+            coordinator.Dispose();
+            coordinator.SetDemandedRegions(new[] { 5 });
+            coordinator.Reconcile();
+
+            Assert.AreEqual(1, notifications);
+        }
+
         private sealed class RecordingLifecycle : IWorldPresentationRegionLifecycle
         {
             public List<int> LoadedRegions { get; } = new List<int>();

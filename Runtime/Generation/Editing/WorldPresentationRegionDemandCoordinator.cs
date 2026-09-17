@@ -15,6 +15,9 @@ namespace Jolybob.ProceduralWorld
         public bool IsDisposed => disposed;
         public int DemandedRegionCount => demandedRegions.Count;
         public int DemandSourceCount => aggregator.SourceCount;
+        public IReadOnlyList<int> DemandedRegions => demandOrder.AsReadOnly();
+
+        public event Action<WorldPresentationRegionDemandChange> DemandChanged;
 
         public WorldPresentationRegionDemandCoordinator(WorldPresentationRegionResidencyCoordinator residency)
             : this(residency, new WorldPresentationRegionDemandPlanner(), new WorldPresentationRegionDemandAggregator())
@@ -92,6 +95,7 @@ namespace Jolybob.ProceduralWorld
             if (disposed) return;
             ClearDemand();
             disposed = true;
+            DemandChanged = null;
         }
 
         private void ReconcileAggregatedDemand()
@@ -107,8 +111,15 @@ namespace Jolybob.ProceduralWorld
             demandedRegions.Clear();
             for (var i = 0; i < nextDemanded.Count; i++)
                 demandedRegions.Add(nextDemanded[i]);
+
             demandOrder.Clear();
             demandOrder.AddRange(nextDemanded);
+
+            var handler = DemandChanged;
+            if (handler != null)
+            {
+                handler(new WorldPresentationRegionDemandChange(demandOrder.AsReadOnly()));
+            }
         }
     }
 }

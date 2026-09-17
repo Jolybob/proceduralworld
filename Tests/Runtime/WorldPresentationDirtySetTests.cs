@@ -10,8 +10,8 @@ namespace Jolybob.ProceduralWorld.Tests
             var dirty = new WorldPresentationDirtySet();
             var position = new WorldPosition(4, -2);
             var first = new GeneratedCell(WorldTile.Deep, 0);
-            var middle = new GeneratedCell(WorldTile.Wall, 0);
-            var latest = new GeneratedCell(WorldTile.Floor, 0);
+            var middle = new GeneratedCell(WorldTile.Empty, 0);
+            var latest = new GeneratedCell(WorldTile.Deep, 0);
 
             dirty.Mark(new WorldCellChange(position, first, middle, WorldEditOperationKind.SetTile));
             dirty.Mark(new WorldCellChange(position, middle, latest, WorldEditOperationKind.SetTile));
@@ -72,8 +72,8 @@ namespace Jolybob.ProceduralWorld.Tests
             var position = new WorldPosition(6, 7);
             var otherPosition = new WorldPosition(9, 10);
             var first = new GeneratedCell(WorldTile.Deep, 0);
-            var latest = new GeneratedCell(WorldTile.Wall, 0);
-            var other = new GeneratedCell(WorldTile.Floor, 0);
+            var latest = new GeneratedCell(WorldTile.Empty, 0);
+            var other = new GeneratedCell(WorldTile.Deep, 0);
 
             dirty.MarkBatch(new WorldChangeBatch(new[]
             {

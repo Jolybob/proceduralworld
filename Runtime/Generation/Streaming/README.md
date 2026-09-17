@@ -11,10 +11,11 @@ The streaming layer controls which chunk coordinates are active. It does not dec
 - `ChunkStreamingPlanner` computes deterministic load/unload deltas around a center chunk and applies the configured load ordering.
 - `ChunkStreamingDelta` contains the coordinates to load and unload for one update.
 - `WorldChunkStreamingController` keeps the original immediate-generation workflow.
-- `IChunkGenerationScheduler` queues generation requests independently from chunk activation.
-- `DeterministicChunkGenerationScheduler` provides stable priority ordering, duplicate coalescing, and cancellation.
+- `IChunkGenerationScheduler` queues generation requests independently from chunk activation and exposes pending membership through `Contains`.
+- `DeterministicChunkGenerationScheduler` provides stable priority ordering, duplicate coalescing, cancellation, and pending-request inspection.
 - `BudgetedChunkGenerationService` processes a bounded number of queued chunks per call.
-- `WorldScheduledChunkStreamingController` composes planning, generation scheduling, cancellation, and sink delivery for frame-budgeted streaming.
+- `ChunkStreamingState` identifies a scheduled coordinate as `Inactive`, `Pending`, or `Loaded`.
+- `WorldScheduledChunkStreamingController` composes planning, generation scheduling, lifecycle tracking, cancellation, and sink delivery for frame-budgeted streaming.
 - `WorldPersistentChunkStreamingController` adds persistence-aware load, save-before-unload, and reset behavior.
 - `WorldScheduledPersistentChunkStreamingController` combines budgeted generation with persistence-aware loading, unloading, and loaded-world access.
 - `IWorldChunkAccess` exposes the minimal read/write boundary for currently loaded chunks.
@@ -41,7 +42,7 @@ The default order uses `long` distance arithmetic to avoid overflow at extreme i
 
 Generation can be separated from the streaming update loop. `IWorldChunkGenerator` preserves the existing synchronous generator contract while allowing schedulers to work with alternate generators in tests or production.
 
-`DeterministicChunkGenerationScheduler` stores each coordinate at an integer priority and uses insertion order as the deterministic tie-break. Re-enqueuing an existing coordinate updates its priority instead of creating a duplicate request. Pending work can be cancelled when streaming moves far enough away that the planner unloads the coordinate.
+`DeterministicChunkGenerationScheduler` stores each coordinate at an integer priority and uses insertion order as the deterministic tie-break. Re-enqueuing an existing coordinate updates its priority instead of creating a duplicate request. Pending work can be cancelled when streaming moves far enough away that the planner unloads the coordinate. `Contains(coordinate)` lets orchestration and presentation systems inspect whether work is still queued without consuming it.
 
 `BudgetedChunkGenerationService.Process(maxChunks, output)` generates at most `maxChunks` requests. No worker thread or Unity object access is introduced by the package: the budget is an explicit main-thread scheduling hook, which keeps generation deterministic and safe for standard Unity presentation adapters.
 
@@ -49,7 +50,7 @@ Generation can be separated from the streaming update loop. `IWorldChunkGenerato
 
 ```csharp
 var controller = new WorldScheduledChunkStreamingController(
-    new ProceduralWorldGenerator(196423, settings),
+    new ProceduralWorldGenerator(281604, settings),
     new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3),
     sink);
 
@@ -57,7 +58,25 @@ controller.Update(new ChunkCoord(10, -4));
 controller.Process(maxChunks: 2);
 ```
 
-`Update()` plans activation and queues work; `Process()` performs only the configured amount of generation and forwards completed chunks to the sink. Unloaded coordinates are cancelled from the pending queue before the sink receives their unload notification. The original `WorldChunkStreamingController` remains available for projects that want immediate generation.
+`Update()` plans activation and queues work; `Process()` performs only the configured amount of generation and forwards completed chunks to the sink. Unloaded coordinates are cancelled from the pending queue before the sink receives their unload notification.
+
+## Scheduled lifecycle state
+
+Scheduled streaming now exposes a small, deterministic lifecycle model without introducing asynchronous state:
+
+```text
+Inactive -- Update() --> Pending -- Process() --> Loaded
+    ^                       |
+    +------ unload/reset ---+
+```
+
+Use `GetState(coordinate)` to inspect this state. `Pending` means the scheduler still owns the generation request. `Loaded` means generation has completed and the chunk has been handed to the sink. `Inactive` means the controller has neither pending work nor loaded state for that coordinate.
+
+```csharp
+ChunkStreamingState state = controller.GetState(new ChunkCoord(10, -4));
+```
+
+The lifecycle state is deliberately derived from scheduler membership and controller-owned loaded state rather than from the planner's active set alone. A coordinate can therefore be planned as active while still waiting for its generation budget, and a caller can distinguish that from a chunk that is already available to gameplay or rendering.
 
 ## Budgeted persistent streaming
 
@@ -70,12 +89,15 @@ ChunkStreamingPlanner
 IChunkGenerationScheduler
         |
         v
+Pending
+        |
+        v
 Budgeted generation
         |
         v
 WorldChunkPersistenceService
         |
-        +----> loaded world state
+        +----> Loaded
         |
         v
 IWorldChunkSink
@@ -137,6 +159,6 @@ Edits only succeed for currently loaded chunks. This prevents gameplay code from
 
 ## Separation
 
-Generation remains deterministic and authoritative for the generated base state. Streaming decides when a chunk should become active. Load ordering is a scheduling policy, not part of generation, so changing the ordering strategy does not alter generated chunk contents. The generation scheduler adds a second independent policy: how much pending generation work is allowed to execute during one update. Persistence stores edits separately from that generated base state. The scheduled persistent controller composes both concerns without moving persistence into the scheduler itself. `IWorldChunkAccess` exposes only loaded state to gameplay systems. Rendering adapters can consume loaded chunks without becoming part of the planner, scheduler, or persistence backend.
+Generation remains deterministic and authoritative for the generated base state. Streaming decides when a chunk should become active. Load ordering is a scheduling policy, not part of generation, so changing the ordering strategy does not alter generated chunk contents. The generation scheduler adds a second independent policy: how much pending generation work is allowed to execute during one update. Lifecycle state makes the boundary observable without coupling generation to rendering. Persistence stores edits separately from that generated base state. The scheduled persistent controller composes both concerns without moving persistence into the scheduler itself. `IWorldChunkAccess` exposes only loaded state to gameplay systems. Rendering adapters can consume loaded chunks without becoming part of the planner, scheduler, persistence backend, or lifecycle inspector.
 
-The preview seed used by this architecture revision is `196423`.
+The preview seed used by this architecture revision is `281604`.

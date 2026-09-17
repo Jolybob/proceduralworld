@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Jolybob.ProceduralWorld;
 using Jolybob.ProceduralWorld.Authoring;
 
 namespace Jolybob.ProceduralWorld.Editor

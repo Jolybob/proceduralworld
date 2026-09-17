@@ -21,6 +21,7 @@ namespace Jolybob.ProceduralWorld
         public WorldRandomService Random { get; }
         public ResourceCatalog Resources { get; }
         public StructureCatalog Structures { get; }
+        public TopologyPipeline Topology { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -117,7 +118,8 @@ namespace Jolybob.ProceduralWorld
             ICaveFieldProvider caveFields,
             WorldRandomService random,
             ResourceCatalog resources,
-            StructureCatalog structures)
+            StructureCatalog structures,
+            TopologyPipeline topology = null)
         {
             Seed = seed;
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -129,6 +131,7 @@ namespace Jolybob.ProceduralWorld
             Random = random ?? throw new ArgumentNullException(nameof(random));
             Resources = resources ?? throw new ArgumentNullException(nameof(resources));
             Structures = structures ?? throw new ArgumentNullException(nameof(structures));
+            Topology = topology ?? new TopologyPipeline();
         }
     }
 

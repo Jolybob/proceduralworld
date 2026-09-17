@@ -60,10 +60,11 @@ namespace Jolybob.ProceduralWorld
         private readonly TerrainCatalog terrains;
         private readonly ResourceCatalog resources;
         private readonly StructureCatalog structures;
+        private readonly TopologyPipeline topology;
         private readonly WorldRandomService random;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
-            : this(seed, settings, null, null, null, null, null, null, null, null)
+            : this(seed, settings, null, null, null, null, null, null, null, null, null)
         {
         }
 
@@ -71,7 +72,7 @@ namespace Jolybob.ProceduralWorld
             int seed,
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline)
-            : this(seed, settings, pipeline, null, null, null, null, null, null, null)
+            : this(seed, settings, pipeline, null, null, null, null, null, null, null, null)
         {
         }
 
@@ -80,7 +81,7 @@ namespace Jolybob.ProceduralWorld
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline,
             IEnvironmentFieldProvider environmentFields)
-            : this(seed, settings, pipeline, environmentFields, null, null, null, null, null, null)
+            : this(seed, settings, pipeline, environmentFields, null, null, null, null, null, null, null)
         {
         }
 
@@ -91,7 +92,7 @@ namespace Jolybob.ProceduralWorld
             IEnvironmentFieldProvider environmentFields,
             RegionCatalog regions,
             TerrainCatalog terrains)
-            : this(seed, settings, pipeline, environmentFields, null, regions, terrains, null, null, null)
+            : this(seed, settings, pipeline, environmentFields, null, regions, terrains, null, null, null, null)
         {
         }
 
@@ -144,7 +145,8 @@ namespace Jolybob.ProceduralWorld
             TerrainCatalog terrains,
             ResourceCatalog resources,
             StructureCatalog structures,
-            WorldPostProcessPipeline postProcess)
+            WorldPostProcessPipeline postProcess,
+            TopologyPipeline topology = null)
         {
             this.seed = seed;
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -166,6 +168,8 @@ namespace Jolybob.ProceduralWorld
             this.terrains = terrains ?? TerrainCatalog.CreateDefault();
             this.resources = resources ?? ResourceCatalog.CreateDefault();
             this.structures = structures ?? StructureCatalog.CreateDefault();
+            this.topology = topology ?? new TopologyPipeline()
+                .Add(new ChasmPass(settings));
             random = new WorldRandomService(seed);
             this.pipeline = pipeline ?? CreateDefaultPipeline(
                 seed,
@@ -174,6 +178,7 @@ namespace Jolybob.ProceduralWorld
                 this.resources,
                 this.structures,
                 postProcess ?? new WorldPostProcessPipeline(),
+                this.topology,
                 settings);
         }
 
@@ -190,7 +195,8 @@ namespace Jolybob.ProceduralWorld
                 caveFields,
                 random,
                 resources,
-                structures);
+                structures,
+                topology);
             pipeline.Execute(context);
             return chunk;
         }
@@ -202,6 +208,7 @@ namespace Jolybob.ProceduralWorld
             ResourceCatalog resources,
             StructureCatalog structures,
             WorldPostProcessPipeline postProcess,
+            TopologyPipeline topology,
             WorldGenerationSettings settings)
         {
             IRegionResolver resolver = settings.macroRegionsEnabled
@@ -215,7 +222,7 @@ namespace Jolybob.ProceduralWorld
                 .Add(new RegionBiomePass(resolver))
                 .Add(new TerrainPass(regions, terrains))
                 .Add(new CavePass(settings))
-                .Add(new ChasmPass(settings))
+                .Add(new TopologyPass(topology))
                 .Add(new ResourcePass(resources))
                 .Add(new StructurePass(structures))
                 .Add(new WorldPostProcessPass(postProcess));

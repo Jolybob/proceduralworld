@@ -7,6 +7,7 @@ namespace Jolybob.ProceduralWorld
     {
         int SourceId { get; }
         IEnumerable<int> GetDemandedRegions();
+        event Action DemandChanged;
     }
 
     public sealed class WorldPresentationRegionDemandSourceCoordinator
@@ -28,16 +29,26 @@ namespace Jolybob.ProceduralWorld
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            if (!sources.ContainsKey(source.SourceId))
+            if (sources.TryGetValue(source.SourceId, out var existing))
+            {
+                existing.DemandChanged -= OnDemandChanged;
+            }
+            else
+            {
                 sourceOrder.Add(source.SourceId);
+            }
 
             sources[source.SourceId] = source;
+            source.DemandChanged += OnDemandChanged;
             Refresh(source.SourceId);
         }
 
         public bool Unregister(int sourceId)
         {
-            if (!sources.Remove(sourceId)) return false;
+            if (!sources.TryGetValue(sourceId, out var source)) return false;
+
+            source.DemandChanged -= OnDemandChanged;
+            sources.Remove(sourceId);
             sourceOrder.Remove(sourceId);
             demand.RemoveSourceDemand(sourceId);
             return true;
@@ -58,10 +69,32 @@ namespace Jolybob.ProceduralWorld
         public void Clear()
         {
             for (var i = sourceOrder.Count - 1; i >= 0; i--)
-                demand.RemoveSourceDemand(sourceOrder[i]);
+            {
+                var sourceId = sourceOrder[i];
+                sources[sourceId].DemandChanged -= OnDemandChanged;
+                demand.RemoveSourceDemand(sourceId);
+            }
 
             sources.Clear();
             sourceOrder.Clear();
+        }
+
+        private void OnDemandChanged()
+        {
+            for (var i = 0; i < sourceOrder.Count; i++)
+            {
+                var sourceId = sourceOrder[i];
+                if (sources[sourceId].Equals(GetCurrentSource()))
+                {
+                    Refresh(sourceId);
+                    return;
+                }
+            }
+        }
+
+        private IWorldPresentationRegionDemandSource GetCurrentSource()
+        {
+            return null;
         }
     }
 }

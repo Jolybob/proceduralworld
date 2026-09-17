@@ -44,7 +44,7 @@ DETERMINISTIC WORLD FIELDS
 
 The detailed target architecture, layering rules, determinism contract, coordinate rules, package boundaries, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md).
 
-## Current implementation — 0.1.92
+## Current implementation — 0.1.93
 
 The runtime provides:
 
@@ -300,7 +300,7 @@ In Unity 6, install from Git using:
 https://github.com/Jolybob/proceduralworld.git
 ```
 
-The package manifest currently declares version `0.1.92`.
+The package manifest currently declares version `0.1.93`.
 
 ## Scope
 

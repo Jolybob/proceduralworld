@@ -123,16 +123,16 @@ namespace Jolybob.ProceduralWorld
 
     public sealed class WorldChunkStreamingController
     {
-        private readonly ProceduralWorldGenerator generator;
+        private readonly IWorldChunkGenerator generator;
         private readonly ChunkStreamingPlanner planner;
         private readonly IWorldChunkSink sink;
 
-        public ProceduralWorldGenerator Generator => generator;
+        public IWorldChunkGenerator Generator => generator;
         public ChunkStreamingPlanner Planner => planner;
         public IWorldChunkSink Sink => sink;
 
         public WorldChunkStreamingController(
-            ProceduralWorldGenerator generator,
+            IWorldChunkGenerator generator,
             ChunkStreamingPlanner planner,
             IWorldChunkSink sink)
         {

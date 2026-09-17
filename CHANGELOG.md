@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.65] - 2026-09-17
+
+- Fixed Unity compilation errors caused by presentation-region contracts being removed from `WorldPresentationDirtyRegionSet` without preserving their runtime definitions.
+- Restored `IWorldPresentationRegionResolver` and `IWorldPresentationRegionRenderer` as dedicated presentation-region contracts so existing region-aware APIs compile cleanly.
+- Added the corresponding Unity `.meta` file for the contract source.
+- Bumped the package version to 0.1.65.
+- Incremented package version for this update.
+
 ## [0.1.64] - 2026-09-17
 
 - Added `IWorldPresentationRegionImpactResolver` so one world change can invalidate multiple presentation regions without coupling the core to chunk or streaming implementations.
@@ -73,7 +81,7 @@
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
 - Added Unity `.meta` files for the new overlay runtime and tests.
-- Bumped the package version to 0.1.57.
+- Bumped package version to 0.1.57.
 - Incremented package version for this update.
 
 ## [0.1.56] - 2026-09-17
@@ -84,13 +92,13 @@
 - Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
 - Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
 - Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped the package version to 0.1.56.
+- Bumped package version to 0.1.56.
 - Incremented package version for this update.
 
 ## [0.1.55] - 2026-09-17
 
 - Fixed Unity test compilation error CS0104 by explicitly qualifying `UnityEngine.Object` in `WorldCellVisualLayerCatalogTests`.
-- Bumped the package version to 0.1.55.
+- Bumped package version to 0.1.55.
 - Incremented package version for this update.
 
 ## [0.1.54] - 2026-09-17

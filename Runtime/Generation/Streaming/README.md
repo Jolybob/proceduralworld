@@ -8,6 +8,7 @@ The streaming layer controls which chunk coordinates are active. It does not dec
 - `ChunkStreamingPlanner` computes deterministic load/unload deltas around a center chunk.
 - `ChunkStreamingDelta` contains the coordinates to load and unload for one update.
 - `WorldChunkStreamingController` connects the planner to `ProceduralWorldGenerator` and a sink.
+- `WorldPersistentChunkStreamingController` adds persistence-aware load, save-before-unload, and reset behavior.
 
 ## Radius model
 
@@ -15,18 +16,41 @@ The streaming layer controls which chunk coordinates are active. It does not dec
 
 A radius of `2` activates 25 chunks around the center. Coordinates are returned in stable Y-then-X order, which makes consumers easier to test and gives deterministic work ordering.
 
+## Persistent lifecycle
+
+`WorldPersistentChunkStreamingController` composes three independent boundaries:
+
+```text
+ChunkStreamingPlanner
+        |
+        v
+persistent controller
+   |           |
+   v           v
+WorldChunkPersistenceService   IWorldChunkSink
+   |
+   v
+IWorldChunkStore
+```
+
+On load, the controller asks `WorldChunkPersistenceService` for the chunk, so deterministic generation happens first and saved overrides are then applied. On unload, the currently loaded chunk is saved before the sink receives its unload notification. `Reset()` saves and unloads every currently loaded chunk before clearing the planner state.
+
+The controller keeps loaded chunk references only for this lifecycle boundary. It does not know how the sink renders or stores the world, and it does not alter the generator's deterministic rules.
+
 ## Separation
 
-Generation remains deterministic and authoritative for chunk contents. Streaming only decides when a chunk should become active. Persistence can later sit behind `IWorldChunkSink` without changing the generator, and rendering adapters can consume loaded chunks without becoming part of the streaming planner.
+Generation remains deterministic and authoritative for the generated base state. Streaming decides when a chunk should become active. Persistence stores edits separately from that generated base state. Rendering adapters can consume loaded chunks without becoming part of the streaming planner.
 
 ## Example
 
 ```csharp
-var generator = new ProceduralWorldGenerator(75319, settings);
+var generator = new ProceduralWorldGenerator(60427, settings);
+var store = new InMemoryWorldChunkStore();
+var persistence = new WorldChunkPersistenceService(generator, store);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
-var streaming = new WorldChunkStreamingController(generator, planner, sink);
+var streaming = new WorldPersistentChunkStreamingController(persistence, planner, sink);
 
 streaming.Update(new ChunkCoord(10, -4));
 ```
 
-The preview seed used by this architecture revision is `75319`.
+The preview seed used by this architecture revision is `60427`.

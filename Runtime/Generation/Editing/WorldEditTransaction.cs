@@ -76,21 +76,33 @@ namespace Jolybob.ProceduralWorld
         }
 
         /// <summary>
-        /// Publishes all transaction changes to the target journal and closes the transaction.
+        /// Publishes all transaction changes to the target journal as one logical batch when supported.
+        /// Journals that do not expose batching retain the original per-change publication behavior.
         /// </summary>
         public bool Commit()
         {
             EnsureOpen();
             completed = true;
 
-            for (int i = 0; i < localJournal.Changes.Count; i++)
-                targetJournal.Record(localJournal.Changes[i]);
+            if (localJournal.Changes.Count == 0)
+                return false;
 
-            return localJournal.Changes.Count > 0;
+            var batchJournal = targetJournal as IWorldChangeBatchJournal;
+            if (batchJournal != null)
+            {
+                batchJournal.RecordBatch(localJournal.Changes);
+            }
+            else
+            {
+                for (int i = 0; i < localJournal.Changes.Count; i++)
+                    targetJournal.Record(localJournal.Changes[i]);
+            }
+
+            return true;
         }
 
         /// <summary>
-        /// Restores every cell changed by the transaction to its original state and closes it.
+        /// Restores every cell changed by the transaction to its original state and closes the transaction.
         /// </summary>
         public bool Rollback()
         {

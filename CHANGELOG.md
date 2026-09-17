@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.26] - 2026-09-17
+
+- Fixed Unity compilation compatibility in `WorldCellModification.GetHashCode` by removing the unsupported 9-argument `HashCode.Combine` call.
+- Replaced it with stable two-stage hash composition compatible with the Unity/.NET profile used by the package.
+- Changed the Tilemap preview and primary test seed from `43017` to `51746` for this fix revision.
+- Bumped the package version to 0.1.26.
+- Incremented package version for this update.
+
 ## [0.1.25] - 2026-09-17
 
 - Added `WorldCellModification` for sparse persisted cell overrides.

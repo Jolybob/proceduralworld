@@ -26,7 +26,9 @@ The important distinction is that a chunk is no longer the identity of work. A *
 
 ## Deterministic execution
 
-`WorldGenerationWorkGraph.BuildSchedule()` performs a deterministic topological sort. Among currently-ready work it orders by phase, then chunk X/Y. Request arrival order therefore does not determine execution order for independent work.
+`WorldGenerationWorkGraph.BuildSchedule()` performs a deterministic topological sort. Among currently-ready work it orders by priority descending, then phase, then chunk X/Y. Request arrival order therefore does not determine execution order for independent work.
+
+Priority never bypasses a prerequisite: a high-priority dependent remains blocked until all of its prerequisites have been dequeued. This separates **when ready work should run** from **whether it is legal to run**.
 
 Dependencies may cross chunk boundaries. This is intentional: a materialization request can depend on a plan or realization result owned by another chunk without forcing that chunk to be loaded as the source of truth.
 

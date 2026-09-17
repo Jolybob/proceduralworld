@@ -3,24 +3,6 @@ using System.Collections.Generic;
 
 namespace Jolybob.ProceduralWorld
 {
-    /// <summary>Stable identifier for generated structure types.</summary>
-    public readonly struct StructureId : IEquatable<StructureId>
-    {
-        public readonly byte Value;
-
-        public StructureId(byte value)
-        {
-            Value = value;
-        }
-
-        public bool Equals(StructureId other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is StructureId other && Equals(other);
-        public override int GetHashCode() => Value.GetHashCode();
-        public static bool operator ==(StructureId left, StructureId right) => left.Equals(right);
-        public static bool operator !=(StructureId left, StructureId right) => !left.Equals(right);
-        public override string ToString() => Value.ToString();
-    }
-
     /// <summary>
     /// Data-only description of a structure that may be placed in generated terrain.
     /// </summary>

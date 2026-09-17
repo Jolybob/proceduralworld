@@ -80,6 +80,64 @@ namespace Jolybob.ProceduralWorld.Tests
                 fallback));
         }
 
+        [Test]
+        public void ResourceLayerResolvesOnlyFlaggedMappedResources()
+        {
+            var expected = CreateTile("Resource");
+            var layer = new ResourceWorldCellVisualLayer(
+                new Dictionary<ResourceId, TileBase> { { new ResourceId(7), expected } });
+
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            TileBase tile;
+            Assert.IsFalse(layer.TryResolve(cell, out tile));
+
+            cell.SetResource(new ResourceId(7));
+            Assert.IsTrue(layer.TryResolve(cell, out tile));
+            Assert.AreSame(expected, tile);
+        }
+
+        [Test]
+        public void UnmappedResourceFallsThrough()
+        {
+            var layer = new ResourceWorldCellVisualLayer(
+                new Dictionary<ResourceId, TileBase> { { new ResourceId(7), CreateTile("Resource") } });
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetResource(new ResourceId(8));
+
+            TileBase tile;
+            Assert.IsFalse(layer.TryResolve(cell, out tile));
+            Assert.IsNull(tile);
+        }
+
+        [Test]
+        public void StructureLayerResolvesOnlyFlaggedMappedStructures()
+        {
+            var expected = CreateTile("Structure");
+            var layer = new StructureWorldCellVisualLayer(
+                new Dictionary<StructureId, TileBase> { { new StructureId(7), expected } });
+
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            TileBase tile;
+            Assert.IsFalse(layer.TryResolve(cell, out tile));
+
+            cell.SetStructure(new StructureId(7));
+            Assert.IsTrue(layer.TryResolve(cell, out tile));
+            Assert.AreSame(expected, tile);
+        }
+
+        [Test]
+        public void UnmappedStructureFallsThrough()
+        {
+            var layer = new StructureWorldCellVisualLayer(
+                new Dictionary<StructureId, TileBase> { { new StructureId(7), CreateTile("Structure") } });
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetStructure(new StructureId(8));
+
+            TileBase tile;
+            Assert.IsFalse(layer.TryResolve(cell, out tile));
+            Assert.IsNull(tile);
+        }
+
         private Tile CreateTile(string name)
         {
             var tile = ScriptableObject.CreateInstance<Tile>();

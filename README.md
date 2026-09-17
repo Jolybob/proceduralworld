@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.24
+## Current architecture — 0.1.25
 
 The generation stack is intentionally separated by responsibility:
 
@@ -30,7 +30,7 @@ seed + settings
 
 `GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming then decides which chunk coordinates are active without changing how chunks are generated.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation.
 
 Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types, structure types, and post-process steps independently deterministic.
 
@@ -55,6 +55,11 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `ChunkStreamingPlanner` — computes deterministic active-chunk deltas
 - `ChunkStreamingDelta` — describes loads and unloads for one update
 - `WorldChunkStreamingController` — connects chunk planning to deterministic generation
+- `WorldCellModification` — one persisted cell override
+- `WorldChunkSaveData` — sparse chunk save representation
+- `IWorldChunkStore` — backend-neutral persistence contract
+- `WorldChunkPersistenceService` — regenerates, compares, saves, and restores chunks
+- `InMemoryWorldChunkStore` — test/prototype persistence backend
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
 
 The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
@@ -67,7 +72,7 @@ Resources are disabled by default. Enable `WorldGenerationSettings.resourcesEnab
 
 ## Structure layer
 
-Structures are generated as deterministic multi-cell footprints. `StructurePass` selects anchors using the Structures random domain plus the structure ID as a salt, validates the entire footprint before placement, prevents overlap with caves, resources, and other structures, and records occupancy through `GeneratedCell.Structure` and `GeneratedCellFlags.HasStructure`.
+Structures are generated as deterministic multi-cell footprints. `StructurePass` selects anchors using the Structures random domain plus the structure ID as a salt, validates the entire footprint before placement, prevents overlap with caves, resources, or other structures, and records occupancy through `GeneratedCell.Structure` and `GeneratedCellFlags.HasStructure`.
 
 Structures are disabled by default. Enable `WorldGenerationSettings.structuresEnabled` when a project wants procedural structure placement.
 
@@ -90,7 +95,7 @@ A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(59273, settings);
+var generator = new ProceduralWorldGenerator(43017, settings);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
 var streaming = new WorldChunkStreamingController(generator, planner, sink);
 
@@ -98,6 +103,31 @@ streaming.Update(new ChunkCoord(10, -4));
 ```
 
 See `Runtime/Generation/Streaming/README.md` for the complete contract.
+
+## Persistence layer
+
+Persistence does not replace procedural generation. `WorldChunkPersistenceService` always regenerates the requested chunk from the normal deterministic generator, then applies any stored cell overrides. When saving, it regenerates the same base chunk and stores only cells whose current state differs.
+
+This makes untouched procedural terrain reproducible while player edits remain persistent. `IWorldChunkStore` is intentionally backend-neutral; a project can implement disk files, databases, cloud storage, or platform-specific persistence without changing generation code.
+
+`WorldChunkSaveData.FormatVersion` provides an explicit migration point for future save-format changes.
+
+Example:
+
+```csharp
+var generator = new ProceduralWorldGenerator(43017, settings);
+var store = new InMemoryWorldChunkStore();
+var persistence = new WorldChunkPersistenceService(generator, store);
+
+GeneratedChunk chunk = persistence.LoadChunk(new ChunkCoord(10, -4));
+GeneratedCell cell = chunk.GetCell(5, 5);
+cell.SetResource(new ResourceId(12));
+chunk.SetCell(5, 5, cell);
+
+persistence.SaveChunk(chunk);
+```
+
+The in-memory store is intended for tests and prototypes. Production projects should provide their own `IWorldChunkStore` implementation.
 
 ## Running package tests
 
@@ -172,11 +202,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `59273` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `43017` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, and persistence backends through `IWorldChunkStore`.
 
 ## Roadmap
 
@@ -205,7 +235,8 @@ Planned extension points include:
 - richer structure placement and WFC
 - world modification layers built on post-process steps
 - streaming prioritization and asynchronous generation hooks
-- persistence interfaces
+- durable storage implementations built on `IWorldChunkStore`
+- save migration tooling
 - editor world preview
 - Jobs/Burst implementations
 - additional render adapters

@@ -19,6 +19,7 @@ namespace Jolybob.ProceduralWorld
         [Header("Region Fields")]
         [Min(0.001f)] public float temperatureScale = 0.008f;
         [Min(0.001f)] public float moistureScale = 0.012f;
+        public bool macroRegionsEnabled = false;
 
         [Header("Caves")]
         public bool cavesEnabled = false;
@@ -160,6 +161,7 @@ namespace Jolybob.ProceduralWorld
             this.structures = structures ?? StructureCatalog.CreateDefault();
             random = new WorldRandomService(seed);
             this.pipeline = pipeline ?? CreateDefaultPipeline(
+                seed,
                 this.regions,
                 this.terrains,
                 this.resources,
@@ -187,6 +189,7 @@ namespace Jolybob.ProceduralWorld
         }
 
         private static WorldGenerationPipeline CreateDefaultPipeline(
+            int seed,
             RegionCatalog regions,
             TerrainCatalog terrains,
             ResourceCatalog resources,
@@ -194,8 +197,15 @@ namespace Jolybob.ProceduralWorld
             WorldPostProcessPipeline postProcess,
             WorldGenerationSettings settings)
         {
+            IRegionResolver resolver = settings.macroRegionsEnabled
+                ? new RadialSectorRegionResolver(
+                    MacroRegionCatalog.CreateDefault(),
+                    seed,
+                    new RegionId(0))
+                : new ThresholdRegionResolver();
+
             return new WorldGenerationPipeline()
-                .Add(new RegionBiomePass(new ThresholdRegionResolver()))
+                .Add(new RegionBiomePass(resolver))
                 .Add(new TerrainPass(regions, terrains))
                 .Add(new CavePass(settings))
                 .Add(new ResourcePass(resources))

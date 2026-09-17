@@ -137,6 +137,7 @@ namespace Jolybob.ProceduralWorld
 
         public string Id { get; }
         public string TypeId { get; }
+        public string TemplateId { get; }
         public string Label { get; }
         public IReadOnlyList<WorldPlanProperty> Properties => properties;
 
@@ -144,6 +145,16 @@ namespace Jolybob.ProceduralWorld
             string id,
             string typeId,
             string label,
+            IEnumerable<WorldPlanProperty> properties = null)
+            : this(id, typeId, label, null, properties)
+        {
+        }
+
+        public WorldPlanNodeDefinition(
+            string id,
+            string typeId,
+            string label,
+            string templateId,
             IEnumerable<WorldPlanProperty> properties = null)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -153,6 +164,7 @@ namespace Jolybob.ProceduralWorld
 
             Id = id;
             TypeId = typeId;
+            TemplateId = templateId ?? string.Empty;
             Label = string.IsNullOrWhiteSpace(label) ? typeId : label;
             this.properties = new List<WorldPlanProperty>();
 
@@ -198,24 +210,106 @@ namespace Jolybob.ProceduralWorld
         }
     }
 
+    public sealed class WorldPlanSubgraphPortDefinition
+    {
+        public string Id { get; }
+        public string DisplayName { get; }
+        public string NodeId { get; }
+        public string PortId { get; }
+
+        public WorldPlanSubgraphPortDefinition(
+            string id,
+            string displayName,
+            string nodeId,
+            string portId)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Exposed port ID must not be empty.", nameof(id));
+            if (string.IsNullOrWhiteSpace(nodeId))
+                throw new ArgumentException("Exposed node ID must not be empty.", nameof(nodeId));
+            if (string.IsNullOrWhiteSpace(portId))
+                throw new ArgumentException("Exposed port target port ID must not be empty.", nameof(portId));
+
+            Id = id;
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? id : displayName;
+            NodeId = nodeId;
+            PortId = portId;
+        }
+    }
+
+    public sealed class WorldPlanSubgraphTemplateDefinition
+    {
+        private readonly List<WorldPlanSubgraphPortDefinition> exposedPorts;
+
+        public string Id { get; }
+        public string DisplayName { get; }
+        public WorldPlanGraphDefinition Graph { get; }
+        public IReadOnlyList<WorldPlanSubgraphPortDefinition> ExposedPorts => exposedPorts;
+
+        public WorldPlanSubgraphTemplateDefinition(
+            string id,
+            string displayName,
+            WorldPlanGraphDefinition graph,
+            IEnumerable<WorldPlanSubgraphPortDefinition> exposedPorts = null)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Template ID must not be empty.", nameof(id));
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+
+            Id = id;
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? id : displayName;
+            Graph = graph;
+            this.exposedPorts = new List<WorldPlanSubgraphPortDefinition>();
+
+            if (exposedPorts != null)
+                this.exposedPorts.AddRange(exposedPorts);
+
+            this.exposedPorts.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
+        }
+
+        public WorldPlanSubgraphPortDefinition GetExposedPort(string id)
+        {
+            for (int i = 0; i < exposedPorts.Count; i++)
+            {
+                if (string.Equals(exposedPorts[i].Id, id, StringComparison.Ordinal))
+                    return exposedPorts[i];
+            }
+
+            return null;
+        }
+    }
+
     public sealed class WorldPlanGraphDefinition
     {
         private readonly List<WorldPlanNodeTypeDefinition> nodeTypes;
         private readonly List<WorldPlanNodeDefinition> nodes;
         private readonly List<WorldPlanConnectionDefinition> connections;
+        private readonly List<WorldPlanSubgraphTemplateDefinition> templates;
 
         public IReadOnlyList<WorldPlanNodeTypeDefinition> NodeTypes => nodeTypes;
         public IReadOnlyList<WorldPlanNodeDefinition> Nodes => nodes;
         public IReadOnlyList<WorldPlanConnectionDefinition> Connections => connections;
+        public IReadOnlyList<WorldPlanSubgraphTemplateDefinition> Templates => templates;
 
         public WorldPlanGraphDefinition(
             IEnumerable<WorldPlanNodeTypeDefinition> nodeTypes,
             IEnumerable<WorldPlanNodeDefinition> nodes,
             IEnumerable<WorldPlanConnectionDefinition> connections)
+            : this(nodeTypes, nodes, connections, null)
+        {
+        }
+
+        public WorldPlanGraphDefinition(
+            IEnumerable<WorldPlanNodeTypeDefinition> nodeTypes,
+            IEnumerable<WorldPlanNodeDefinition> nodes,
+            IEnumerable<WorldPlanConnectionDefinition> connections,
+            IEnumerable<WorldPlanSubgraphTemplateDefinition> templates)
         {
             this.nodeTypes = new List<WorldPlanNodeTypeDefinition>();
             this.nodes = new List<WorldPlanNodeDefinition>();
             this.connections = new List<WorldPlanConnectionDefinition>();
+            this.templates = new List<WorldPlanSubgraphTemplateDefinition>();
 
             if (nodeTypes != null)
                 this.nodeTypes.AddRange(nodeTypes);
@@ -223,6 +317,8 @@ namespace Jolybob.ProceduralWorld
                 this.nodes.AddRange(nodes);
             if (connections != null)
                 this.connections.AddRange(connections);
+            if (templates != null)
+                this.templates.AddRange(templates);
         }
     }
 

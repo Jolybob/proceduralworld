@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.111] - 2026-09-18
+
+- Added `WorldSceneDefinition`, `WorldSceneCatalog`, and deterministic `WorldSceneSelector` for reusable scenes, dungeon pieces, and landmarks.
+- Added weighted biome/tag filtering, unique-scene consumption, world-instance limits, minimum origin distance, and orientation metadata to scene definitions.
+- Added Unity-authored `WorldSceneDefinitionAsset` and `WorldSceneCatalogAsset` and exposed the catalog from `ProceduralWorldDefinitionAsset`.
+- Added regression coverage for canonical ordering, deterministic selection, tag filtering, uniqueness, and empty pools.
+- Documented scene/dungeon catalog architecture and preserved the generic world-space feature placement boundary.
+- Bumped the package version to 0.1.111.
+
 ## [0.1.110] - 2026-09-18
 
 - Added deterministic `WorldPlanSelector` and weighted `WorldPlanCandidate` selection using world seed, stable selection salt, canonical candidate IDs, enable flags, and required tags.

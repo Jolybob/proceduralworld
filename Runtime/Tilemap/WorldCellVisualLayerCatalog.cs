@@ -6,6 +6,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
 {
     /// <summary>
     /// Ordered composition of optional visual layers followed by a required fallback resolver.
+    /// Lower order values are evaluated first and therefore have higher precedence.
     /// </summary>
     public sealed class WorldCellVisualLayerCatalog : IWorldCellVisualResolver
     {
@@ -29,6 +30,16 @@ namespace Jolybob.ProceduralWorld.Tilemap
             }
 
             ordered.Sort((left, right) => left.Order.CompareTo(right.Order));
+            for (int i = 1; i < ordered.Count; i++)
+            {
+                if (ordered[i - 1].Order == ordered[i].Order)
+                {
+                    throw new ArgumentException(
+                        $"Visual layer order '{ordered[i].Order}' is assigned more than once.",
+                        nameof(layers));
+                }
+            }
+
             this.layers = ordered;
         }
 

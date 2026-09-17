@@ -6,10 +6,12 @@ The plan layer sits between authored semantic intent and world-space feature/mat
 
 ## Deterministic plan selection
 
-`WorldPlanSelector` selects one authored candidate without process-local random state. Candidates are canonicalized by stable ID, filtered by enabled state, positive weight, and required tags, then selected from a seed-derived stable hash:
+`WorldPlanSelector` selects one authored candidate without process-local random state. Candidates are canonicalized by stable ID, filtered by enabled state, positive weight, and required tags, then selected from a seed-derived stable hash. Selection happens once at world scope, before chunk streaming or geometry materialization.
+
+`ProceduralWorldDefinitionAsset` exposes candidate plans with stable IDs, weights, enable flags, required tags, and a selection salt. The existing single `worldPlanGraph` remains the fallback when no candidate catalog is configured.
 
 ```text
-world seed + selection salt + available tags
+world seed + selection salt + tags
                   |
                   v
           eligible candidates
@@ -24,50 +26,131 @@ world seed + selection salt + available tags
              selected plan
 ```
 
-The selected graph is still compiled, expanded, laid out, lowered, and realized by the same runtime pipeline. This means semantic variation happens before world geometry is materialized while preserving reproducibility for a fixed seed, catalog, salt, and tag set.
+## Hierarchical plans
 
-`ProceduralWorldDefinitionAsset` exposes a candidate list, weights, enable flags, required tags, and a selection salt. The legacy single `worldPlanGraph` field remains as the fallback when no candidate catalog is configured.
+A `WorldPlanNodeDefinition` can reference a `WorldPlanSubgraphTemplateDefinition` through `TemplateId`.
 
-## Runtime stages
+During expansion, template instances are removed and replaced by concrete nodes and connections using deterministic scoped IDs:
 
 ```text
-candidate catalog
-      |
-      v
-WorldPlanSelector
-      |
-      v
-WorldPlanGraphDefinition
-      |
-      v
-WorldPlanSubgraphCompiler
-      |
-      v
-WorldPlanLayoutSolver
-      |
-      +----> WorldPlanFeatureLowerer (optional)
-      |             |
-      |             v
-      |        WorldPlanRealizer (optional)
-      |             |
-      |             v
-      +------> WorldRealizationMap
+Template instance: dungeon
+        |
+        +-- room_a      -> dungeon/room_a
+        +-- room_b      -> dungeon/room_b
+        +-- room_a -> room_b
+                    -> dungeon/room_a -> dungeon/room_b
 ```
 
-Selection is a world-level decision. It is not repeated per chunk, and chunk coordinates do not participate in choosing the plan. The selected semantic plan is therefore stable before streaming or chunk materialization begins.
+A template exposes only the internal ports that may cross its boundary through `WorldPlanSubgraphPortDefinition`.
 
-## Runtime types
+Nested templates are recursively lowered, so a reusable room network can itself contain reusable room clusters or larger dungeon sections.
 
-Current runtime types include `WorldPlanGraphDefinition`, `WorldPlanCompiler`, `WorldPlanSubgraphCompiler`, `WorldPlanSelector`, `WorldPlanCandidate`, `WorldPlanSelectionSettings`, `WorldPlanRuntimeBuilder`, `WorldPlanRuntime`, `WorldPlanLayoutSolver`, `WorldPlanFeatureLowerer`, and `WorldPlanRealizer`.
+The expansion layer validates missing templates, duplicate identifiers, invalid exposed ports, and recursive template cycles before delegating the resulting flat graph to the existing semantic compiler.
 
-## Determinism
+## World-space layout
 
-Selection, expansion, compilation, layout, lowering, realization ordering, and chunk indexing canonicalize their inputs by stable semantic identifiers and world coordinates. Reordering candidate or graph lists does not change selection or downstream world-space results.
+`WorldPlanLayoutSolver` converts the compiled flat `WorldPlan` into world-space node footprints and semantic port anchors.
 
-Canvas positions and Unity authoring objects are not part of the deterministic runtime plan or runtime layout representation.
+```text
+WorldPlan
+   |
+   v
+WorldPlanLayoutSolver
+   |
+   +-- connected components
+   +-- deterministic graph-distance layers
+   +-- footprint + clearance packing
+   +-- semantic port anchors
+   |
+   v
+WorldPlanLayout
+```
+
+The layout is deterministic from stable plan identity and `WorldPlanLayoutSettings`. The solver does not read Unity editor canvas coordinates, chunk residency, or mutable random state.
+
+Each connected component uses its lowest node ID as its root. Breadth-first graph distance determines layers and stable node IDs determine order inside each layer. Disconnected components are packed horizontally with a deterministic component gap.
+
+Node minimum width, height, and clearance are treated as occupied layout constraints. The result therefore provides a stable non-overlapping world-space footprint for later room/structure materialization.
+
+Port anchors are placed on node perimeters using semantic connection direction and stable port ordering. Connected sources use the right side, connected targets use the left side, and unconnected bidirectional ports use the bottom side.
+
+## Runtime plan program
+
+`WorldPlanRuntimeBuilder` is the authoritative orchestration boundary for plan-driven generation:
+
+```text
+WorldPlanGraphDefinition
+        |
+        v
+WorldPlanSubgraphCompiler
+        |
+        v
+WorldPlanCompiler
+        |
+        v
+WorldPlanLayoutSolver
+        |
+        +----> WorldPlanFeatureLowerer (optional)
+        |             |
+        |             v
+        |        WorldPlanRealizer (optional)
+        |             |
+        |             v
+        +------> WorldRealizationMap
+                         |
+                         v
+                  chunk intersection query
+```
+
+The builder executes these stages once per world runtime, rather than recreating semantic planning inside each chunk. Feature lowering remains optional because feature catalogs and realization semantics are application-owned extension points.
+
+`WorldPlanRuntime` indexes realization edits by chunk only as an acceleration structure. World coordinates remain the authoritative identity and no chunk-local copy of the semantic plan is created.
+
+The plan runtime carries an explicit `ChunkSize`. Lowering settings must use that same chunk size, and a generator rejects a supplied plan runtime whose chunk size differs from `WorldGenerationSettings.chunkSize`. This prevents cross-boundary realization lookups from silently using a different execution grid.
 
 ## Chunk-generation integration
 
-`ProceduralWorldGenerator` exposes the same immutable `WorldPlanRuntime` through `WorldGenerationContext` and the optional `IWorldPlanChunkGenerator` capability. The runtime is built once for the world definition, not recreated inside each chunk.
+`ProceduralWorldGenerator` implements `IWorldPlanChunkGenerator` when supplied with a `WorldPlanRuntime`. The same runtime is also exposed on `WorldGenerationContext` so custom generation passes can inspect the global plan while they materialize a chunk.
 
-World coordinates remain authoritative; chunk indexing is only an acceleration path for materialization and streaming.
+The chunk boundary is intentionally explicit:
+
+```text
+WorldPlanRuntime
+      |
+      +-- global plan/layout/realization truth
+      |
+      v
+WorldGenerationContext.WorldPlan
+      |
+      +-- custom materialization pass
+      |
+      v
+GeneratedChunk
+```
+
+Consumers that only have `IWorldChunkGenerator` can use `WorldPlanChunkGeneration.TryCollectRealizationEdits(...)` to detect and query the optional plan capability without coupling to `ProceduralWorldGenerator`.
+
+## Determinism
+
+Selection, expansion, compilation, layout, lowering, realization ordering, and chunk indexing all canonicalize their inputs by stable semantic identifiers and world coordinates. Reordering candidate or graph lists does not change selection, scoped IDs, node footprints, port anchors, or realization lookup results.
+
+Canvas positions and Unity authoring objects are not part of the deterministic runtime plan or runtime layout representation.
+
+## Authoring boundary
+
+`ProceduralWorldDefinitionAsset` can reference a `WorldPlanGraphAsset` directly or configure a candidate catalog. Candidate selection is performed from the world seed before the selected graph is compiled and laid out. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
+
+## Runtime boundary
+
+The runtime planning module has no dependency on `UnityEditor`, GraphView, Tilemap, GameObjects, or scene hierarchies. Authoring assets compile into plain runtime definitions, then into a `WorldPlan`, then into world-space plan data shared by chunk generation.
+
+The remaining materialization stages can consume the same world-space truth without creating a chunk-local planning layer:
+
+```text
+WorldPlanRuntime
+    |
+    +----> terrain-aware feasibility
+    +----> feature placement
+    +----> world-space corridor/path planning
+    +----> chunk-local materialization
+```

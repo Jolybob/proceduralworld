@@ -79,7 +79,7 @@
 - Updated `WorldCellVisualStateOverlayLayer` with an optional channel while preserving its existing constructor behavior.
 - Added regression coverage for simultaneous channels, same-channel order precedence, and unresolved-channel fallthrough.
 - Added Unity `.meta` files for the multi-channel overlay runtime and tests.
-- Bumped package version to 0.1.59.
+- Bumped the package version to 0.1.59.
 - Incremented package version for this update.
 
 ## [0.1.58] - 2026-09-17

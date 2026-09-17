@@ -17,6 +17,10 @@ player / gameplay system
                                              +----> WorldChangeObserverJournal
                                                         |
                                                         +----> IWorldChangeListener
+                                                        |
+                                                        +----> IWorldChangeBatchListener
+                                                                   |
+                                                                   +----> IWorldChangeRenderer
 ```
 
 ## Responsibilities
@@ -26,17 +30,24 @@ player / gameplay system
 - Preserve deterministic generation and persistence as separate systems.
 - Allow a project to provide its own journal implementation for networking, undo/redo, analytics, or replay.
 - Publish canonical changes to reactive consumers without coupling the journal to rendering or gameplay systems.
+- Keep presentation code behind a renderer boundary so world state does not depend on Tilemap, mesh, UI, or other rendering technologies.
 
 ## Main types
 
 - `WorldEditService` — performs controlled mutations against `IWorldChunkAccess`.
+- `WorldEditTransaction` — groups multiple mutations into one commit/rollback lifecycle.
 - `WorldEditOperationKind` — identifies the kind of mutation that occurred.
 - `WorldCellChange` — captures position, before state, after state, and operation kind.
 - `IWorldChangeJournal` — backend-neutral change recording contract.
+- `IWorldChangeBatchJournal` — optional journal capability for publishing several recorded changes as one logical batch.
 - `InMemoryWorldChangeJournal` — lightweight implementation for tests and prototypes.
 - `WorldEditHistory` — grouped undo/redo over journal records.
-- `IWorldChangeListener` — receives successfully recorded changes.
-- `WorldChangeObserverJournal` — decorates any journal with change notifications and disposable subscriptions.
+- `IWorldChangeListener` — receives successfully recorded single-cell changes.
+- `IWorldChangeBatchListener` — receives transaction-scale logical change batches.
+- `WorldChangeBatch` — immutable snapshot of related changes.
+- `WorldChangeObserverJournal` — decorates a journal with per-cell and logical-batch notifications.
+- `IWorldChangeRenderer` — presentation contract that consumes canonical changes without owning world state.
+- `WorldChangeRenderObserver` — connects the observable journal to an `IWorldChangeRenderer` and manages both subscriptions.
 
 ## Change tracking
 
@@ -54,20 +65,42 @@ if (edits.TrySetTile(position, WorldTile.Core))
 }
 ```
 
-## Reactive notifications
+## Transactions and logical batching
 
-Wrap the journal when other systems should react to the same canonical change records:
+Use `WorldEditTransaction` when several mutations represent one logical operation. The transaction records changes locally until `Commit()` and can restore the original states with `Rollback()`.
+
+When the target journal implements `IWorldChangeBatchJournal`, a committed transaction is published as one `WorldChangeBatch`. The underlying journal still retains every `WorldCellChange`, so history and persistence integrations keep their per-cell source of truth while presentation systems can update once per logical operation.
 
 ```csharp
 var source = new InMemoryWorldChangeJournal();
 var journal = new WorldChangeObserverJournal(source);
-using (journal.Subscribe(listener))
+var transaction = new WorldEditTransaction(worldAccess, chunkSize, journal);
+
+transaction.TrySetTile(new WorldPosition(10, 10), WorldTile.Core);
+transaction.TrySetResource(new WorldPosition(11, 10), new ResourceId(12));
+transaction.Commit();
+```
+
+## Reactive notifications
+
+`WorldChangeObserverJournal` provides two notification levels. `Subscribe()` sends individual changes immediately after they are recorded. `SubscribeBatch()` sends one immutable `WorldChangeBatch` for a transaction commit when the commit uses a batching-capable journal.
+
+Observers are called in registration order from a snapshot, so subscribing or unsubscribing during a callback does not invalidate the active notification iteration. Subscriptions are disposable.
+
+## Presentation adapters
+
+Presentation code should not inspect streaming controllers, persistence services, or generated chunks directly when it only needs to react to mutations. Implement `IWorldChangeRenderer` and connect it with `WorldChangeRenderObserver`.
+
+```csharp
+var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
+var renderer = new MyWorldRenderer();
+using (var observer = new WorldChangeRenderObserver(journal, renderer))
 {
     var edits = new WorldEditService(worldAccess, chunkSize, journal);
-    edits.TrySetCell(position, replacement);
+    edits.TrySetTile(position, replacement);
 }
 ```
 
-`WorldChangeObserverJournal` keeps the wrapped journal as the history source of truth and forwards each recorded change to subscribed `IWorldChangeListener` instances. Subscriptions are disposable and observer callbacks run in registration order from a snapshot, so subscribing or unsubscribing during a callback is safe.
+`Render(WorldCellChange)` is used for direct edits. `RenderBatch(WorldChangeBatch)` is used for transaction commits, preventing the common error where a multi-cell operation causes one rendering pass per cell. A concrete implementation can translate these contracts into Tilemap updates, mesh invalidation, VFX, UI refreshes, or another presentation technology without changing the world-generation or editing layers.
 
-This boundary is suitable for tilemap invalidation, UI updates, audio, gameplay reactions, multiplayer transport, replay recording, and analytics. No observer owns the world state; the canonical `WorldCellChange` remains the shared contract.
+No rendering adapter owns canonical world state. `IWorldChunkAccess` remains the state boundary and `WorldCellChange` remains the shared data contract.

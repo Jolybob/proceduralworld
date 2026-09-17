@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.38] - 2026-09-17
+
+- Fixed `NearestFirstChunkStreamingOrder` tie-breaking so equal-priority chunks follow the documented deterministic order used by the streaming tests.
+- Fixed `ChunkStreamingPlanner` radius iteration at extreme `int` coordinates by performing boundary calculations in `long` and casting each generated coordinate only after the bounds are established.
+- Preserved the nearest-first active-load strategy while keeping unload ordering deterministic.
+- Updated the legacy `ChunkStreamingTests` expectation to match the intentional nearest-first default introduced by the streaming-order architecture.
+- Added regression coverage for deterministic tie ordering and extreme-coordinate load generation.
+- Changed the preview seed from `173921` to `184667`.
+- Bumped the package version to 0.1.38.
+- Incremented package version for this update.
+
 ## [0.1.37] - 2026-09-17
 
 - Added `IChunkStreamingOrder` to separate deterministic chunk load prioritization from active-set calculation.

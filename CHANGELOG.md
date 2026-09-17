@@ -2,12 +2,13 @@
 
 ## [0.1.68] - 2026-09-17
 
-- Added `WorldPresentationRegionDemandCoordinator` as the explicit boundary between desired region visibility and region residency.
-- Added deterministic demand reconciliation so newly demanded regions load once and no-longer-demanded regions unload once.
-- Preserved first-seen demand order while ignoring duplicate region requests.
-- Added automatic reverse-demand-order clearing for predictable presentation teardown.
+- Added `WorldPresentationRegionDemandPlanner` as a pure, framework-neutral boundary that computes region load/unload transitions without performing lifecycle work.
+- Added `WorldPresentationRegionDemandPlan` as an immutable description of deterministic load and unload operations.
+- Updated `WorldPresentationRegionDemandCoordinator` to reconcile against actual residency rather than its previous demand snapshot.
+- Exposed the deterministic loaded-region order from `WorldPresentationRegionResidencyCoordinator` for safe planning without leaking mutable state.
+- Preserved duplicate-demand elimination, first-seen load order, reverse teardown order, and idempotent residency behavior.
 - Restored the 0.1.67 residency runtime and regression coverage on the architecture branch so the published lifecycle/residency contract remains internally complete.
-- Added Unity `.meta` files for the demand runtime and tests.
+- Added Unity `.meta` files and regression coverage for demand planning and reconciliation.
 - Bumped the package version to 0.1.68.
 - Incremented package version for this update.
 

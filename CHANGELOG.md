@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.57] - 2026-09-17
+
+- Added `IWorldCellVisualOverlayLayer` for supplementary presentation such as overlays, decals, and cell states without changing `GeneratedCell`.
+- Added `WorldCellVisualOverlayCatalog` for deterministic order-based overlay composition with explicit fallthrough.
+- Added `WorldTilemapOverlayRenderer` as an independent Tilemap sink/renderer for supplementary visuals, keeping the base terrain renderer isolated.
+- Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
+- Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
+- Added Unity `.meta` files for the new overlay runtime and tests.
+- Bumped the package version to 0.1.57.
+- Incremented package version for this update.
+
 ## [0.1.56] - 2026-09-17
 
 - Added `ResourceWorldCellVisualLayer` for resource-specific presentation with flag-gated fallthrough.

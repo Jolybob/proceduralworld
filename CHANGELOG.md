@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.22] - 2026-09-17
+
+- Added `IWorldChunkSink` as the rendering/persistence-independent boundary for chunk load and unload operations.
+- Added `ChunkStreamingPlanner` to track active chunk coordinates and compute deterministic load/unload deltas.
+- Added configurable load/unload radii, including unload hysteresis for smoother chunk lifetime management.
+- Added `ChunkStreamingDelta` with stable Y-then-X coordinate ordering for predictable consumers and tests.
+- Added `WorldChunkStreamingController` to connect chunk planning to the existing deterministic `ProceduralWorldGenerator`.
+- Kept chunk generation rules independent from streaming and presentation.
+- Added streaming regression tests covering initial loads, unchanged centers, hysteresis, unload boundaries, controller behavior, and deterministic generated data.
+- Changed the Tilemap preview seed from `86420` to `75319` for this architecture update.
+- Added chunk-streaming architecture documentation.
+- Bumped the package version to 0.1.22.
+- Incremented package version for this update.
+
 ## [0.1.21] - 2026-09-17
 
 - Added `IWorldPostProcessStep` for composable, ordered world-data modifications after the main generation passes.

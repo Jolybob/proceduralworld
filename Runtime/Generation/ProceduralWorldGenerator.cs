@@ -40,7 +40,7 @@ namespace Jolybob.ProceduralWorld
         [Min(1f)] public float borderWarp = 20f;
     }
 
-    public sealed class ProceduralWorldGenerator
+    public sealed class ProceduralWorldGenerator : IWorldChunkGenerator
     {
         private readonly int seed;
         private readonly WorldGenerationSettings settings;

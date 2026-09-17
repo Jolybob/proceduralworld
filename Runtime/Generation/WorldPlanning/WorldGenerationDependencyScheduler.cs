@@ -173,16 +173,18 @@ namespace Jolybob.ProceduralWorld
             if (!items.ContainsKey(key)) items.Add(key, new WorldGenerationWorkItem(key.Chunk, key.Kind));
         }
 
-        private static int CompareReady(WorldGenerationWorkKey a, WorldGenerationWorkKey b)
+        private int CompareReady(WorldGenerationWorkKey a, WorldGenerationWorkKey b)
         {
-            int c = a.Kind.CompareTo(b.Kind);
+            int c = items[b].Priority.CompareTo(items[a].Priority);
+            if (c != 0) return c;
+            c = a.Kind.CompareTo(b.Kind);
             if (c != 0) return c;
             c = a.Chunk.X.CompareTo(b.Chunk.X);
             if (c != 0) return c;
             return a.Chunk.Y.CompareTo(b.Chunk.Y);
         }
 
-        private static WorldGenerationWorkKey FindCycleKey(Dictionary<WorldGenerationWorkKey, int> indegree)
+        private WorldGenerationWorkKey FindCycleKey(Dictionary<WorldGenerationWorkKey, int> indegree)
         {
             WorldGenerationWorkKey found = default(WorldGenerationWorkKey);
             bool hasFound = false;

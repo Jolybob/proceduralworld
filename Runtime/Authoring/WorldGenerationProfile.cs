@@ -19,6 +19,7 @@ namespace Jolybob.ProceduralWorld
         [SerializeField] private bool useMacroRegions;
         [SerializeField] private bool rotateMacroLayoutBySeed = true;
         [SerializeField] private float macroSeedRotationRadians;
+        [SerializeField] private byte macroFallbackRegionId;
         [SerializeField] private MacroRegionEntry[] macroRegions = Array.Empty<MacroRegionEntry>();
 
         [Header("Regions")]
@@ -37,15 +38,28 @@ namespace Jolybob.ProceduralWorld
         public bool UseMacroRegions => useMacroRegions && macroRegions != null && macroRegions.Length > 0;
         public bool RotateMacroLayoutBySeed => rotateMacroLayoutBySeed;
         public float MacroSeedRotationRadians => macroSeedRotationRadians;
+        public byte MacroFallbackRegionId => macroFallbackRegionId;
         public MacroRegionEntry[] MacroRegions => macroRegions;
         public RegionEntry[] Regions => regions;
         public TerrainEntry[] Terrains => terrains;
         public ResourceEntry[] Resources => resources;
         public StructureEntry[] Structures => structures;
 
+        public void SetMacroRegions(params MacroRegionEntry[] value)
+        {
+            macroRegions = value ?? Array.Empty<MacroRegionEntry>();
+            useMacroRegions = macroRegions.Length > 0;
+        }
+
+        public void SetRegions(params RegionEntry[] value) => regions = value ?? Array.Empty<RegionEntry>();
+        public void SetTerrains(params TerrainEntry[] value) => terrains = value ?? Array.Empty<TerrainEntry>();
+        public void SetResources(params ResourceEntry[] value) => resources = value ?? Array.Empty<ResourceEntry>();
+        public void SetStructures(params StructureEntry[] value) => structures = value ?? Array.Empty<StructureEntry>();
+        public void EnableMacroRegions(bool enabled) => useMacroRegions = enabled;
+
         /// <summary>
-        /// Builds the runtime generator from this asset without leaking mutable authoring arrays.
-        /// Empty catalogs intentionally fall back to package defaults.
+        /// Builds the runtime generator from this asset without exposing mutable authoring state
+        /// to the generation pipeline.
         /// </summary>
         public ProceduralWorldGenerator CreateGenerator(int seed)
         {
@@ -57,10 +71,15 @@ namespace Jolybob.ProceduralWorld
             IRegionResolver resolver;
             if (UseMacroRegions)
             {
+                RegionId fallback = new RegionId(macroFallbackRegionId);
+                if (!regionCatalog.TryGet(fallback, out _))
+                    throw new InvalidOperationException(
+                        $"Macro fallback region ID {macroFallbackRegionId} is not defined in the region catalog.");
+
                 resolver = new RadialSectorRegionResolver(
                     BuildMacroRegions(),
                     seed,
-                    regionCatalog.DefinitionsAsFallbackRegion(),
+                    fallback,
                     seedRotationRadians: macroSeedRotationRadians,
                     rotateBySeed: rotateMacroLayoutBySeed);
             }
@@ -99,7 +118,14 @@ namespace Jolybob.ProceduralWorld
                 BuildResources();
                 BuildStructures();
                 if (UseMacroRegions)
+                {
+                    RegionCatalog catalog = BuildRegions();
+                    if (!catalog.TryGet(new RegionId(macroFallbackRegionId), out _))
+                        throw new InvalidOperationException(
+                            $"Macro fallback region ID {macroFallbackRegionId} is not defined in the region catalog.");
                     BuildMacroRegions();
+                }
+
                 error = string.Empty;
                 return true;
             }
@@ -289,17 +315,6 @@ namespace Jolybob.ProceduralWorld
             [Min(1)] public int width = 1;
             [Min(1)] public int height = 1;
             [Min(0)] public int minimumDistanceFromOrigin;
-        }
-    }
-
-    internal static class RegionCatalogAuthoringExtensions
-    {
-        public static RegionId DefinitionsAsFallbackRegion(this RegionCatalog catalog)
-        {
-            foreach (RegionDefinition definition in catalog.Definitions)
-                return definition.Id;
-
-            throw new InvalidOperationException("Region catalog must contain at least one region.");
         }
     }
 }

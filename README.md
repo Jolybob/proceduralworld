@@ -64,7 +64,7 @@ The package is intended for large, persistent 2D worlds where terrain, caves, re
 
 The detailed target architecture, layering rules, determinism contract, coordinate rules, authoring model, node graph design, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md), and the graph implementation contract is in [`docs/WORLD_PLAN_GRAPH.md`](docs/WORLD_PLAN_GRAPH.md).
 
-## Current implementation — 0.1.94
+## Current implementation — 0.1.95
 
 The runtime currently provides:
 
@@ -81,6 +81,7 @@ The runtime currently provides:
 - deterministic world-plan compilation with canonical ordering and structural validation;
 - a Unity-authored `WorldPlanGraphAsset` that separates editor canvas state from runtime graph semantics;
 - a Unity node graph editor with custom-port rendering, compatibility filtering, node movement, connection creation/removal, validation, framing, and asset-backed undo/save behavior;
+- Unity 6-compatible GraphView editor tooling without dependence on the inaccessible runtime `Toolbar` type;
 - deterministic chunk streaming and persistence-aware streaming;
 - world access and controlled edit services;
 - transactions, change journals, grouped undo/redo history, and change observers;
@@ -216,7 +217,7 @@ WorldPlan
 world-space generation
 ```
 
-The current 0.1.94 implementation reaches the compiler/runtime-plan stage. Layout solving, feature lowering, and corridor planning remain the next runtime increments.
+The current 0.1.95 implementation reaches the compiler/runtime-plan stage. Layout solving, feature lowering, and corridor planning remain the next runtime increments.
 
 ## Streaming and persistence
 
@@ -255,6 +256,7 @@ canonical world data
   -> connectivity / graph generation
   -> typed world-plan graph foundation       <-- implemented 0.1.94
   -> customizable node/port authoring UI      <-- implemented 0.1.94
+  -> Unity 6 GraphView compatibility           <-- implemented 0.1.95
   -> hierarchical plan templates / subgraphs
   -> deterministic plan expansion
   -> deterministic plan layout / constraints

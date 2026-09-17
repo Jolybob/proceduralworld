@@ -40,6 +40,77 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void BatchCoalescesRepeatedSourceChanges()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Register(source);
+            using (sources.BeginBatch())
+            {
+                source.SetRegions(3);
+                source.SetRegions(4);
+                source.SetRegions(5);
+                Assert.IsTrue(sources.IsBatching);
+                CollectionAssert.AreEqual(new[] { 2 }, lifecycle.LoadedRegions);
+            }
+
+            Assert.IsFalse(sources.IsBatching);
+            CollectionAssert.AreEqual(new[] { 2, 5 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void NestedBatchesFlushOnlyWhenOuterBatchEnds()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Register(source);
+            using (sources.BeginBatch())
+            {
+                source.SetRegions(3);
+                using (sources.BeginBatch())
+                {
+                    source.SetRegions(4);
+                }
+
+                CollectionAssert.AreEqual(new[] { 2 }, lifecycle.LoadedRegions);
+            }
+
+            CollectionAssert.AreEqual(new[] { 2, 4 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void RefreshAllWithinBatchIsDeferred()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Register(source);
+            source.SetRegionsWithoutNotification(5);
+
+            using (sources.BeginBatch())
+            {
+                sources.RefreshAll();
+                CollectionAssert.AreEqual(new[] { 2 }, lifecycle.LoadedRegions);
+            }
+
+            CollectionAssert.AreEqual(new[] { 2, 5 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
         public void UnregisteredSourceCannotRefreshDemand()
         {
             var lifecycle = new RecordingLifecycle();
@@ -144,6 +215,11 @@ namespace Jolybob.ProceduralWorld.Tests
             {
                 regions = nextRegions;
                 DemandChanged?.Invoke(SourceId);
+            }
+
+            public void SetRegionsWithoutNotification(params int[] nextRegions)
+            {
+                regions = nextRegions;
             }
         }
 

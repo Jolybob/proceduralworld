@@ -35,7 +35,16 @@ namespace Jolybob.ProceduralWorld.Tilemap
             EnsureTilemap();
             BuildRuntimeTiles();
             tilemap.ClearAllTiles();
-            worldRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles, topologyTiles);
+
+            var terrainCatalog = new WorldCellVisualCatalog(tiles);
+            var visualResolver = new WorldCellVisualLayerCatalog(
+                new IWorldCellVisualLayer[]
+                {
+                    new TopologyWorldCellVisualLayer(topologyTiles)
+                },
+                terrainCatalog);
+
+            worldRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, visualResolver);
 
             var generator = new ProceduralWorldGenerator(seed, settings);
 

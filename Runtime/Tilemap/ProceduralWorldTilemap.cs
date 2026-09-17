@@ -22,6 +22,8 @@ namespace Jolybob.ProceduralWorld.Tilemap
         private WorldTilemapRenderer worldRenderer;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
         private readonly Dictionary<CellTopology, TileBase> topologyTiles = new Dictionary<CellTopology, TileBase>();
+        private readonly Dictionary<ResourceId, TileBase> resourceTiles = new Dictionary<ResourceId, TileBase>();
+        private readonly Dictionary<StructureId, TileBase> structureTiles = new Dictionary<StructureId, TileBase>();
 
         private void Start()
         {
@@ -40,7 +42,9 @@ namespace Jolybob.ProceduralWorld.Tilemap
             var visualResolver = new WorldCellVisualLayerCatalog(
                 new IWorldCellVisualLayer[]
                 {
-                    new TopologyWorldCellVisualLayer(topologyTiles)
+                    new TopologyWorldCellVisualLayer(topologyTiles),
+                    new ResourceWorldCellVisualLayer(resourceTiles),
+                    new StructureWorldCellVisualLayer(structureTiles)
                 },
                 terrainCatalog);
 
@@ -99,6 +103,12 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 topologyTiles[CellTopology.Lava] = CreateTile("Lava", new Color(0.9f, 0.22f, 0.04f, 0.95f));
                 topologyTiles[CellTopology.Chasm] = CreateTile("Chasm", new Color(0.04f, 0.03f, 0.05f, 1f));
             }
+
+            if (resourceTiles.Count == 0)
+                resourceTiles[new ResourceId(1)] = CreateTile("Resource", new Color(0.2f, 0.9f, 0.35f, 1f));
+
+            if (structureTiles.Count == 0)
+                structureTiles[new StructureId(1)] = CreateTile("Structure", new Color(0.95f, 0.55f, 0.2f, 1f));
         }
 
         private TileBase CreateTile(string tileName, Color color)

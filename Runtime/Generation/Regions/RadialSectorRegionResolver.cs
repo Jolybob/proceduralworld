@@ -6,8 +6,10 @@ namespace Jolybob.ProceduralWorld
     /// <summary>
     /// Resolves macro regions from world-space polar coordinates.
     /// Boundaries can be deterministically warped so large regions remain organic instead of perfectly radial.
+    /// This resolver also implements <see cref="IRegionLayout"/> so macro geography can be composed
+    /// independently from environment-field based region selection.
     /// </summary>
-    public sealed class RadialSectorRegionResolver : IPositionAwareRegionResolver
+    public sealed class RadialSectorRegionResolver : IPositionAwareRegionResolver, IRegionLayout
     {
         private readonly MacroRegionCatalog catalog;
         private readonly int seed;
@@ -36,8 +38,13 @@ namespace Jolybob.ProceduralWorld
 
         public RegionId Resolve(EnvironmentSample sample, int worldX, int worldY)
         {
-            float x = worldX;
-            float y = worldY;
+            return Resolve(new WorldPosition(worldX, worldY));
+        }
+
+        public RegionId Resolve(WorldPosition position)
+        {
+            float x = position.X;
+            float y = position.Y;
             float radius = MathF.Sqrt(x * x + y * y);
             float angle = MathF.Atan2(y, x);
 

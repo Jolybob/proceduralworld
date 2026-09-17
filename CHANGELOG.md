@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.103] - 2026-09-17
+
+- Added `WorldGenerationWorkKey` so generation work is identified by `(chunk, phase)` rather than chunk alone.
+- Added `WorldGenerationDependency` and `WorldGenerationWorkGraph` for explicit same-chunk and cross-chunk prerequisites.
+- Added deterministic topological scheduling with stable ready-work ordering.
+- Added bounded dequeue that executes only dependency-ready work and preserves pending prerequisites.
+- Added structured dependency-cycle diagnostics and safe dequeue behavior when the graph is cyclic.
+- Added `WorldGenerationDependencySchedulerRunner` for executor injection without coupling scheduling to Unity rendering, persistence, or chunk implementation details.
+- Added regression coverage for request-order determinism, multi-phase same-chunk execution, cross-chunk dependencies, cycle detection, and bounded dequeue.
+- Added world-generation dependency architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.103.
+
 ## [0.1.102] - 2026-09-17
 
 - Added `WorldGenerationWorkItem`, `WorldGenerationSchedule`, and `WorldGenerationScheduler` as a deterministic bounded execution queue for streaming-driven generation work.

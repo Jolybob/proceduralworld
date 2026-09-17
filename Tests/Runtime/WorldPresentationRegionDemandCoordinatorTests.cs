@@ -132,13 +132,15 @@ namespace Jolybob.ProceduralWorld.Tests
             var lifecycle = new RecordingLifecycle();
             var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
             var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
-            IReadOnlyList<int> received = null;
+            var received = new List<IReadOnlyList<int>>();
 
-            coordinator.DemandChanged += change => received = change.DemandedRegions;
+            coordinator.DemandChanged += change => received.Add(change.DemandedRegions);
             coordinator.SetDemandedRegions(new[] { 1, 3 });
             coordinator.SetDemandedRegions(new[] { 8 });
 
-            CollectionAssert.AreEqual(new[] { 1, 3 }, received);
+            Assert.AreEqual(2, received.Count);
+            CollectionAssert.AreEqual(new[] { 1, 3 }, received[0]);
+            CollectionAssert.AreEqual(new[] { 8 }, received[1]);
         }
 
         [Test]

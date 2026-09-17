@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.23] - 2026-09-17
+
+- Fixed package test discovery documentation for Git-installed UPM packages.
+- Documented the required project `Packages/manifest.json` `testables` entry for `com.jolybob.proceduralworld` tests.
+- Confirmed the package test assembly remains configured with the Unity test-assembly support and the runtime assembly reference.
+- Changed the Tilemap preview and primary generator test seed from `75319` / `86420` to `68124` for this revision.
+- Bumped the package version to 0.1.23.
+- Incremented package version for this update.
+
 ## [0.1.22] - 2026-09-17
 
 - Added `IWorldChunkSink` as the rendering/persistence-independent boundary for chunk load and unload operations.

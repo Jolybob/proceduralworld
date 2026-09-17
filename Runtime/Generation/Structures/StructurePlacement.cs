@@ -24,15 +24,14 @@ namespace Jolybob.ProceduralWorld
             StructureDefinition definition,
             WorldPosition anchor,
             ChunkCoord ownerChunk)
-            : this(
-                definition,
-                new WorldFeaturePlacement(
-                    definition == null ? 0 : definition.Id.Value,
-                    anchor,
-                    ownerChunk,
-                    definition == null ? 1 : definition.Width,
-                    definition == null ? 1 : definition.Height))
         {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            featurePlacement = new WorldFeaturePlacement(
+                definition.Id.Value,
+                anchor,
+                ownerChunk,
+                definition.Width,
+                definition.Height);
         }
 
         internal StructurePlacement(
@@ -61,7 +60,8 @@ namespace Jolybob.ProceduralWorld
         public bool Equals(StructurePlacement other)
         {
             return Definition.Id == other.Definition.Id
-                && featurePlacement.Equals(other.featurePlacement);
+                && Anchor == other.Anchor
+                && OwnerChunk == other.OwnerChunk;
         }
 
         public override bool Equals(object obj)
@@ -74,7 +74,8 @@ namespace Jolybob.ProceduralWorld
             unchecked
             {
                 int hash = Definition.Id.GetHashCode();
-                hash = hash * 397 ^ featurePlacement.GetHashCode();
+                hash = hash * 397 ^ Anchor.GetHashCode();
+                hash = hash * 397 ^ OwnerChunk.GetHashCode();
                 return hash;
             }
         }

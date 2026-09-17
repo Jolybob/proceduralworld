@@ -7,7 +7,7 @@ namespace Jolybob.ProceduralWorld
     /// Streaming controller that restores persisted chunk edits when loading and saves
     /// modified chunk state before unloading.
     /// </summary>
-    public sealed class WorldPersistentChunkStreamingController
+    public sealed class WorldPersistentChunkStreamingController : IWorldChunkAccess
     {
         private readonly WorldChunkPersistenceService persistence;
         private readonly ChunkStreamingPlanner planner;
@@ -43,6 +43,38 @@ namespace Jolybob.ProceduralWorld
             return delta;
         }
 
+        public bool TryGetChunk(ChunkCoord coordinate, out GeneratedChunk chunk)
+        {
+            return loadedChunks.TryGetValue(coordinate, out chunk);
+        }
+
+        public bool TryGetCell(WorldPosition position, out GeneratedCell cell)
+        {
+            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, GetChunkSize());
+            if (!loadedChunks.TryGetValue(coordinate, out GeneratedChunk chunk))
+            {
+                cell = default(GeneratedCell);
+                return false;
+            }
+
+            int localX = WorldChunkCoordinates.ToLocalX(position, chunk.Size);
+            int localY = WorldChunkCoordinates.ToLocalY(position, chunk.Size);
+            cell = chunk.GetCell(localX, localY);
+            return true;
+        }
+
+        public bool SetCell(WorldPosition position, GeneratedCell cell)
+        {
+            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, GetChunkSize());
+            if (!loadedChunks.TryGetValue(coordinate, out GeneratedChunk chunk))
+                return false;
+
+            int localX = WorldChunkCoordinates.ToLocalX(position, chunk.Size);
+            int localY = WorldChunkCoordinates.ToLocalY(position, chunk.Size);
+            chunk.SetCell(localX, localY, cell);
+            return true;
+        }
+
         /// <summary>
         /// Saves and unloads every currently loaded chunk, then resets the planner.
         /// </summary>
@@ -57,6 +89,15 @@ namespace Jolybob.ProceduralWorld
 
             loadedChunks.Clear();
             planner.Reset();
+        }
+
+        private int GetChunkSize()
+        {
+            foreach (GeneratedChunk chunk in loadedChunks.Values)
+                return chunk.Size;
+
+            throw new InvalidOperationException(
+                "World chunk access is unavailable until at least one chunk is loaded.");
         }
 
         private void Load(ChunkCoord coordinate)

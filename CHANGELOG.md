@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.81] - 2026-09-17
+
+- Made `WorldPresentationRegionDemandSourceCoordinator` explicitly disposable so source subscriptions and active demand are released through one lifecycle boundary.
+- Added `IsDisposed` and a deterministic read-only `RegisteredSourceIds` view for coordinator state inspection.
+- Hardened registration, refresh, batching, and event handling against use after disposal.
+- Ensured disposing an active coordinator detaches all reactive subscriptions and releases demanded regions exactly once.
+- Added regression coverage for lifecycle cleanup, post-disposal no-op behavior, source-order inspection, and disposed batches.
+- Bumped the package version to 0.1.81.
+- Incremented package version for this update.
+
 ## [0.1.80] - 2026-09-17
 
 - Fixed the runtime Tilemap visual resolver so the default `CellTopology.Solid` state does not override ordinary terrain visuals.
@@ -15,12 +25,4 @@
 - Hardened the 2D preview camera by resetting its rotation, enforcing a valid negative Z position, and using orthographic framing for the generated world.
 - Preserved deterministic runtime tile generation and existing topology/terrain fallback behavior.
 - Bumped the package version to 0.1.79.
-- Incremented package version for this update.
-
-## [0.1.78] - 2026-09-17
-
-- Fixed the runtime Tilemap preview so `CellTopology.Empty` falls through to the generated terrain visual instead of replacing it with a fully transparent tile.
-- Preserved explicit topology visuals for solid, water, lava, and chasm cells.
-- Kept the TilemapRenderer and camera visibility fixes from 0.1.77.
-- Bumped the package version to 0.1.78.
 - Incremented package version for this update.

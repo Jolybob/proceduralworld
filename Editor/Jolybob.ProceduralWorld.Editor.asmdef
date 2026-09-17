@@ -3,6 +3,7 @@
   "rootNamespace": "Jolybob.ProceduralWorld.Editor",
   "references": [
     "Jolybob.ProceduralWorld.Runtime",
+    "Jolybob.ProceduralWorld.Authoring",
     "Jolybob.ProceduralWorld.Tilemap"
   ],
   "includePlatforms": [

@@ -5,8 +5,9 @@ namespace Jolybob.ProceduralWorld
 {
     /// <summary>
     /// Data-only description of a structure that may be placed in generated terrain.
+    /// Structure placement rules also implement the generic world-feature placement contract.
     /// </summary>
-    public sealed class StructureDefinition
+    public sealed class StructureDefinition : IWorldFeaturePlacementDefinition
     {
         public StructureId Id { get; }
         public string Name { get; }
@@ -17,6 +18,9 @@ namespace Jolybob.ProceduralWorld
         public int MinimumDistanceFromOrigin { get; }
         public int Width { get; }
         public int Height { get; }
+
+        int IWorldFeaturePlacementDefinition.FeatureId => Id.Value;
+        int IWorldFeaturePlacementDefinition.MaxPerChunk => MaxPerChunk;
 
         public StructureDefinition(
             StructureId id,

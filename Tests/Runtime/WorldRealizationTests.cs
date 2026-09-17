@@ -52,50 +52,19 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void FeatureRealizerPreservesSourceTraceabilityAndCanonicalOrder()
+        public void IntersectingQueryIsDeduplicatedAndCanonical()
         {
-            var placements = new List<WorldPlanFeaturePlacement>
-            {
-                new WorldPlanFeaturePlacement("node:b", new WorldFeaturePlacement("Room", new WorldPosition(2, 2), new ChunkCoord(0, 0), 2, 2)),
-                new WorldPlanFeaturePlacement("node:a", new WorldFeaturePlacement("Room", new WorldPosition(0, 0), new ChunkCoord(0, 0), 2, 2))
-            };
-            var lowering = new WorldPlanFeatureLoweringResultForTest(placements).Result;
-            var batch = new WorldPlanRealizer().Realize(lowering, new TestSource());
+            var map = new WorldRealizationMap(4);
+            var first = new WorldRealizationEdit("b", "node:b", "Tile", "Stone", 0, new WorldPosition(3, 3));
+            var second = new WorldRealizationEdit("a", "node:a", "Object", "Chest", 1, new WorldPosition(4, 4));
+            Assert.IsTrue(map.TryAdd(first, out WorldRealizationConflict ignoredFirst));
+            Assert.IsTrue(map.TryAdd(second, out WorldRealizationConflict ignoredSecond));
 
-            Assert.AreEqual(2, batch.Count);
-            Assert.AreEqual(new WorldPosition(0, 0), batch.Edits[0].Position);
-            Assert.AreEqual("node:a", batch.Edits[0].SourceId);
-            Assert.AreEqual("node:b", batch.Edits[1].SourceId);
-        }
-
-        private sealed class TestSource : IWorldPlanRealizationSource
-        {
-            public IEnumerable<WorldRealizationEdit> CreateEdits(WorldPlanFeaturePlacement placement)
-            {
-                yield return new WorldRealizationEdit(
-                    placement.NodeId + ":tile",
-                    placement.NodeId,
-                    "Tile",
-                    placement.Placement.FeatureId,
-                    0,
-                    placement.Placement.Anchor);
-            }
-        }
-
-        private sealed class WorldPlanFeatureLoweringResultForTest
-        {
-            public WorldPlanFeatureLoweringResult Result { get; }
-            public WorldPlanFeatureLoweringResultForTest(IReadOnlyList<WorldPlanFeaturePlacement> placements)
-            {
-                Result = Create(placements);
-            }
-
-            private static WorldPlanFeatureLoweringResult Create(IReadOnlyList<WorldPlanFeaturePlacement> placements)
-            {
-                return (WorldPlanFeatureLoweringResult)typeof(WorldPlanFeatureLoweringResult)
-                    .GetConstructor(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(List<WorldPlanFeaturePlacement>), typeof(List<WorldPlanValidationIssue>) }, null)
-                    .Invoke(new object[] { new List<WorldPlanFeaturePlacement>(placements), new List<WorldPlanValidationIssue>() });
-            }
+            var results = new List<WorldRealizationEdit>();
+            map.CollectIntersecting(new WorldPosition(0, 0), new WorldPosition(7, 7), results);
+            Assert.AreEqual(2, results.Count);
+            Assert.AreEqual("b", results[0].Id);
+            Assert.AreEqual("a", results[1].Id);
         }
     }
 }

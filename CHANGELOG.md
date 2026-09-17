@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.32] - 2026-09-17
+
+- Added `IWorldChangeListener` for reactive consumers of successful world edits.
+- Added `WorldChangeObserverJournal` as a journal decorator that preserves the existing change-history source of truth while publishing changes to multiple observers.
+- Added disposable subscriptions with stable registration-order notification and snapshot iteration so subscriptions can safely change during callbacks.
+- Kept no-op and failed edits out of the notification stream because they are not recorded by `WorldEditService`.
+- Added regression tests for exact change forwarding, no-op suppression, unsubscription, and deterministic multi-observer ordering.
+- Changed the architecture preview and editing test seed from `105827` to `116503` for this update.
+- Updated package architecture and world-editing documentation with the notification boundary.
+- Bumped the package version to 0.1.32.
+- Incremented package version for this update.
+
 ## [0.1.31] - 2026-09-17
 
 - Added `WorldEditHistoryEntry` to represent named groups of cell changes as one undo/redo operation.

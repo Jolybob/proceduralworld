@@ -42,7 +42,43 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
         public bool TryResolve(WorldPosition position, GeneratedCell cell, out TileBase tile)
         {
-            return tiles.TryGetValue(stateProvider.GetState(position, cell), out tile);
+            WorldCellVisualState state = stateProvider.GetState(position, cell);
+            if (tiles.TryGetValue(state, out tile))
+                return true;
+
+            WorldCellVisualState bestState = WorldCellVisualState.None;
+            TileBase bestTile = null;
+            int bestBitCount = -1;
+
+            foreach (var pair in tiles)
+            {
+                if (pair.Key == WorldCellVisualState.None || (state & pair.Key) != pair.Key)
+                    continue;
+
+                int bitCount = CountBits((byte)pair.Key);
+                if (bitCount > bestBitCount ||
+                    (bitCount == bestBitCount && pair.Key.CompareTo(bestState) < 0))
+                {
+                    bestState = pair.Key;
+                    bestTile = pair.Value;
+                    bestBitCount = bitCount;
+                }
+            }
+
+            tile = bestTile;
+            return bestBitCount >= 0;
+        }
+
+        private static int CountBits(byte value)
+        {
+            int count = 0;
+            while (value != 0)
+            {
+                count += value & 1;
+                value >>= 1;
+            }
+
+            return count;
         }
     }
 }

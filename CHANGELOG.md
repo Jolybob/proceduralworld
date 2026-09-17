@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.33] - 2026-09-17
+
+- Added `WorldEditTransaction` for isolated multi-edit workflows built on the existing `WorldEditService`.
+- Transaction edits are recorded in a private journal and are not published to the target journal until `Commit()`.
+- `Rollback()` restores every changed cell to its original before-state in reverse order without publishing transaction changes.
+- Completed transactions reject further reads or writes so transaction lifecycle is explicit and deterministic.
+- Added regression tests for grouped commit, rollback, empty transactions, and completed-transaction safety.
+- Changed the architecture preview and transaction test seed from `116503` to `127931`.
+- Updated world-editing documentation with transaction usage and lifecycle rules.
+- Bumped the package version to 0.1.33.
+- Incremented package version for this update.
+
 ## [0.1.32] - 2026-09-17
 
 - Added `IWorldChangeListener` for reactive consumers of successful world edits.
@@ -24,40 +36,4 @@
 - Changed the architecture preview and edit-history test seed from `93417` to `105827`.
 - Updated package architecture documentation with the undo/redo history boundary.
 - Bumped the package version to 0.1.31.
-- Incremented package version for this update.
-
-## [0.1.30] - 2026-09-17
-
-- Fixed `NamedEditOperationsRecordBeforeAndAfterState` so its tile edit always changes state instead of accidentally becoming a no-op when the generated tile is already `WorldTile.Core`.
-- Kept no-op suppression in `WorldEditService`; the regression now selects the opposite tile from the current state before testing the named operation sequence.
-- Changed the architecture preview seed from `82641` to `93417` for this fix revision.
-- Updated world-editing documentation to clarify that named operations are journaled only when they actually change state.
-- Bumped the package version to 0.1.30.
-- Incremented package version for this update.
-
-## [0.1.29] - 2026-09-17
-
-- Added `WorldEditOperationKind` to classify gameplay/world mutations without coupling them to presentation or persistence.
-- Added `WorldCellChange` containing world position plus complete before/after generated-cell state.
-- Added `IWorldChangeJournal` as a backend-neutral change-history boundary.
-- Added `InMemoryWorldChangeJournal` for tests and prototypes.
-- Updated `WorldEditService` so successful mutations are recorded after the underlying world access accepts them.
-- Suppressed no-op edits from the journal and ensured failed edits never create change records.
-- Added regression tests covering cell changes, no-op suppression, named edit operations, and failed edits.
-- Updated the architecture preview seed from `71593` to `82641` for this revision.
-- Added dedicated world-editing/change-tracking documentation.
-- Bumped the package version to 0.1.29.
-- Incremented package version for this update.
-
-## [0.1.28] - 2026-09-17
-
-- Added `IWorldChunkAccess` as the narrow read/write boundary for currently loaded world chunks.
-- Added `WorldChunkCoordinates` with correct floor-division mapping for positive and negative world positions.
-- Added `WorldEditService` as a gameplay-facing mutation layer for cell, tile, resource, and structure edits.
-- Connected `WorldPersistentChunkStreamingController` to `IWorldChunkAccess` so gameplay code does not depend directly on streaming internals.
-- Ensured unloaded-world access fails safely instead of throwing when no chunks are active.
-- Added regression tests for coordinate mapping, loaded-cell editing, and unloaded-cell rejection.
-- Changed the architecture preview and persistent-streaming/edit test seed from `60427` to `71593`.
-- Updated streaming documentation with the new world-access and editing boundaries.
-- Bumped the package version to 0.1.28.
 - Incremented package version for this update.

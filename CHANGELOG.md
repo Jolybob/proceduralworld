@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.96] - 2026-09-17
+
+- Added reusable hierarchical world-plan subgraphs through `WorldPlanSubgraphTemplateDefinition`, `WorldPlanSubgraphPortDefinition`, and template-backed `WorldPlanNodeDefinition` instances.
+- Added `WorldPlanSubgraphCompiler` to deterministically expand nested template instances into the existing flat runtime plan representation.
+- Added stable scope-based node, type, and connection identities so repeated template instances remain independent while preserving deterministic input-order behaviour.
+- Added exposed-port rewiring across template boundaries, including nested exposed ports, with semantic direction/type validation delegated to the existing flat compiler.
+- Added template-cycle, duplicate-template, missing-template, missing-exposed-port, and missing-endpoint validation diagnostics.
+- Extended `WorldPlanGraphAsset` authoring with reusable-template metadata, exposed ports, referenced template assets, template instances, and recursive runtime-definition construction.
+- Extended the Unity 6 GraphView editor with reusable subgraph instance creation and exposed-port visualization, including nested template port resolution.
+- Hardened graph inspector/window validation and compilation against authoring reference-cycle exceptions.
+- Added regression coverage for template expansion, deterministic instance ordering, nested flattening, missing templates, missing exposed ports, and connection rewiring.
+- Added world-plan subgraph architecture documentation and Unity `.meta` metadata for the new runtime/test assets.
+- Bumped the package version to 0.1.96.
+
 ## [0.1.95] - 2026-09-17
 
 - Fixed Unity 6 `WorldPlanGraphWindow` editor compilation errors caused by using the inaccessible `UnityEngine.UIElements.Toolbar` type; the editor now uses a plain `VisualElement` toolbar container.

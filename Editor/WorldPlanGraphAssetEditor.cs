@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using Jolybob.ProceduralWorld;
@@ -24,40 +25,54 @@ namespace Jolybob.ProceduralWorld.Editor
 
                 if (GUILayout.Button("Validate"))
                 {
-                    WorldPlanValidationResult result = graph.Validate();
-                    int errors = 0;
-                    int warnings = 0;
-                    for (int i = 0; i < result.Issues.Count; i++)
+                    try
                     {
-                        if (result.Issues[i].Severity == WorldPlanValidationSeverity.Error)
-                            errors++;
-                        else
-                            warnings++;
-                    }
+                        WorldPlanValidationResult result = graph.Validate();
+                        int errors = 0;
+                        int warnings = 0;
+                        for (int i = 0; i < result.Issues.Count; i++)
+                        {
+                            if (result.Issues[i].Severity == WorldPlanValidationSeverity.Error)
+                                errors++;
+                            else
+                                warnings++;
+                        }
 
-                    if (result.IsValid)
-                        Debug.Log("World plan graph is valid: " + result.Issues.Count + " warning(s).", graph);
-                    else
-                        Debug.LogError("World plan graph has " + errors + " error(s) and " + warnings + " warning(s).", graph);
+                        if (result.IsValid)
+                            Debug.Log("World plan graph is valid: " + warnings + " warning(s).", graph);
+                        else
+                            Debug.LogError("World plan graph has " + errors + " error(s) and " + warnings + " warning(s).", graph);
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogError("World plan graph validation failed: " + exception.Message, graph);
+                    }
                 }
             }
 
             if (GUILayout.Button("Compile Runtime Plan"))
             {
-                WorldPlanCompilationResult result = graph.Compile();
-                if (!result.Succeeded)
+                try
                 {
-                    Debug.LogError("World plan graph could not compile because validation failed.", graph);
+                    WorldPlanCompilationResult result = graph.Compile();
+                    if (!result.Succeeded)
+                    {
+                        Debug.LogError("World plan graph could not compile because validation failed.", graph);
+                    }
+                    else
+                    {
+                        Debug.Log(
+                            "Compiled world plan: "
+                            + result.Plan.Nodes.Count
+                            + " node(s), "
+                            + result.Plan.Connections.Count
+                            + " connection(s).",
+                            graph);
+                    }
                 }
-                else
+                catch (Exception exception)
                 {
-                    Debug.Log(
-                        "Compiled world plan: "
-                        + result.Plan.Nodes.Count
-                        + " node(s), "
-                        + result.Plan.Connections.Count
-                        + " connection(s).",
-                        graph);
+                    Debug.LogError("World plan graph compilation failed: " + exception.Message, graph);
                 }
             }
         }

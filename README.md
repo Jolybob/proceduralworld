@@ -62,9 +62,9 @@ The package is intended for large, persistent 2D worlds where terrain, caves, re
                    CHANGE / EVENT LAYER
 ```
 
-The detailed target architecture, layering rules, determinism contract, coordinate rules, authoring model, node graph design, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md), and the graph implementation contract is in [`docs/WORLD_PLAN_GRAPH.md`](docs/WORLD_PLAN_GRAPH.md).
+The detailed target architecture, layering rules, determinism contract, coordinate rules, authoring model, node graph design, and roadmap are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). World connectivity details are in [`docs/CONNECTIVITY.md`](docs/CONNECTIVITY.md), and the graph implementation contract is in [`docs/WORLD_PLAN_GRAPH.md`](docs/WORLD_PLAN_GRAPH.md). Hierarchical template details are in [`docs/WORLD_PLAN_SUBGRAPHS.md`](docs/WORLD_PLAN_SUBGRAPHS.md).
 
-## Current implementation — 0.1.95
+## Current implementation — 0.1.96
 
 The runtime currently provides:
 
@@ -79,8 +79,10 @@ The runtime currently provides:
 - cross-chunk structure placement built on the generic placement kernel;
 - a typed world-plan graph model with node types, semantic ports, connection kinds, and properties;
 - deterministic world-plan compilation with canonical ordering and structural validation;
-- a Unity-authored `WorldPlanGraphAsset` that separates editor canvas state from runtime graph semantics;
-- a Unity node graph editor with custom-port rendering, compatibility filtering, node movement, connection creation/removal, validation, framing, and asset-backed undo/save behavior;
+- reusable hierarchical world-plan subgraphs with exposed semantic ports and deterministic expansion;
+- nested subgraph instances with scoped node/type/connection identities;
+- a Unity-authored `WorldPlanGraphAsset` that separates editor canvas state from runtime graph semantics and can reference reusable template assets;
+- a Unity node graph editor with custom-port rendering, compatibility filtering, node movement, connection creation/removal, template-instance creation, validation, framing, and asset-backed undo/save behavior;
 - Unity 6-compatible GraphView editor tooling without dependence on the inaccessible runtime `Toolbar` type;
 - deterministic chunk streaming and persistence-aware streaming;
 - world access and controlled edit services;
@@ -88,7 +90,7 @@ The runtime currently provides:
 - a Unity Tilemap presentation adapter;
 - an optional Unity authoring assembly with `ProceduralWorldDefinitionAsset`.
 
-The graph foundation is intentionally one step ahead of the final world-plan pipeline: hierarchical expansion, deterministic layout/constraint solving, feature lowering, and world-space corridor generation remain the next runtime increments.
+The world-plan foundation now has a semantic hierarchy: reusable graphs can be expanded into the same flat runtime representation before world-space layout and feature realization.
 
 ## World-plan graph
 
@@ -105,11 +107,19 @@ node type definition
 node instances
         |
         +-- stable node ID
+        +-- optional template ID
         +-- properties
         +-- editor canvas position
         |
         v
 semantic connections
+        |
+        v
+hierarchical expansion
+        |
+        +-- exposed-port rewiring
+        +-- stable instance scopes
+        +-- nested template expansion
         |
         v
 WorldPlanCompiler
@@ -125,6 +135,43 @@ WorldPlan
 Canvas positions are intentionally not part of the runtime `WorldPlan` definition. Designers can reorganize the editor graph without changing deterministic world semantics.
 
 Ports can be input, output, or bidirectional. Connections are classified as `Required`, `Optional`, or `Derived`. Semantic port types are checked during validation and graph connection filtering.
+
+## Hierarchical world-plan subgraphs
+
+Reusable graph sections are authored as template assets and referenced by stable template ID.
+
+```text
+Dungeon
+  |
+  +-- ForestWing
+  |      |
+  |      +-- Room*
+  |      +-- Corridor*
+  |
+  +-- BossWing
+         |
+         +-- Arena
+         +-- Entrance
+```
+
+A template exposes only explicitly selected boundary ports. During compilation:
+
+```text
+host instance
+    |
+    v
+expand template
+    |
+    +-- scope internal IDs by instance identity
+    +-- recursively expand nested templates
+    +-- resolve exposed ports to concrete ports
+    +-- rewrite host connections
+    |
+    v
+flat WorldPlan
+```
+
+This keeps reusable authoring structures separate from the runtime execution model. Two instances of the same template never collide because their expanded node, type, and connection IDs are scoped by their instance path.
 
 ## Feature and world planning
 
@@ -163,6 +210,15 @@ same graph definition
 = same runtime plan ordering and relationships
 ```
 
+Hierarchical expansion adds the rule:
+
+```text
+same template graph
++ same instance path
++ same stable template / node IDs
+= same expanded identities and rewired relationships
+```
+
 The editor UI is not part of deterministic inputs. Moving a node on the canvas changes authoring metadata only.
 
 Random streams are isolated by subsystem and stable salt. Connectivity graph construction is deterministic from sorted world-space placements and does not consume mutable random state.
@@ -184,9 +240,11 @@ Define node types in the asset inspector. A node type can specify:
 - multi-connection policy;
 - custom property keys.
 
+Reusable templates additionally define a stable template ID, referenced template assets, and explicitly exposed internal ports. The graph editor can then add a template instance beside ordinary nodes and expose the template boundary ports for normal semantic connections.
+
 Open **Window > Procedural World > World Plan Graph** or press **Open Node Graph** from the asset inspector.
 
-The graph editor supports moving nodes, adding nodes from custom node types, creating compatible connections, deleting nodes/connections, validation, framing, and asset-backed undo/save behavior.
+The graph editor supports moving nodes, adding nodes from custom node types, adding referenced subgraph instances, creating compatible connections, deleting nodes/connections, validation, framing, and asset-backed undo/save behavior.
 
 ## Runtime boundary
 
@@ -204,6 +262,9 @@ WorldPlanGraphAsset
 WorldPlanGraphDefinition
    |
    v
+WorldPlanSubgraphCompiler
+   |
+   v
 WorldPlanCompiler
    |
    v
@@ -217,7 +278,7 @@ WorldPlan
 world-space generation
 ```
 
-The current 0.1.95 implementation reaches the compiler/runtime-plan stage. Layout solving, feature lowering, and corridor planning remain the next runtime increments.
+Subgraph expansion is a compile-time lowering stage; the runtime plan still has one flat canonical representation.
 
 ## Streaming and persistence
 
@@ -257,7 +318,7 @@ canonical world data
   -> typed world-plan graph foundation       <-- implemented 0.1.94
   -> customizable node/port authoring UI      <-- implemented 0.1.94
   -> Unity 6 GraphView compatibility           <-- implemented 0.1.95
-  -> hierarchical plan templates / subgraphs
+  -> hierarchical plan templates / subgraphs  <-- implemented 0.1.96
   -> deterministic plan expansion
   -> deterministic plan layout / constraints
   -> feature-placement lowering

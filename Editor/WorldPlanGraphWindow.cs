@@ -43,7 +43,6 @@ namespace Jolybob.ProceduralWorld.Editor
             graphView = new WorldPlanGraphView();
             graphView.style.flexGrow = 1f;
             rootVisualElement.Add(graphView);
-
             Rebuild();
         }
 
@@ -87,10 +86,17 @@ namespace Jolybob.ProceduralWorld.Editor
                 return;
             }
 
-            WorldPlanValidationResult validation = asset.Validate();
-            statusLabel.text = validation.IsValid
-                ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
-                : BuildIssueSummary(validation);
+            try
+            {
+                WorldPlanValidationResult validation = asset.Validate();
+                statusLabel.text = validation.IsValid
+                    ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
+                    : BuildIssueSummary(validation);
+            }
+            catch (Exception exception)
+            {
+                statusLabel.text = "Graph validation failed: " + exception.Message;
+            }
         }
 
         private void SelectGraphAsset()
@@ -107,10 +113,17 @@ namespace Jolybob.ProceduralWorld.Editor
             if (asset == null)
                 return;
 
-            WorldPlanValidationResult validation = asset.Validate();
-            statusLabel.text = validation.IsValid
-                ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
-                : BuildIssueSummary(validation);
+            try
+            {
+                WorldPlanValidationResult validation = asset.Validate();
+                statusLabel.text = validation.IsValid
+                    ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
+                    : BuildIssueSummary(validation);
+            }
+            catch (Exception exception)
+            {
+                statusLabel.text = "Graph validation failed: " + exception.Message;
+            }
         }
 
         private static string BuildIssueSummary(WorldPlanValidationResult validation)
@@ -223,11 +236,10 @@ namespace Jolybob.ProceduralWorld.Editor
                         if (node == null)
                             continue;
 
-                        WorldPlanGraphAsset.NodeTypeRecord type = asset.FindNodeType(node.typeId);
-                        if (type == null)
+                        WorldPlanGraphNodeView view = CreateNodeView(node);
+                        if (view == null)
                             continue;
 
-                        WorldPlanGraphNodeView view = CreateNodeView(node, type);
                         nodesById.Add(node.id, view);
                         AddElement(view);
                     }
@@ -243,12 +255,28 @@ namespace Jolybob.ProceduralWorld.Editor
                 rebuilding = false;
             }
 
-            private WorldPlanGraphNodeView CreateNodeView(
+            private WorldPlanGraphNodeView CreateNodeView(WorldPlanGraphAsset.NodeRecord node)
+            {
+                if (!string.IsNullOrWhiteSpace(node.templateId))
+                {
+                    WorldPlanGraphAsset template = asset.FindReferencedTemplate(node.templateId);
+                    if (template == null)
+                        return null;
+                    return CreateTemplateNodeView(node, template);
+                }
+
+                WorldPlanGraphAsset.NodeTypeRecord type = asset.FindNodeType(node.typeId);
+                if (type == null)
+                    return null;
+
+                return CreateRegularNodeView(node, type);
+            }
+
+            private WorldPlanGraphNodeView CreateRegularNodeView(
                 WorldPlanGraphAsset.NodeRecord node,
                 WorldPlanGraphAsset.NodeTypeRecord type)
             {
                 var view = new WorldPlanGraphNodeView(node);
-
                 for (int i = 0; i < type.ports.Count; i++)
                 {
                     WorldPlanGraphAsset.PortRecord portRecord = type.ports[i];
@@ -274,11 +302,61 @@ namespace Jolybob.ProceduralWorld.Editor
                 return view;
             }
 
+            private WorldPlanGraphNodeView CreateTemplateNodeView(
+                WorldPlanGraphAsset.NodeRecord node,
+                WorldPlanGraphAsset template)
+            {
+                var view = new WorldPlanGraphNodeView(node);
+                template.EnsureIds();
+
+                for (int i = 0; i < template.ExposedPorts.Count; i++)
+                {
+                    WorldPlanGraphAsset.ExposedPortRecord exposed = template.ExposedPorts[i];
+                    if (exposed == null)
+                        continue;
+
+                    WorldPlanGraphAsset.PortRecord portRecord = ResolveTemplatePort(template, exposed, new HashSet<WorldPlanGraphAsset>());
+                    if (portRecord == null)
+                        continue;
+
+                    string displayName = string.IsNullOrWhiteSpace(exposed.displayName)
+                        ? exposed.id
+                        : exposed.displayName;
+
+                    if (portRecord.direction == WorldPlanPortDirection.Input
+                        || portRecord.direction == WorldPlanPortDirection.Bidirectional)
+                    {
+                        view.inputContainer.Add(CreatePort(node.id, exposed.id, portRecord, Direction.Input, displayName + " In"));
+                    }
+
+                    if (portRecord.direction == WorldPlanPortDirection.Output
+                        || portRecord.direction == WorldPlanPortDirection.Bidirectional)
+                    {
+                        view.outputContainer.Add(CreatePort(node.id, exposed.id, portRecord, Direction.Output, displayName + " Out"));
+                    }
+                }
+
+                view.RefreshExpandedState();
+                view.RefreshPorts();
+                view.SetPosition(new Rect(node.position, new Vector2(240f, 140f)));
+                return view;
+            }
+
             private Port CreatePort(
                 string nodeId,
                 WorldPlanGraphAsset.PortRecord portRecord,
                 Direction direction,
                 string suffix)
+            {
+                return CreatePort(nodeId, portRecord.id, portRecord, direction, portRecord.displayName + " " + suffix);
+            }
+
+            private Port CreatePort(
+                string nodeId,
+                string bindingPortId,
+                WorldPlanGraphAsset.PortRecord portRecord,
+                Direction direction,
+                string displayName)
             {
                 Port port = Port.Create<Edge>(
                     Orientation.Horizontal,
@@ -287,11 +365,11 @@ namespace Jolybob.ProceduralWorld.Editor
                         ? Port.Capacity.Multi
                         : Port.Capacity.Single,
                     typeof(float));
-                port.portName = portRecord.displayName + " " + suffix;
-                port.userData = new PortBinding(nodeId, portRecord.id);
+                port.portName = displayName;
+                port.userData = new PortBinding(nodeId, bindingPortId);
                 port.tooltip = string.IsNullOrWhiteSpace(portRecord.semanticType)
-                    ? portRecord.displayName
-                    : portRecord.displayName + " [" + portRecord.semanticType + "]";
+                    ? displayName
+                    : displayName + " [" + portRecord.semanticType + "]";
                 return port;
             }
 
@@ -399,11 +477,12 @@ namespace Jolybob.ProceduralWorld.Editor
 
             private void BuildContextualMenu(ContextualMenuPopulateEvent evt)
             {
-                if (asset == null || asset.NodeTypes.Count == 0)
+                if (asset == null)
                     return;
 
                 Vector2 localPosition = contentViewContainer.WorldToLocal(evt.localMousePosition);
                 evt.menu.AppendSeparator();
+
                 for (int i = 0; i < asset.NodeTypes.Count; i++)
                 {
                     WorldPlanGraphAsset.NodeTypeRecord type = asset.NodeTypes[i];
@@ -417,6 +496,20 @@ namespace Jolybob.ProceduralWorld.Editor
                     evt.menu.AppendAction(
                         "Add Node/" + displayName,
                         _ => AddNode(typeId, localPosition));
+                }
+
+                for (int i = 0; i < asset.ReferencedTemplates.Count; i++)
+                {
+                    WorldPlanGraphAsset template = asset.ReferencedTemplates[i];
+                    if (template == null)
+                        continue;
+
+                    template.EnsureIds();
+                    string templateId = template.TemplateId;
+                    string displayName = template.TemplateDisplayName;
+                    evt.menu.AppendAction(
+                        "Add Subgraph/" + displayName,
+                        _ => AddTemplateInstance(templateId, displayName, localPosition));
                 }
             }
 
@@ -432,11 +525,34 @@ namespace Jolybob.ProceduralWorld.Editor
                 Rebuild();
             }
 
+            private void AddTemplateInstance(string templateId, string label, Vector2 position)
+            {
+                if (asset == null || asset.FindReferencedTemplate(templateId) == null)
+                    return;
+
+                Undo.RecordObject(asset, "Add World Plan Subgraph Instance");
+                asset.AddNode(WorldPlanGraphAsset.CreateTemplateInstance(templateId, label, position));
+                EditorUtility.SetDirty(asset);
+                AssetDatabase.SaveAssets();
+                Rebuild();
+            }
+
             private WorldPlanGraphAsset.PortRecord FindPortRecord(PortBinding binding)
             {
                 WorldPlanGraphAsset.NodeRecord node = asset.FindNode(binding.NodeId);
                 if (node == null)
                     return null;
+
+                if (!string.IsNullOrWhiteSpace(node.templateId))
+                {
+                    WorldPlanGraphAsset template = asset.FindReferencedTemplate(node.templateId);
+                    if (template == null)
+                        return null;
+                    WorldPlanGraphAsset.ExposedPortRecord exposed = template.FindExposedPort(binding.PortId);
+                    return exposed == null
+                        ? null
+                        : ResolveTemplatePort(template, exposed, new HashSet<WorldPlanGraphAsset>());
+                }
 
                 WorldPlanGraphAsset.NodeTypeRecord type = asset.FindNodeType(node.typeId);
                 if (type == null)
@@ -450,6 +566,54 @@ namespace Jolybob.ProceduralWorld.Editor
                 }
 
                 return null;
+            }
+
+            private static WorldPlanGraphAsset.PortRecord ResolveTemplatePort(
+                WorldPlanGraphAsset template,
+                WorldPlanGraphAsset.ExposedPortRecord exposed,
+                HashSet<WorldPlanGraphAsset> activeTemplates)
+            {
+                if (template == null || exposed == null || activeTemplates == null)
+                    return null;
+                if (!activeTemplates.Add(template))
+                    return null;
+
+                try
+                {
+                    WorldPlanGraphAsset.NodeRecord targetNode = template.FindNode(exposed.nodeId);
+                    if (targetNode == null)
+                        return null;
+
+                    if (!string.IsNullOrWhiteSpace(targetNode.templateId))
+                    {
+                        WorldPlanGraphAsset nestedTemplate = template.FindReferencedTemplate(targetNode.templateId);
+                        if (nestedTemplate == null)
+                            return null;
+
+                        WorldPlanGraphAsset.ExposedPortRecord nestedExposed = nestedTemplate.FindExposedPort(exposed.portId);
+                        if (nestedExposed == null)
+                            return null;
+
+                        return ResolveTemplatePort(nestedTemplate, nestedExposed, activeTemplates);
+                    }
+
+                    WorldPlanGraphAsset.NodeTypeRecord type = template.FindNodeType(targetNode.typeId);
+                    if (type == null)
+                        return null;
+
+                    for (int i = 0; i < type.ports.Count; i++)
+                    {
+                        WorldPlanGraphAsset.PortRecord port = type.ports[i];
+                        if (port != null && string.Equals(port.id, exposed.portId, StringComparison.Ordinal))
+                            return port;
+                    }
+
+                    return null;
+                }
+                finally
+                {
+                    activeTemplates.Remove(template);
+                }
             }
 
             private Port FindPort(WorldPlanGraphNodeView node, string portId, Direction direction)

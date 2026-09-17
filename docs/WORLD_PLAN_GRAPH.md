@@ -14,7 +14,7 @@ The graph expresses:
 - which ports may connect;
 - which relationships are required or optional;
 - which custom properties a node accepts;
-- basic footprint and clearance metadata for future layout solving.
+- basic footprint and clearance metadata for world-space layout.
 
 It is not itself the world. It is an authoring/planning representation that compiles into a deterministic runtime `WorldPlan`.
 
@@ -29,6 +29,13 @@ CUSTOM NODE TYPE SCHEMAS
  nodes  connections  canvas positions
    |       |              |
    +-------+--------------+
+           |
+           v
+ HIERARCHICAL EXPANSION
+           |
+   exposed-port rewiring
+   scoped identities
+   nested templates
            |
            v
  WORLD PLAN COMPILER
@@ -53,7 +60,9 @@ The following identities are semantic and may become generation inputs:
 - node type ID;
 - node ID;
 - port ID within a node type;
-- connection ID.
+- connection ID;
+- template ID;
+- exposed template-port ID.
 
 Editor canvas coordinates are not semantic.
 
@@ -158,11 +167,75 @@ The current runtime represents property values as strings so the planning core s
 
 Future authoring tooling may expose richer typed property editors while compiling them into deterministic runtime values.
 
+## Hierarchical templates
+
+`WorldPlanSubgraphTemplateDefinition` packages a normal graph as a reusable semantic building block. `WorldPlanSubgraphPortDefinition` defines the explicit ports that may cross the template boundary.
+
+A graph node becomes a template instance when its `TemplateId` is set:
+
+```text
+Dungeon
+  |
+  +-- Entrance ---> Wing01 ---> Boss
+                     |
+                     +-- template: DungeonWing
+```
+
+The template instance is not present in the runtime result. It expands to scoped concrete nodes:
+
+```text
+Wing01/Entrance
+Wing01/RoomA
+Wing01/RoomB
+Wing01/BossGate
+```
+
+Two instances of the same template therefore cannot collide:
+
+```text
+Wing01/RoomA
+Wing02/RoomA
+```
+
+Nested templates are supported. Parent exposed ports can target a nested template instance's exposed port, and the compiler resolves the chain to a concrete internal node/port before flattening the graph.
+
+## Deterministic expansion
+
+`WorldPlanSubgraphCompiler.Expand` canonicalizes template lowering by stable identifiers:
+
+```text
+node types   -> ordinal type ID
+nodes        -> ordinal node ID
+connections  -> source/port/target/port/kind/ID
+exposed      -> ordinal exposed-port ID
+```
+
+Internal IDs are scoped from the template instance path:
+
+```text
+instance/child/room
+instance/child/door
+instance/child/connect
+```
+
+The expansion result therefore does not depend on serialized list order. The same semantic input graph produces the same flattened graph.
+
 ## Validation
 
-`WorldPlanCompiler.Validate` is intentionally separate from layout solving.
+Subgraph expansion validates the hierarchy before the existing flat compiler performs semantic validation.
 
-It currently checks:
+Hierarchical checks include:
+
+- null templates;
+- duplicate template IDs;
+- unknown template references;
+- duplicate node IDs;
+- missing exposed ports;
+- invalid nested exposed-port chains;
+- missing endpoint nodes;
+- template recursion/reference cycles.
+
+The flattened result then receives the normal graph validation for:
 
 - null node types/nodes/connections/ports/properties;
 - duplicate node type IDs;
@@ -179,11 +252,9 @@ It currently checks:
 - connection multiplicity violations;
 - undeclared properties as warnings.
 
-This establishes the semantic correctness boundary before world-space layout is attempted.
-
 ## Deterministic compilation
 
-`WorldPlanCompiler.Compile(seed, definition)` canonicalizes the input before creating runtime objects.
+`WorldPlanCompiler.Compile(seed, definition)` canonicalizes a flat graph before creating runtime objects.
 
 The deterministic ordering is:
 
@@ -203,9 +274,9 @@ connections
    -> connection ID
 ```
 
-The compiler therefore does not depend on serialized list order.
+The hierarchical compiler is a lowering wrapper around this canonical flat compiler rather than a second runtime representation.
 
-The seed is retained on the runtime plan for later deterministic expansion/layout stages. The 0.1.94 compiler itself does not use the seed to randomly mutate the graph.
+The seed is retained on the runtime plan for later deterministic expansion/layout stages. The current plan compilers do not consume the seed as mutable random state.
 
 ## Editor graph
 
@@ -223,6 +294,8 @@ The current graph editor provides:
 
 - grid-based canvas navigation;
 - node creation from registered node types;
+- reusable subgraph instance creation from referenced template assets;
+- exposed template-port visualization;
 - node movement;
 - semantic port visualization;
 - compatible-port filtering;
@@ -232,7 +305,7 @@ The current graph editor provides:
 - framing;
 - Unity Undo/asset persistence.
 
-The graph view stores only the visual `position` metadata back to the asset when nodes move. That value is excluded by `BuildDefinition()`.
+The graph view stores only the visual `position` metadata back to the asset when nodes move. That value is excluded from `BuildDefinition()`.
 
 ## Authoring vs runtime
 
@@ -246,6 +319,9 @@ WorldPlanGraphAsset
      |
      v
 WorldPlanGraphDefinition
+     |
+     v
+WorldPlanSubgraphCompiler
      |
      v
 WorldPlanCompiler
@@ -265,76 +341,27 @@ This makes the compiled plan usable for:
 - future background generation;
 - non-Unity tooling.
 
-## Future hierarchical plans
+## Relationship to world-space realization
 
-The current 0.1.94 model represents a flat node/connection graph. The next planned layer is reusable hierarchical expansion:
-
-```text
-Template: Settlement
-    |
-    +-- TownCenter
-    +-- District*
-            |
-            +-- Building*
-                    |
-                    +-- Room*
-```
-
-A future deterministic expander should:
-
-1. select a concrete template/subgraph from authored rules;
-2. derive child identities from parent identity + stable template identity;
-3. preserve semantic connection IDs through expansion;
-4. enforce recursion limits;
-5. compile the expanded result into the same flat runtime `WorldPlan` representation.
-
-This allows one graph schema to describe worlds, regions, towns, dungeons, buildings, rooms, and smaller reusable structures.
-
-## Future layout
-
-After plan compilation, a future `WorldPlanLayoutSolver` should convert semantic structure into world-space placement:
+Hierarchical expansion is intentionally before layout and placement:
 
 ```text
-WorldPlan
-   |
-   +-- footprint constraints
-   +-- clearance constraints
-   +-- port alignment
-   +-- region/terrain eligibility
-   |
-   v
-initial deterministic placement
-   |
-   v
-overlap / separation solving
-   |
-   v
-world-space feature placements
-```
-
-The solver must run in world coordinates and must not be partitioned by chunk.
-
-## Future path/corridor planning
-
-Semantic connections eventually lower to world-space paths:
-
-```text
-PlanConnection
-      |
-      v
-source port world position
-      |
-      v
-world traversability query
-      |
-      v
-deterministic corridor/path
-      |
-      v
+hierarchical semantic plan
+          |
+          v
+flat semantic plan
+          |
+          v
+world-space layout / constraints
+          |
+          v
+feature placement / paths
+          |
+          v
 chunk-local materialization
 ```
 
-This is the intended place to incorporate the useful path-generation concept from grammar/graph-based procedural generators while retaining the world-space and chunk-boundary guarantees of this package.
+A template has no privileged relationship to chunks. An expanded template may describe a structure that spans multiple chunks, just like any other world-space feature.
 
 ## Relationship to connectivity
 
@@ -356,7 +383,7 @@ world-space placement
 
 A spatial edge does not automatically imply that a semantic required connection has been fulfilled. Required plan connections need to be checked against actual placement/path feasibility.
 
-## Current 0.1.94 scope
+## Current 0.1.96 scope
 
 Implemented:
 
@@ -365,19 +392,24 @@ Implemented:
 - semantic ports;
 - required/optional/derived connection kinds;
 - node properties;
-- deterministic compilation;
-- semantic validation;
-- Unity graph asset;
-- Unity GraphView editor.
+- deterministic flat compilation;
+- hierarchical template/subgraph definitions;
+- exposed template-port boundaries;
+- deterministic recursive template expansion;
+- scoped IDs for repeated and nested instances;
+- hierarchical validation and flat semantic validation;
+- Unity `WorldPlanGraphAsset` template/reference authoring;
+- Unity GraphView subgraph-instance authoring and port visualization;
+- regression coverage for expansion, ordering, nesting, missing templates, missing exposed ports, and connection rewiring.
 
 Not yet implemented:
 
-- hierarchical template/subgraph expansion;
-- deterministic plan selection from weighted alternatives;
-- world-space layout solving;
+- deterministic weighted plan selection;
+- deterministic world-space layout / constraint solving;
 - plan-to-feature placement lowering;
 - semantic port world positions;
 - world-space corridor/path generation;
 - direct `ProceduralWorldGenerator` integration;
 - dedicated graph-side property/connection inspectors;
-- graph preview of resolved world geometry.
+- graph preview of resolved world geometry;
+- generation scheduling and background execution.

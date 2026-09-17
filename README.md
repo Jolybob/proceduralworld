@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.27
+## Current architecture — 0.1.30
 
 The generation stack is intentionally separated by responsibility:
 
@@ -25,14 +25,14 @@ seed + settings
       +----> post-process pipeline
       +----> chunk streaming planner/controller
       +----> persistence
+      +----> world access / editing
+      +----> change tracking
       +----> presentation adapters
 ```
 
 `GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation.
-
-Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types, structure types, and post-process steps independently deterministic.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation. The world-access layer exposes only currently loaded state to gameplay, while the change journal records successful mutations as before/after state transitions.
 
 ## Main extension points
 
@@ -55,7 +55,14 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `ChunkStreamingPlanner` — computes deterministic active-chunk deltas
 - `ChunkStreamingDelta` — describes loads and unloads for one update
 - `WorldChunkStreamingController` — connects chunk planning to deterministic generation
-- `WorldPersistentChunkStreamingController` — connects streaming to persistence-aware load/save lifecycle
+- `WorldPersistentChunkStreamingController` — connects streaming to persistence-aware load/save lifecycle and implements active-world access
+- `IWorldChunkAccess` — narrow read/write boundary for currently loaded chunks
+- `WorldChunkCoordinates` — deterministic world-to-chunk/local coordinate conversion
+- `WorldEditService` — gameplay-facing controlled world mutation API
+- `WorldEditOperationKind` — classifies mutation types
+- `WorldCellChange` — captures complete before/after cell state for one edit
+- `IWorldChangeJournal` — backend-neutral change-history boundary
+- `InMemoryWorldChangeJournal` — test/prototype change journal
 - `WorldCellModification` — one persisted cell override
 - `WorldChunkSaveData` — sparse chunk save representation
 - `IWorldChunkStore` — backend-neutral persistence contract
@@ -64,6 +71,14 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
 
 The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
+
+## World editing and change tracking
+
+Gameplay should mutate loaded cells through `WorldEditService` rather than reaching into streaming internals. The service exposes named operations for tiles, resources, structures, and complete cell replacement. A mutation is recorded only after the underlying world access accepts it, and no-op edits are not journaled.
+
+`IWorldChangeJournal` receives `WorldCellChange` records containing the exact world position, complete `Before` and `After` `GeneratedCell` state, and the operation kind. The journal is intentionally independent from persistence, networking, replay, and undo/redo so a project can choose how those systems consume the same mutation history.
+
+A named operation should only create a change when state actually changes. This is why regression tests choose a target tile different from the current generated tile before asserting that all named operations are recorded.
 
 ## Resource layer
 
@@ -91,20 +106,23 @@ Streaming is deliberately separate from generation and rendering. `ChunkStreamin
 
 `WorldChunkStreamingController` connects the planner to `ProceduralWorldGenerator` and an `IWorldChunkSink`. Newly requested coordinates are generated exactly through the normal deterministic generator; unload operations only notify the sink.
 
-`WorldPersistentChunkStreamingController` adds the world lifecycle boundary on top of this: loads use `WorldChunkPersistenceService.LoadChunk`, unloaded chunks are saved before the sink is notified, and `Reset()` saves and unloads all currently loaded chunks. This keeps player edits persistent without coupling the generator to a storage backend.
+`WorldPersistentChunkStreamingController` adds the world lifecycle boundary on top of this: loads use `WorldChunkPersistenceService.LoadChunk`, unloaded chunks are saved before the sink is notified, and `Reset()` saves and unloads all currently loaded chunks. It also implements `IWorldChunkAccess`, allowing gameplay services to read and mutate only active chunks without depending on streaming implementation details.
 
 A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable Y-then-X order, making scheduling and tests deterministic.
 
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(60427, settings);
+var generator = new ProceduralWorldGenerator(93417, settings);
 var store = new InMemoryWorldChunkStore();
 var persistence = new WorldChunkPersistenceService(generator, store);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
 var streaming = new WorldPersistentChunkStreamingController(persistence, planner, sink);
+var journal = new InMemoryWorldChangeJournal();
+var edits = new WorldEditService(streaming, settings.chunkSize, journal);
 
 streaming.Update(new ChunkCoord(10, -4));
+edits.TrySetTile(new WorldPosition(641, -255), WorldTile.Core);
 ```
 
 See `Runtime/Generation/Streaming/README.md` for the complete streaming contract.
@@ -120,7 +138,7 @@ This makes untouched procedural terrain reproducible while player edits remain p
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(60427, settings);
+var generator = new ProceduralWorldGenerator(93417, settings);
 var store = new InMemoryWorldChunkStore();
 var persistence = new WorldChunkPersistenceService(generator, store);
 
@@ -207,11 +225,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `60427` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `93417` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, and persistence backends through `IWorldChunkStore`.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, persistence backends through `IWorldChunkStore`, gameplay access through `IWorldChunkAccess`, and mutation history through `IWorldChangeJournal`.
 
 ## Roadmap
 
@@ -228,6 +246,8 @@ fields
   -> chunk streaming
   -> persistence
   -> persistence-aware streaming lifecycle
+  -> world access / editing
+  -> change tracking
   -> rendering adapters
 ```
 
@@ -239,7 +259,8 @@ Planned extension points include:
 - terrain layers and material selection
 - richer resource distribution and clustering
 - richer structure placement and WFC
-- world modification layers built on post-process steps
+- editor-facing world modification tools
+- grouped transactions and undo/redo on top of the change journal
 - streaming prioritization and asynchronous generation hooks
 - durable storage implementations built on `IWorldChunkStore`
 - save migration tooling

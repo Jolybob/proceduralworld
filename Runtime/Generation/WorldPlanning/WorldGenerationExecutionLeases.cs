@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace Jolybob.ProceduralWorld
 {
@@ -164,7 +165,10 @@ namespace Jolybob.ProceduralWorld
     {
         public static string Create(WorldGenerationWorkKey key, string ownerId, int attempt)
         {
-            return ownerId + ":" + ((int)key.Kind).ToString() + ":" + key.Chunk.X.ToString() + ":" + key.Chunk.Y.ToString() + ":" + attempt.ToString();
+            return ownerId + ":" + ((int)key.Kind).ToString(CultureInfo.InvariantCulture) + ":" +
+                key.Chunk.X.ToString(CultureInfo.InvariantCulture) + ":" +
+                key.Chunk.Y.ToString(CultureInfo.InvariantCulture) + ":" +
+                attempt.ToString(CultureInfo.InvariantCulture);
         }
     }
 }

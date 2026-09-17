@@ -79,6 +79,7 @@ namespace Jolybob.ProceduralWorld
                    left.Resource == right.Resource &&
                    left.Structure == right.Structure &&
                    left.Tile == right.Tile &&
+                   left.Topology == right.Topology &&
                    left.Biome == right.Biome &&
                    left.Flags == right.Flags;
         }
@@ -86,7 +87,7 @@ namespace Jolybob.ProceduralWorld
         public static int GetCellHashCode(GeneratedCell cell)
         {
             int first = HashCode.Combine(cell.Region, cell.Terrain, cell.Resource, cell.Structure);
-            return HashCode.Combine(first, cell.Tile, cell.Biome, cell.Flags);
+            return HashCode.Combine(first, cell.Tile, cell.Topology, cell.Biome, cell.Flags);
         }
     }
 }

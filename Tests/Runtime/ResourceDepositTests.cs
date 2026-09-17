@@ -55,6 +55,9 @@ namespace Jolybob.ProceduralWorld.Tests
                 resourcesEnabled = true,
                 structuresEnabled = false
             };
+            var resolver = new RegionLayoutResolver(
+                new ConstantRegionLayout(new RegionId(1)),
+                new RegionId(0));
 
             var generator = new ProceduralWorldGenerator(
                 12345,
@@ -68,7 +71,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 null,
                 null,
                 null,
-                new ConstantRegionLayout(new RegionId(1)));
+                resolver);
 
             GeneratedChunk first = generator.GenerateChunk(new ChunkCoord(3, -2));
             GeneratedChunk second = generator.GenerateChunk(new ChunkCoord(3, -2));

@@ -92,7 +92,7 @@ The path planner can therefore work from world-space anchors without understandi
 
 ## Relationship to Core Keeper-style generation
 
-The package is intentionally moving toward the same useful separation visible in descriptions of Core Keeper's generated dungeons: larger structures are not treated as isolated chunk-local decorations. The Core Keeper Wiki describes dungeons as multi-area structures whose rooms/areas are connected together, and notes that larger structures can cross chunk boundaries. cite-not-embedded
+The package is intentionally moving toward the same useful separation described for Core Keeper's generated dungeons: larger structures are represented as multiple connected areas and can cross chunk boundaries rather than being treated as isolated chunk-local decorations.
 
 That distinction matters architecturally:
 

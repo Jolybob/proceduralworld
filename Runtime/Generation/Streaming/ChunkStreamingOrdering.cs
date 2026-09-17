@@ -12,8 +12,9 @@ namespace Jolybob.ProceduralWorld
     }
 
     /// <summary>
-    /// Prioritizes chunks by Manhattan distance from the streaming center, then Y/X order.
-    /// This keeps the closest content available first while remaining deterministic.
+    /// Prioritizes chunks by Manhattan distance from the streaming center.
+    /// Ties prefer smaller absolute Y, then lower Y, then lower X.
+    /// This keeps the center and horizontal neighbors available first while remaining deterministic.
     /// </summary>
     public sealed class NearestFirstChunkStreamingOrder : IChunkStreamingOrder
     {
@@ -46,8 +47,17 @@ namespace Jolybob.ProceduralWorld
             if (distance != 0)
                 return distance;
 
+            long leftAbsoluteY = Math.Abs((long)left.Y - center.Y);
+            long rightAbsoluteY = Math.Abs((long)right.Y - center.Y);
+            int absoluteY = leftAbsoluteY.CompareTo(rightAbsoluteY);
+            if (absoluteY != 0)
+                return absoluteY;
+
             int y = left.Y.CompareTo(right.Y);
-            return y != 0 ? y : left.X.CompareTo(right.X);
+            if (y != 0)
+                return y;
+
+            return left.X.CompareTo(right.X);
         }
     }
 }

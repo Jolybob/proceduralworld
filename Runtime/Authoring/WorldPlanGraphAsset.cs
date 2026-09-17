@@ -124,6 +124,21 @@ namespace Jolybob.ProceduralWorld.Authoring
             referencedTemplates.Remove(template);
         }
 
+        public WorldPlanGraphAsset FindReferencedTemplate(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return null;
+
+            for (int i = 0; i < referencedTemplates.Count; i++)
+            {
+                WorldPlanGraphAsset template = referencedTemplates[i];
+                if (template != null && string.Equals(template.TemplateId, id, StringComparison.Ordinal))
+                    return template;
+            }
+
+            return null;
+        }
+
         public void AddExposedPort(ExposedPortRecord port)
         {
             if (port == null)
@@ -144,6 +159,21 @@ namespace Jolybob.ProceduralWorld.Authoring
                     exposedPorts.RemoveAt(i);
                 }
             }
+        }
+
+        public ExposedPortRecord FindExposedPort(string exposedPortId)
+        {
+            if (string.IsNullOrWhiteSpace(exposedPortId))
+                return null;
+
+            for (int i = 0; i < exposedPorts.Count; i++)
+            {
+                ExposedPortRecord exposed = exposedPorts[i];
+                if (exposed != null && string.Equals(exposed.id, exposedPortId, StringComparison.Ordinal))
+                    return exposed;
+            }
+
+            return null;
         }
 
         public void AddNode(NodeRecord node)
@@ -259,7 +289,7 @@ namespace Jolybob.ProceduralWorld.Authoring
                     exposedPort.displayName = exposedPort.id;
             }
 
-            if (reusableTemplate && string.IsNullOrWhiteSpace(templateId))
+            if (string.IsNullOrWhiteSpace(templateId))
                 templateId = "template_" + Guid.NewGuid().ToString("N");
             if (reusableTemplate && string.IsNullOrWhiteSpace(templateDisplayName))
                 templateDisplayName = name;

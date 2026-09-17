@@ -1,0 +1,7 @@
+{
+  "name": "Jolybob.ProceduralWorld.Authoring",
+  "rootNamespace": "Jolybob.ProceduralWorld.Authoring",
+  "references": [
+    "Jolybob.ProceduralWorld.Runtime"
+  ]
+}

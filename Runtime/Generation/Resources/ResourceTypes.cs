@@ -5,6 +5,7 @@ namespace Jolybob.ProceduralWorld
 {
     /// <summary>
     /// Data-only description of a resource that may spawn in generated terrain.
+    /// Resource deposits can optionally grow into deterministic clusters.
     /// </summary>
     public sealed class ResourceDefinition
     {
@@ -15,6 +16,9 @@ namespace Jolybob.ProceduralWorld
         public float SpawnChance { get; }
         public byte MaxPerChunk { get; }
         public int MinimumDistanceFromOrigin { get; }
+        public byte DepositSizeMin { get; }
+        public byte DepositSizeMax { get; }
+        public float DepositGrowthChance { get; }
 
         public ResourceDefinition(
             ResourceId id,
@@ -23,7 +27,10 @@ namespace Jolybob.ProceduralWorld
             TerrainId terrain,
             float spawnChance,
             byte maxPerChunk,
-            int minimumDistanceFromOrigin = 0)
+            int minimumDistanceFromOrigin = 0,
+            byte depositSizeMin = 1,
+            byte depositSizeMax = 1,
+            float depositGrowthChance = 0f)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Resource name cannot be empty.", nameof(name));
@@ -33,6 +40,12 @@ namespace Jolybob.ProceduralWorld
                 throw new ArgumentOutOfRangeException(nameof(maxPerChunk));
             if (minimumDistanceFromOrigin < 0)
                 throw new ArgumentOutOfRangeException(nameof(minimumDistanceFromOrigin));
+            if (depositSizeMin == 0)
+                throw new ArgumentOutOfRangeException(nameof(depositSizeMin));
+            if (depositSizeMax < depositSizeMin)
+                throw new ArgumentOutOfRangeException(nameof(depositSizeMax));
+            if (depositGrowthChance < 0f || depositGrowthChance > 1f)
+                throw new ArgumentOutOfRangeException(nameof(depositGrowthChance));
 
             Id = id;
             Name = name;
@@ -41,6 +54,9 @@ namespace Jolybob.ProceduralWorld
             SpawnChance = spawnChance;
             MaxPerChunk = maxPerChunk;
             MinimumDistanceFromOrigin = minimumDistanceFromOrigin;
+            DepositSizeMin = depositSizeMin;
+            DepositSizeMax = depositSizeMax;
+            DepositGrowthChance = depositGrowthChance;
         }
     }
 
@@ -79,7 +95,7 @@ namespace Jolybob.ProceduralWorld
         public ResourceDefinition Get(ResourceId id)
         {
             if (!definitions.TryGetValue(id, out ResourceDefinition definition))
-                throw new KeyNotFoundException($"Resource ID {id} is not defined in this catalog.");
+                throw new KeyNotFoundException($"Resource ID {id} is not defined in the catalog.");
 
             return definition;
         }
@@ -95,7 +111,10 @@ namespace Jolybob.ProceduralWorld
                     new TerrainId(3),
                     0.025f,
                     6,
-                    20),
+                    20,
+                    2,
+                    6,
+                    0.65f),
                 new ResourceDefinition(
                     new ResourceId(2),
                     "Ore",
@@ -103,7 +122,10 @@ namespace Jolybob.ProceduralWorld
                     new TerrainId(2),
                     0.04f,
                     8,
-                    35),
+                    35,
+                    2,
+                    5,
+                    0.6f),
                 new ResourceDefinition(
                     new ResourceId(3),
                     "Rare Ore",
@@ -111,7 +133,10 @@ namespace Jolybob.ProceduralWorld
                     new TerrainId(1),
                     0.0125f,
                     4,
-                    60)
+                    60,
+                    1,
+                    3,
+                    0.55f)
             });
         }
     }

@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.31
+## Current architecture — 0.1.32
 
 The generation stack is intentionally separated by responsibility:
 
@@ -27,12 +27,13 @@ seed + settings
       +----> persistence
       +----> world access / editing
       +----> change tracking / history
+      +----> change notifications
       +----> presentation adapters
 ```
 
 `GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation. The world-access layer exposes only currently loaded state to gameplay, while the change journal records successful mutations as before/after state transitions. World edit history groups those transitions into named undo/redo entries.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming decides which chunk coordinates are active without changing how chunks are generated. Persistence stores player/world modifications separately from deterministic generation. The world-access layer exposes only currently loaded state to gameplay, while the change journal records successful mutations as before/after state transitions. World edit history groups those transitions into named undo/redo entries. The notification layer fans recorded changes out to reactive consumers without replacing the journal as the history source of truth.
 
 ## Main extension points
 
@@ -65,6 +66,8 @@ Fields produce reusable deterministic values. Regions convert environment data i
 - `InMemoryWorldChangeJournal` — test/prototype change journal
 - `WorldEditHistoryEntry` — named group of changes used for undo/redo
 - `WorldEditHistory` — grouped undo/redo history over journal changes
+- `IWorldChangeListener` — reactive consumer boundary for successful world changes
+- `WorldChangeObserverJournal` — observable journal decorator with disposable subscriptions
 - `WorldCellModification` — one persisted cell override
 - `WorldChunkSaveData` — sparse chunk save representation
 - `IWorldChunkStore` — backend-neutral persistence contract
@@ -74,28 +77,35 @@ Fields produce reusable deterministic values. Regions convert environment data i
 
 The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
 
-## World editing, change tracking, and history
+## World editing, change tracking, history, and notifications
 
 Gameplay should mutate loaded cells through `WorldEditService` rather than reaching into streaming internals. The service exposes named operations for tiles, resources, structures, and complete cell replacement. A mutation is recorded only after the underlying world access accepts it, and no-op edits are not journaled.
 
 `IWorldChangeJournal` receives `WorldCellChange` records containing the exact world position, complete `Before` and `After` `GeneratedCell` state, and the operation kind. `WorldEditHistory` consumes those records without coupling history to persistence or rendering. Multiple journal records can be committed under one name and then undone or redone as a single history entry. Undo applies grouped changes in reverse order; redo reapplies them in forward order. A new committed edit after undo invalidates the redo branch.
 
-History operates against `IWorldChunkAccess`, so it can be used with any active-world implementation. Calling `Undo()` without an explicit `Commit()` safely captures pending journal changes as one default history entry.
+`WorldChangeObserverJournal` decorates any `IWorldChangeJournal` and publishes each successfully recorded change to subscribed `IWorldChangeListener` instances. The wrapped journal remains the durable source of truth for history, while listeners can drive UI, rendering invalidation, multiplayer transport, analytics, audio, or other reactive systems. Subscriptions are disposable, and observers are called in registration order from a stable snapshot so a callback can safely subscribe or unsubscribe without mutating the active notification iteration.
 
 Example:
 
 ```csharp
-var journal = new InMemoryWorldChangeJournal();
+var sourceJournal = new InMemoryWorldChangeJournal();
+var journal = new WorldChangeObserverJournal(sourceJournal);
+using (journal.Subscribe(change => { }))
+{
+    // Implement IWorldChangeListener in production code.
+}
+
 var edits = new WorldEditService(worldAccess, settings.chunkSize, journal);
 var history = new WorldEditHistory(worldAccess, journal);
 
 edits.TrySetTile(new WorldPosition(10, 10), WorldTile.Core);
 edits.TrySetResource(new WorldPosition(11, 10), new ResourceId(12));
 history.Commit("Build chamber");
-
 history.Undo();
 history.Redo();
 ```
+
+Implement `IWorldChangeListener` when a system should react to the same canonical change record without owning world state or persistence.
 
 ## Resource layer
 
@@ -130,12 +140,12 @@ A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(105827, settings);
+var generator = new ProceduralWorldGenerator(116503, settings);
 var store = new InMemoryWorldChunkStore();
 var persistence = new WorldChunkPersistenceService(generator, store);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
 var streaming = new WorldPersistentChunkStreamingController(persistence, planner, sink);
-var journal = new InMemoryWorldChangeJournal();
+var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
 var edits = new WorldEditService(streaming, settings.chunkSize, journal);
 var history = new WorldEditHistory(streaming, journal);
 
@@ -157,7 +167,7 @@ This makes untouched procedural terrain reproducible while player edits remain p
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(105827, settings);
+var generator = new ProceduralWorldGenerator(116503, settings);
 var store = new InMemoryWorldChunkStore();
 var persistence = new WorldChunkPersistenceService(generator, store);
 
@@ -244,11 +254,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `105827` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `116503` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, persistence backends through `IWorldChunkStore`, gameplay access through `IWorldChunkAccess`, mutation history through `IWorldChangeJournal`, and undo/redo storage through `WorldEditHistory`.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`, persistence backends through `IWorldChunkStore`, gameplay access through `IWorldChunkAccess`, mutation history through `IWorldChangeJournal`, undo/redo through `WorldEditHistory`, and reactive consumers through `IWorldChangeListener`.
 
 ## Roadmap
 
@@ -268,6 +278,7 @@ fields
   -> world access / editing
   -> change tracking
   -> grouped undo / redo history
+  -> change notifications
   -> rendering adapters
 ```
 
@@ -281,6 +292,7 @@ Planned extension points include:
 - richer structure placement and WFC
 - editor-facing world modification tools
 - history transaction merging and bounded history memory
+- change-event batching for high-volume systems
 - streaming prioritization and asynchronous generation hooks
 - durable storage implementations built on `IWorldChunkStore`
 - save migration tooling

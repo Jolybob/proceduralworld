@@ -46,8 +46,11 @@ namespace Jolybob.ProceduralWorld.Tests
 
         private static WorldPlanNodeTypeDefinition Type() => new WorldPlanNodeTypeDefinition(
             "Room", "Room", "Test", 2, 2, 0,
-            new WorldPlanPortDefinition("in", "In", WorldPlanPortDirection.Input, "flow", false, false),
-            new WorldPlanPortDefinition("out", "Out", WorldPlanPortDirection.Output, "flow", false, false));
+            new[]
+            {
+                new WorldPlanPortDefinition("in", "In", WorldPlanPortDirection.Input, "flow", false, false),
+                new WorldPlanPortDefinition("out", "Out", WorldPlanPortDirection.Output, "flow", false, false)
+            });
 
         private static WorldPlanGraphDefinition Graph(WorldPlanNodeTypeDefinition type, bool reversed)
         {

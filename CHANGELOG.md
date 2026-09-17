@@ -1,14 +1,24 @@
 # Changelog
 
-## [0.1.68] - 2026-09-17
+## [0.1.69] - 2026-09-17
 
 - Added `WorldPresentationRegionDemandPlanner` as a pure, framework-neutral boundary that computes region load/unload transitions without performing lifecycle work.
 - Added `WorldPresentationRegionDemandPlan` as an immutable description of deterministic load and unload operations.
 - Updated `WorldPresentationRegionDemandCoordinator` to reconcile against actual residency rather than its previous demand snapshot.
-- Exposed the deterministic loaded-region order from `WorldPresentationRegionResidencyCoordinator` for safe planning without leaking mutable state.
+- Exposed the deterministic loaded-region order from `WorldPresentationRegionResidencyCoordinator` as a read-only snapshot for planning.
 - Preserved duplicate-demand elimination, first-seen load order, reverse teardown order, and idempotent residency behavior.
-- Restored the 0.1.67 residency runtime and regression coverage on the architecture branch so the published lifecycle/residency contract remains internally complete.
 - Added Unity `.meta` files and regression coverage for demand planning and reconciliation.
+- Bumped the package version to 0.1.69.
+- Incremented package version for this update.
+
+## [0.1.68] - 2026-09-17
+
+- Added `WorldPresentationRegionDemandCoordinator` as the explicit boundary between desired region visibility and region residency.
+- Added deterministic demand reconciliation so newly demanded regions load once and no-longer-demanded regions unload once.
+- Preserved first-seen demand order while ignoring duplicate region requests.
+- Added automatic reverse-demand-order clearing for predictable presentation teardown.
+- Restored the 0.1.67 residency runtime and regression coverage on the architecture branch so the published lifecycle/residency contract remains internally complete.
+- Added Unity `.meta` files for the demand runtime and tests.
 - Bumped the package version to 0.1.68.
 - Incremented package version for this update.
 
@@ -31,22 +41,4 @@
 - Added regression coverage for region identity forwarding and post-disposal no-op behavior.
 - Added Unity `.meta` files for the lifecycle runtime and tests.
 - Bumped the package version to 0.1.66.
-- Incremented package version for this update.
-
-## [0.1.65] - 2026-09-17
-
-- Fixed Unity compilation errors caused by presentation-region contracts being removed from `WorldPresentationDirtyRegionSet` without preserving their runtime definitions.
-- Restored `IWorldPresentationRegionResolver` and `IWorldPresentationRegionRenderer` as dedicated presentation-region contracts so existing region-aware APIs compile cleanly.
-- Added the corresponding Unity `.meta` file for the contract source.
-- Bumped the package version to 0.1.65.
-- Incremented package version for this update.
-
-## [0.1.64] - 2026-09-17
-
-- Added `IWorldPresentationRegionImpactResolver` so one world change can invalidate multiple presentation regions without coupling the core to chunk or streaming implementations.
-- Added `SingleRegionPresentationImpactResolver` to preserve the existing one-region resolver behavior and constructor compatibility.
-- Updated `WorldPresentationDirtyRegionSet` to coalesce changes independently per impacted region while preserving deterministic first-seen region and position ordering.
-- Updated `WorldPresentationRegionFlushCoordinator` with an impact-resolver constructor so boundary-sensitive presentation can flush all affected regions.
-- Added regression coverage for multi-region invalidation, shared-region coalescing, zero-impact changes, and multi-region coordinator flushing.
-- Bumped the package version to 0.1.64.
 - Incremented package version for this update.

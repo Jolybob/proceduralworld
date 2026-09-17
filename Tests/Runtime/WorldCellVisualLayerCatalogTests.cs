@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -62,6 +63,21 @@ namespace Jolybob.ProceduralWorld.Tests
                 fallback);
 
             Assert.AreSame(expected, catalog.Resolve(new GeneratedCell(WorldTile.Deep, 0)));
+        }
+
+        [Test]
+        public void DuplicateLayerOrderFailsFast()
+        {
+            var fallback = new WorldCellVisualCatalog(
+                new Dictionary<WorldTile, TileBase> { { WorldTile.Deep, CreateTile("Fallback") } });
+
+            Assert.Throws<ArgumentException>(() => new WorldCellVisualLayerCatalog(
+                new IWorldCellVisualLayer[]
+                {
+                    new StubLayer(10, CreateTile("First")),
+                    new StubLayer(10, CreateTile("Second"))
+                },
+                fallback));
         }
 
         private Tile CreateTile(string name)

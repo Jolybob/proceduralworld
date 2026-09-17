@@ -35,6 +35,28 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void FlushSupportsRegionsImpactedByOneChange()
+        {
+            var journal = new WorldChangeObserverJournal(new InMemoryWorldChangeJournal());
+            var resolver = new FixedImpactResolver();
+            var renderer = new RecordingRenderer();
+            var coordinator = new WorldPresentationRegionFlushCoordinator(journal, resolver, renderer);
+            var position = new WorldPosition(1, 1);
+            resolver.Set(position, 10, 20);
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            var empty = new GeneratedCell(WorldTile.Empty, 0);
+
+            journal.Record(new WorldCellChange(position, cell, empty, WorldEditOperationKind.SetTile));
+            coordinator.Flush();
+
+            Assert.AreEqual(2, renderer.Regions.Count);
+            Assert.AreEqual(10, renderer.Regions[0].RegionId);
+            Assert.AreEqual(20, renderer.Regions[1].RegionId);
+            Assert.AreEqual(position, renderer.Regions[0].Batch.Changes[0].Position);
+            Assert.AreEqual(position, renderer.Regions[1].Batch.Changes[0].Position);
+        }
+
+        [Test]
         public void CleanFlushIsNoOp()
         {
             var renderer = new RecordingRenderer();
@@ -66,6 +88,17 @@ namespace Jolybob.ProceduralWorld.Tests
             private readonly Dictionary<WorldPosition, int> regions = new Dictionary<WorldPosition, int>();
             public void Set(WorldPosition position, int regionId) { regions[position] = regionId; }
             public int ResolveRegion(WorldPosition position) { return regions[position]; }
+        }
+
+        private sealed class FixedImpactResolver : IWorldPresentationRegionImpactResolver
+        {
+            private readonly Dictionary<WorldPosition, int[]> regions = new Dictionary<WorldPosition, int[]>();
+            public void Set(WorldPosition position, params int[] regionIds) { regions[position] = regionIds; }
+            public void ResolveRegions(WorldPosition position, ICollection<int> regionIds)
+            {
+                int[] resolved = regions[position];
+                for (int i = 0; i < resolved.Length; i++) regionIds.Add(resolved[i]);
+            }
         }
 
         private sealed class RecordingRenderer : IWorldPresentationRegionRenderer

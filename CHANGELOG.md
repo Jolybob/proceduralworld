@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.91] - 2026-09-17
+
+- Added `WorldFeaturePlacementQueryContext` and `IWorldFeaturePlacementQuerySource` for deterministic feature discovery without constructing a `GeneratedChunk`.
+- Added `WorldFeaturePlacementIndex` with cached chunk queries, world-space point containment queries, rectangle intersection queries, de-duplication, and explicit invalidation.
+- Updated `DeterministicWorldFeaturePlacementSource` to support both generation-context and lightweight query-context discovery.
+- Added regression coverage for query caching, negative-coordinate floor division, cross-chunk de-duplication, and cache invalidation.
+- Updated feature and package documentation to expose feature querying as a world-level gameplay/runtime boundary.
+- Bumped the package version to 0.1.91.
+
 ## [0.1.90] - 2026-09-17
 
 - Added a reusable world-space feature placement kernel through `IWorldFeaturePlacementDefinition`, `WorldFeaturePlacement`, `WorldFeaturePlacementSet`, `WorldFeaturePlacementPlanner`, and `IWorldFeaturePlacementSource`.

@@ -44,20 +44,14 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 throw new ArgumentException("The generated chunk size does not match the renderer chunk size.", nameof(chunk));
 
             ClearChunk(coordinate);
-
             for (int y = 0; y < chunkSize; y++)
             {
                 for (int x = 0; x < chunkSize; x++)
-                {
                     RenderCell(ToTilemapPosition(coordinate, x, y), ToWorldPosition(coordinate, x, y), chunk.GetCell(x, y));
-                }
             }
         }
 
-        public void Unload(ChunkCoord coordinate)
-        {
-            ClearChunk(coordinate);
-        }
+        public void Unload(ChunkCoord coordinate) => ClearChunk(coordinate);
 
         public void Render(WorldCellChange change)
         {
@@ -94,45 +88,29 @@ namespace Jolybob.ProceduralWorld.Tilemap
             foreach (var pair in tilemaps)
             {
                 TileBase tile;
-                if (resolved.TryGetValue(pair.Key, out tile))
-                    pair.Value.SetTile(tilemapPosition, tile);
-                else
-                    pair.Value.SetTile(tilemapPosition, null);
+                pair.Value.SetTile(tilemapPosition, resolved.TryGetValue(pair.Key, out tile) ? tile : null);
             }
         }
 
         private void ClearChunk(ChunkCoord coordinate)
         {
             var bounds = new BoundsInt(
-                checked(coordinate.X * chunkSize),
-                checked(coordinate.Y * chunkSize),
-                0,
-                chunkSize,
-                chunkSize,
-                1);
-
+                checked(coordinate.X * chunkSize), checked(coordinate.Y * chunkSize), 0,
+                chunkSize, chunkSize, 1);
             foreach (var pair in tilemaps)
                 pair.Value.SetTilesBlock(bounds, new TileBase[chunkSize * chunkSize]);
         }
 
         private Vector3Int ToTilemapPosition(ChunkCoord coordinate, int localX, int localY)
         {
-            return new Vector3Int(
-                checked(coordinate.X * chunkSize + localX),
-                checked(coordinate.Y * chunkSize + localY),
-                0);
+            return new Vector3Int(checked(coordinate.X * chunkSize + localX), checked(coordinate.Y * chunkSize + localY), 0);
         }
 
-        private static Vector3Int ToTilemapPosition(WorldPosition position)
+        private WorldPosition ToWorldPosition(ChunkCoord coordinate, int localX, int localY)
         {
-            return new Vector3Int(position.X, position.Y, 0);
+            return new WorldPosition(checked(coordinate.X * chunkSize + localX), checked(coordinate.Y * chunkSize + localY));
         }
 
-        private static WorldPosition ToWorldPosition(ChunkCoord coordinate, int localX, int localY)
-        {
-            return new WorldPosition(
-                checked(coordinate.X * 1 + localX),
-                checked(coordinate.Y * 1 + localY));
-        }
+        private static Vector3Int ToTilemapPosition(WorldPosition position) => new Vector3Int(position.X, position.Y, 0);
     }
 }

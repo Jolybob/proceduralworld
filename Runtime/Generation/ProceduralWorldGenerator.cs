@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Jolybob.ProceduralWorld
@@ -55,7 +56,7 @@ namespace Jolybob.ProceduralWorld
         [Min(1f)] public float borderWarp = 20f;
     }
 
-    public sealed class ProceduralWorldGenerator : IWorldChunkGenerator
+    public sealed class ProceduralWorldGenerator : IWorldPlanChunkGenerator
     {
         private readonly int seed;
         private readonly WorldGenerationSettings settings;
@@ -69,6 +70,7 @@ namespace Jolybob.ProceduralWorld
         private readonly StructureCatalog structures;
         private readonly TopologyPipeline topology;
         private readonly WorldRandomService random;
+        private readonly WorldPlanRuntime worldPlan;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
             : this(seed, settings, null, null, null, null, null, null, null, null, null)
@@ -202,7 +204,33 @@ namespace Jolybob.ProceduralWorld
                 this.topology,
                 settings,
                 regionResolver);
+            worldPlan = null;
         }
+
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
+            RegionCatalog regions,
+            TerrainCatalog terrains,
+            ResourceCatalog resources,
+            StructureCatalog structures,
+            WorldPostProcessPipeline postProcess,
+            TopologyPipeline topology,
+            IRegionResolver regionResolver,
+            WorldPlanRuntime worldPlan)
+            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, resources,
+                structures, postProcess, topology, regionResolver)
+        {
+            if (worldPlan != null && worldPlan.Seed != seed)
+                throw new ArgumentException("World-plan seed must match the generator seed.", nameof(worldPlan));
+
+            this.worldPlan = worldPlan;
+        }
+
+        public WorldPlanRuntime WorldPlan => worldPlan;
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
         {
@@ -218,9 +246,22 @@ namespace Jolybob.ProceduralWorld
                 random,
                 resources,
                 structures,
-                topology);
+                topology,
+                worldPlan);
             pipeline.Execute(context);
             return chunk;
+        }
+
+        public void CollectWorldPlanRealizationEdits(
+            ChunkCoord coordinate,
+            List<WorldRealizationEdit> output)
+        {
+            if (output == null)
+                throw new ArgumentNullException(nameof(output));
+            if (worldPlan == null)
+                return;
+
+            worldPlan.CollectChunkRealizationEdits(coordinate, output);
         }
 
         private static WorldGenerationPipeline CreateDefaultPipeline(

@@ -15,8 +15,12 @@ namespace Jolybob.ProceduralWorld
         private readonly WorldPresentationRegionDemandCoordinator demand;
         private readonly Dictionary<int, IWorldPresentationRegionDemandSource> sources = new Dictionary<int, IWorldPresentationRegionDemandSource>();
         private readonly List<int> sourceOrder = new List<int>();
+        private readonly HashSet<int> pendingRefreshes = new HashSet<int>();
+        private readonly List<int> pendingRefreshOrder = new List<int>();
+        private int batchDepth;
 
         public int SourceCount => sourceOrder.Count;
+        public bool IsBatching => batchDepth > 0;
 
         public WorldPresentationRegionDemandSourceCoordinator(WorldPresentationRegionDemandCoordinator demand)
         {
@@ -24,6 +28,12 @@ namespace Jolybob.ProceduralWorld
         }
 
         public bool HasSource(int sourceId) => sources.ContainsKey(sourceId);
+
+        public WorldPresentationRegionDemandSourceBatch BeginBatch()
+        {
+            batchDepth++;
+            return new WorldPresentationRegionDemandSourceBatch(this);
+        }
 
         public void Register(IWorldPresentationRegionDemandSource source)
         {
@@ -40,7 +50,7 @@ namespace Jolybob.ProceduralWorld
 
             sources[source.SourceId] = source;
             source.DemandChanged += OnDemandChanged;
-            Refresh(source.SourceId);
+            QueueRefresh(source.SourceId);
         }
 
         public bool Unregister(int sourceId)
@@ -50,6 +60,7 @@ namespace Jolybob.ProceduralWorld
             source.DemandChanged -= OnDemandChanged;
             sources.Remove(sourceId);
             sourceOrder.Remove(sourceId);
+            RemovePendingRefresh(sourceId);
             demand.RemoveSourceDemand(sourceId);
             return true;
         }
@@ -63,7 +74,9 @@ namespace Jolybob.ProceduralWorld
         public void RefreshAll()
         {
             for (var i = 0; i < sourceOrder.Count; i++)
-                Refresh(sourceOrder[i]);
+                QueueRefresh(sourceOrder[i]);
+
+            FlushPendingRefreshes();
         }
 
         public void Clear()
@@ -77,11 +90,62 @@ namespace Jolybob.ProceduralWorld
 
             sources.Clear();
             sourceOrder.Clear();
+            pendingRefreshes.Clear();
+            pendingRefreshOrder.Clear();
+        }
+
+        internal void EndBatch()
+        {
+            if (batchDepth == 0)
+            {
+                return;
+            }
+
+            batchDepth--;
+            if (batchDepth == 0)
+            {
+                FlushPendingRefreshes();
+            }
         }
 
         private void OnDemandChanged(int sourceId)
         {
-            Refresh(sourceId);
+            QueueRefresh(sourceId);
+        }
+
+        private void QueueRefresh(int sourceId)
+        {
+            if (batchDepth == 0)
+            {
+                Refresh(sourceId);
+                return;
+            }
+
+            if (pendingRefreshes.Add(sourceId))
+            {
+                pendingRefreshOrder.Add(sourceId);
+            }
+        }
+
+        private void FlushPendingRefreshes()
+        {
+            for (var i = 0; i < pendingRefreshOrder.Count; i++)
+            {
+                Refresh(pendingRefreshOrder[i]);
+            }
+
+            pendingRefreshOrder.Clear();
+            pendingRefreshes.Clear();
+        }
+
+        private void RemovePendingRefresh(int sourceId)
+        {
+            if (!pendingRefreshes.Remove(sourceId))
+            {
+                return;
+            }
+
+            pendingRefreshOrder.Remove(sourceId);
         }
     }
 }

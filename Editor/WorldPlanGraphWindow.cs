@@ -408,7 +408,7 @@ namespace Jolybob.ProceduralWorld.Editor
                 if (asset == null || asset.NodeTypes.Count == 0)
                     return;
 
-                Vector2 localPosition = contentViewContainer.WorldToLocal(evt.eventInfo.mousePosition);
+                Vector2 localPosition = contentViewContainer.WorldToLocal(evt.localMousePosition);
                 evt.menu.AppendSeparator();
                 for (int i = 0; i < asset.NodeTypes.Count; i++)
                 {

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.98] - 2026-09-17
+
+- Added `IWorldPlanFeatureResolver` and `WorldPlanFeatureLowerer` to lower semantic world-plan nodes into the existing world-space feature placement kernel.
+- Added `IWorldPlanPlacementFeasibility` and `WorldPlanPlacementContext` so terrain, cave, water, reservation, and protected-area rules can reject or accept candidate footprints without coupling the core planner to a specific world representation.
+- Added deterministic bounded Manhattan-ring relocation when the preferred layout anchor is not feasible.
+- Added mathematical floor-division owner-chunk assignment for negative world coordinates.
+- Added source-node traceability through `WorldPlanFeaturePlacement` and structured lowering diagnostics.
+- Added regression coverage for lowering, deterministic feasibility relocation, and negative-coordinate owner chunks.
+- Added world-plan feature-lowering architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.98.
+
 ## [0.1.97] - 2026-09-17
 
 - Added `WorldPlanLayoutSettings`, `WorldPlanNodeLayout`, `WorldPlanLayoutPort`, and `WorldPlanLayout` as a Unity-independent world-space layout representation.
@@ -17,7 +28,7 @@
 - Added stable scope-based node, type, and connection identities so repeated template instances remain independent while preserving deterministic input-order behaviour.
 - Added exposed-port rewiring across template boundaries, including nested exposed ports, with semantic direction/type validation delegated to the existing flat compiler.
 - Added template-cycle, duplicate-template, missing-template, missing-exposed-port, and missing-endpoint validation diagnostics.
-- Extended `WorldPlanGraphAsset` authoring with reusable-template metadata, exposed ports, referenced template assets, template instances, and recursive runtime-definition construction.
+- Extended `WorldPlanGraphAsset` authoring with reusable-template metadata, exposed ports, referenced template assets, and template instances.
 - Extended the Unity 6 GraphView editor with reusable subgraph instance creation and exposed-port visualization, including nested template port resolution.
 - Hardened graph inspector/window validation and compilation against authoring reference-cycle exceptions.
 - Added regression coverage for template expansion, deterministic instance ordering, nested flattening, missing templates, missing exposed ports, and connection rewiring.

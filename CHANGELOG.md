@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.59] - 2026-09-17
+
+- Added `WorldCellVisualOverlayChannel` so supplementary visuals can render simultaneously on independent channels.
+- Added `IWorldCellVisualOverlayChannelLayer` for channel-aware overlay implementations while preserving the existing layer contract.
+- Added `WorldCellVisualOverlayChannelCatalog` for deterministic per-channel composition and explicit unresolved-channel omission.
+- Added `WorldTilemapOverlayChannelRenderer` to render multiple overlay channels through dedicated Tilemaps without allowing one overlay to overwrite another.
+- Updated `WorldCellVisualStateOverlayLayer` with an optional channel while preserving its existing constructor behavior.
+- Added regression coverage for simultaneous channels, same-channel order precedence, and unresolved-channel fallthrough.
+- Added Unity `.meta` files for the multi-channel overlay runtime and tests.
+- Bumped the package version to 0.1.59.
+- Incremented package version for this update.
+
 ## [0.1.58] - 2026-09-17
 
 - Added `WorldCellVisualState` as a presentation-only flag set for transient cell states such as selection, hover, damage, and interaction.
@@ -58,7 +70,7 @@
 - Updated `WorldTilemapRenderer` to accept an injected visual resolver while preserving existing constructors.
 - Added regression coverage for resolver injection, topology precedence, and terrain fallback.
 - Added Unity `.meta` files for the new presentation abstraction and catalog.
-- Bumped the package version to 0.1.53.
+- Bumped package version to 0.1.53.
 - Incremented package version for this update.
 
 ## [0.1.52] - 2026-09-17
@@ -86,7 +98,7 @@
 - Kept liquid generation data-only, leaving fluid simulation and rendering to later systems.
 - Added regression coverage for disabled behavior, water/lava classification, topology preservation, and deterministic generation.
 - Added Unity `.meta` files for the liquid topology runtime and tests.
-- Bumped the package version to 0.1.50.
+- Bumped package version to 0.1.50.
 - Incremented package version for this update.
 
 ## [0.1.49] - 2026-09-17
@@ -97,5 +109,5 @@
 - Exposed the topology pipeline through `WorldGenerationContext` and `ProceduralWorldGenerator` for custom topology modifiers without replacing unrelated generation stages.
 - Added regression coverage for topology modifier ordering and deterministic execution order.
 - Added Unity `.meta` files for the new topology pipeline and tests.
-- Bumped the package version to 0.1.49.
+- Bumped package version to 0.1.49.
 - Incremented package version for this update.

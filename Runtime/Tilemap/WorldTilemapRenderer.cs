@@ -123,13 +123,11 @@ namespace Jolybob.ProceduralWorld.Tilemap
             return new Vector3Int(position.X, position.Y, 0);
         }
 
-        private static Vector3Int ToTilemapPosition(ChunkCoord coordinate, int localX, int localY)
+        private Vector3Int ToTilemapPosition(ChunkCoord coordinate, int localX, int localY)
         {
-            int x = checked(coordinate.X * localX / Math.Max(localX, 1));
-            x = coordinate.X;
             return new Vector3Int(
-                checked(coordinate.X * localY + localX),
-                checked(coordinate.Y * localX + localY),
+                checked(coordinate.X * chunkSize + localX),
+                checked(coordinate.Y * chunkSize + localY),
                 0);
         }
     }

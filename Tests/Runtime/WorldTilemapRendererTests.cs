@@ -13,6 +13,7 @@ namespace Jolybob.ProceduralWorld.Tests
         private GameObject gameObject;
         private UnityTilemap tilemap;
         private Dictionary<WorldTile, TileBase> tiles;
+        private Dictionary<CellTopology, TileBase> topologyTiles;
         private readonly List<Tile> createdTiles = new List<Tile>();
 
         [SetUp]
@@ -28,6 +29,15 @@ namespace Jolybob.ProceduralWorld.Tests
                 { WorldTile.Mid, CreateTile("Mid") },
                 { WorldTile.Inner, CreateTile("Inner") },
                 { WorldTile.Core, CreateTile("Core") }
+            };
+
+            topologyTiles = new Dictionary<CellTopology, TileBase>
+            {
+                { CellTopology.Empty, CreateTile("TopologyEmpty") },
+                { CellTopology.Solid, CreateTile("TopologySolid") },
+                { CellTopology.Water, CreateTile("Water") },
+                { CellTopology.Lava, CreateTile("Lava") },
+                { CellTopology.Chasm, CreateTile("Chasm") }
             };
         }
 
@@ -64,6 +74,51 @@ namespace Jolybob.ProceduralWorld.Tests
 
             Assert.IsNull(tilemap.GetTile(new Vector3Int(-2, 4, 0)));
             Assert.IsNull(tilemap.GetTile(new Vector3Int(-1, 5, 0)));
+        }
+
+        [Test]
+        public void TopologyMappingOverridesTerrainMappingWhenProvided()
+        {
+            var renderer = new WorldTilemapRenderer(tilemap, 1, tiles, topologyTiles);
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetTopology(CellTopology.Water, WorldTile.Deep);
+            var chunk = new GeneratedChunk(new ChunkCoord(0, 0), 1);
+            chunk.SetCell(0, 0, cell);
+
+            renderer.Load(chunk.Coordinate, chunk);
+
+            Assert.AreSame(topologyTiles[CellTopology.Water], tilemap.GetTile(new Vector3Int(0, 0, 0)));
+        }
+
+        [Test]
+        public void MissingTopologyMappingFallsBackToTerrainMapping()
+        {
+            var renderer = new WorldTilemapRenderer(tilemap, 1, tiles, new Dictionary<CellTopology, TileBase>());
+            var cell = new GeneratedCell(WorldTile.Deep, 0);
+            cell.SetTopology(CellTopology.Water, WorldTile.Deep);
+            var chunk = new GeneratedChunk(new ChunkCoord(0, 0), 1);
+            chunk.SetCell(0, 0, cell);
+
+            renderer.Load(chunk.Coordinate, chunk);
+
+            Assert.AreSame(tiles[WorldTile.Deep], tilemap.GetTile(new Vector3Int(0, 0, 0)));
+        }
+
+        [Test]
+        public void DirectChangeRendersTopologyWhenMapped()
+        {
+            var renderer = new WorldTilemapRenderer(tilemap, 2, tiles, topologyTiles);
+            var before = new GeneratedCell(WorldTile.Deep, 0);
+            var after = new GeneratedCell(WorldTile.Deep, 0);
+            after.SetTopology(CellTopology.Lava, WorldTile.Deep);
+
+            renderer.Render(new WorldCellChange(
+                new WorldPosition(3, -2),
+                before,
+                after,
+                WorldEditOperationKind.SetTile));
+
+            Assert.AreSame(topologyTiles[CellTopology.Lava], tilemap.GetTile(new Vector3Int(3, -2, 0)));
         }
 
         [Test]

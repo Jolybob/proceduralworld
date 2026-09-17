@@ -8,24 +8,24 @@ namespace Jolybob.ProceduralWorld.Tilemap
 {
     /// <summary>
     /// Concrete Unity Tilemap presentation adapter for streamed chunks and canonical world-change notifications.
-    /// It can be used as an <see cref="IWorldChunkSink"/> and an <see cref="IWorldChangeRenderer"/>.
-    /// Topology mappings are optional so existing tile-only integrations remain source compatible.
+    /// Visual selection is delegated to <see cref="IWorldCellVisualResolver"/> so generation and presentation
+    /// remain independently composable.
     /// </summary>
     public sealed class WorldTilemapRenderer : IWorldChunkSink, IWorldChangeRenderer
     {
         private readonly UnityTilemap tilemap;
         private readonly int chunkSize;
-        private readonly IReadOnlyDictionary<WorldTile, TileBase> tiles;
-        private readonly IReadOnlyDictionary<CellTopology, TileBase> topologyTiles;
+        private readonly IWorldCellVisualResolver visualResolver;
 
         public UnityTilemap Tilemap => tilemap;
         public int ChunkSize => chunkSize;
+        public IWorldCellVisualResolver VisualResolver => visualResolver;
 
         public WorldTilemapRenderer(
             UnityTilemap tilemap,
             int chunkSize,
             IReadOnlyDictionary<WorldTile, TileBase> tiles)
-            : this(tilemap, chunkSize, tiles, null)
+            : this(tilemap, chunkSize, new WorldCellVisualCatalog(tiles))
         {
         }
 
@@ -34,12 +34,19 @@ namespace Jolybob.ProceduralWorld.Tilemap
             int chunkSize,
             IReadOnlyDictionary<WorldTile, TileBase> tiles,
             IReadOnlyDictionary<CellTopology, TileBase> topologyTiles)
+            : this(tilemap, chunkSize, new WorldCellVisualCatalog(tiles, topologyTiles))
+        {
+        }
+
+        public WorldTilemapRenderer(
+            UnityTilemap tilemap,
+            int chunkSize,
+            IWorldCellVisualResolver visualResolver)
         {
             this.tilemap = tilemap ?? throw new ArgumentNullException(nameof(tilemap));
             if (chunkSize <= 0)
                 throw new ArgumentOutOfRangeException(nameof(chunkSize));
-            this.tiles = tiles ?? throw new ArgumentNullException(nameof(tiles));
-            this.topologyTiles = topologyTiles;
+            this.visualResolver = visualResolver ?? throw new ArgumentNullException(nameof(visualResolver));
             this.chunkSize = chunkSize;
         }
 
@@ -64,7 +71,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 {
                     GeneratedCell cell = chunk.GetCell(x, y);
                     positions[index] = ToTilemapPosition(coordinate, x, y);
-                    tileBases[index] = ResolveTile(cell);
+                    tileBases[index] = visualResolver.Resolve(cell);
                     index++;
                 }
             }
@@ -86,7 +93,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
 
         public void Render(WorldCellChange change)
         {
-            tilemap.SetTile(ToTilemapPosition(change.Position), ResolveTile(change.After));
+            tilemap.SetTile(ToTilemapPosition(change.Position), visualResolver.Resolve(change.After));
         }
 
         public void RenderBatch(WorldChangeBatch batch)
@@ -103,7 +110,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
             {
                 WorldCellChange change = batch.Changes[i];
                 Vector3Int position = ToTilemapPosition(change.Position);
-                TileBase tile = ResolveTile(change.After);
+                TileBase tile = visualResolver.Resolve(change.After);
 
                 if (!latestTiles.ContainsKey(position))
                     positions.Add(position);
@@ -116,27 +123,6 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 tileBases[i] = latestTiles[positions[i]];
 
             tilemap.SetTiles(positions.ToArray(), tileBases);
-        }
-
-        private TileBase ResolveTile(GeneratedCell cell)
-        {
-            TileBase topologyTile;
-            if (topologyTiles != null && topologyTiles.TryGetValue(cell.Topology, out topologyTile))
-                return topologyTile;
-
-            return ResolveTerrainTile(cell.Tile);
-        }
-
-        private TileBase ResolveTerrainTile(WorldTile tile)
-        {
-            TileBase result;
-            if (!tiles.TryGetValue(tile, out result))
-            {
-                throw new KeyNotFoundException(
-                    $"No TileBase mapping exists for world tile '{tile}'.");
-            }
-
-            return result;
         }
 
         private static Vector3Int ToTilemapPosition(WorldPosition position)

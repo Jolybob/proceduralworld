@@ -75,6 +75,20 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void Builder_DeduplicatesIdenticalPlacements()
+        {
+            WorldFeaturePlacement placement = Placement(1, 10, 10);
+            var placements = new[] { placement, placement, placement };
+
+            WorldConnectivityGraph graph = new WorldConnectivityGraphBuilder().Build(
+                placements,
+                new WorldConnectivitySettings(8, 2));
+
+            Assert.AreEqual(1, graph.Nodes.Count);
+            Assert.AreEqual(0, graph.Edges.Count);
+        }
+
+        [Test]
         public void Builder_HandlesNegativeWorldCoordinatesWithoutBucketWrap()
         {
             var placements = new[]
@@ -95,7 +109,6 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void BuildFromIndex_UsesWorldRectangleQueries()
         {
-            var definition = new TestFeatureDefinition();
             var source = new StaticQuerySource(new[]
             {
                 new WorldFeaturePlacement(1, new WorldPosition(2, 2), new ChunkCoord(0, 0), 1, 1),
@@ -115,17 +128,20 @@ namespace Jolybob.ProceduralWorld.Tests
 
         private static WorldFeaturePlacement Placement(int id, int x, int y)
         {
-            return new WorldFeaturePlacement(id, new WorldPosition(x, y), new ChunkCoord(x / 64, y / 64), 1, 1);
+            return new WorldFeaturePlacement(
+                id,
+                new WorldPosition(x, y),
+                new ChunkCoord(FloorDiv(x, 64), FloorDiv(y, 64)),
+                1,
+                1);
         }
 
-        private sealed class TestFeatureDefinition : IWorldFeaturePlacementDefinition
+        private static int FloorDiv(int value, int divisor)
         {
-            public int FeatureId => 1;
-            public int Width => 1;
-            public int Height => 1;
-            public float SpawnChance => 1f;
-            public int MaxPerChunk => 1;
-            public int MinimumDistanceFromOrigin => 0;
+            long quotient = value / divisor;
+            long remainder = value % divisor;
+            if (remainder != 0L && value < 0) quotient--;
+            return checked((int)quotient);
         }
 
         private sealed class StaticQuerySource : IWorldFeaturePlacementQuerySource

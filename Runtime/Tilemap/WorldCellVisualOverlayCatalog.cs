@@ -21,19 +21,9 @@ namespace Jolybob.ProceduralWorld.Tilemap
             foreach (var layer in layers)
             {
                 if (layer == null)
-                {
-                    throw new ArgumentException(
-                        "Visual overlay layer collection cannot contain null entries.",
-                        nameof(layers));
-                }
-
+                    throw new ArgumentException("Visual overlay layer collection cannot contain null entries.", nameof(layers));
                 if (layer.Order < 0)
-                {
-                    throw new ArgumentException(
-                        "Visual overlay layer order cannot be negative.",
-                        nameof(layers));
-                }
-
+                    throw new ArgumentException("Visual overlay layer order cannot be negative.", nameof(layers));
                 ordered.Add(layer);
             }
 
@@ -41,11 +31,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
             for (int i = 1; i < ordered.Count; i++)
             {
                 if (ordered[i - 1].Order == ordered[i].Order)
-                {
-                    throw new ArgumentException(
-                        $"Visual overlay layer order '{ordered[i].Order}' is assigned more than once.",
-                        nameof(layers));
-                }
+                    throw new ArgumentException($"Visual overlay layer order '{ordered[i].Order}' is assigned more than once.", nameof(layers));
             }
 
             this.layers = ordered;
@@ -58,6 +44,26 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 TileBase tile;
                 if (layers[i].TryResolve(cell, out tile))
                     return tile;
+            }
+
+            return null;
+        }
+
+        public TileBase Resolve(WorldPosition position, GeneratedCell cell)
+        {
+            for (int i = 0; i < layers.Count; i++)
+            {
+                TileBase tile;
+                var contextualLayer = layers[i] as IWorldCellVisualOverlayContextLayer;
+                if (contextualLayer != null)
+                {
+                    if (contextualLayer.TryResolve(position, cell, out tile))
+                        return tile;
+                }
+                else if (layers[i].TryResolve(cell, out tile))
+                {
+                    return tile;
+                }
             }
 
             return null;

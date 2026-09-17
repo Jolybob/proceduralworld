@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.94] - 2026-09-17
+
+- Added a typed world-plan graph runtime model with deterministic node and connection ordering.
+- Added customizable node types, semantic ports, connection kinds, node properties, and footprint/clearance metadata.
+- Added `WorldPlanCompiler` and `WorldPlanValidationResult` for deterministic compilation and structural validation.
+- Added a Unity `WorldPlanGraphAsset` authoring asset that keeps editor canvas positions separate from runtime plan semantics.
+- Added a Unity node graph editor with draggable nodes, custom port rendering, semantic-type compatibility filtering, connection creation/removal, graph validation, framing, and asset-backed undo/save behaviour.
+- Added regression coverage for deterministic compilation, unknown node types, incompatible port types, required ports, and node properties.
+- Updated the Editor assembly to reference the Authoring assembly.
+- Bumped the package version to 0.1.94.
+
 ## [0.1.93] - 2026-09-17
 
 - Fixed `Builder_IsDeterministicRegardlessOfInputOrder` so node and edge collections are compared independently, avoiding an out-of-range edge access when a graph has fewer edges than nodes.

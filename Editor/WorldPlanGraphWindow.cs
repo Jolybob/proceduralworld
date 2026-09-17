@@ -86,10 +86,17 @@ namespace Jolybob.ProceduralWorld.Editor
                 return;
             }
 
-            WorldPlanValidationResult validation = asset.Validate();
-            statusLabel.text = validation.IsValid
-                ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
-                : BuildIssueSummary(validation);
+            try
+            {
+                WorldPlanValidationResult validation = asset.Validate();
+                statusLabel.text = validation.IsValid
+                    ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
+                    : BuildIssueSummary(validation);
+            }
+            catch (Exception exception)
+            {
+                statusLabel.text = "Graph validation failed: " + exception.Message;
+            }
         }
 
         private void SelectGraphAsset()
@@ -106,10 +113,17 @@ namespace Jolybob.ProceduralWorld.Editor
             if (asset == null)
                 return;
 
-            WorldPlanValidationResult validation = asset.Validate();
-            statusLabel.text = validation.IsValid
-                ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
-                : BuildIssueSummary(validation);
+            try
+            {
+                WorldPlanValidationResult validation = asset.Validate();
+                statusLabel.text = validation.IsValid
+                    ? "Valid graph: " + asset.Nodes.Count + " nodes, " + asset.Connections.Count + " connections."
+                    : BuildIssueSummary(validation);
+            }
+            catch (Exception exception)
+            {
+                statusLabel.text = "Graph validation failed: " + exception.Message;
+            }
         }
 
         private static string BuildIssueSummary(WorldPlanValidationResult validation)
@@ -301,7 +315,7 @@ namespace Jolybob.ProceduralWorld.Editor
                     if (exposed == null)
                         continue;
 
-                    WorldPlanGraphAsset.PortRecord portRecord = ResolveTemplatePort(template, exposed);
+                    WorldPlanGraphAsset.PortRecord portRecord = ResolveTemplatePort(template, exposed, new HashSet<WorldPlanGraphAsset>());
                     if (portRecord == null)
                         continue;
 
@@ -535,7 +549,9 @@ namespace Jolybob.ProceduralWorld.Editor
                     if (template == null)
                         return null;
                     WorldPlanGraphAsset.ExposedPortRecord exposed = template.FindExposedPort(binding.PortId);
-                    return exposed == null ? null : ResolveTemplatePort(template, exposed);
+                    return exposed == null
+                        ? null
+                        : ResolveTemplatePort(template, exposed, new HashSet<WorldPlanGraphAsset>());
                 }
 
                 WorldPlanGraphAsset.NodeTypeRecord type = asset.FindNodeType(node.typeId);
@@ -554,27 +570,50 @@ namespace Jolybob.ProceduralWorld.Editor
 
             private static WorldPlanGraphAsset.PortRecord ResolveTemplatePort(
                 WorldPlanGraphAsset template,
-                WorldPlanGraphAsset.ExposedPortRecord exposed)
+                WorldPlanGraphAsset.ExposedPortRecord exposed,
+                HashSet<WorldPlanGraphAsset> activeTemplates)
             {
-                if (template == null || exposed == null)
+                if (template == null || exposed == null || activeTemplates == null)
+                    return null;
+                if (!activeTemplates.Add(template))
                     return null;
 
-                WorldPlanGraphAsset.NodeRecord targetNode = template.FindNode(exposed.nodeId);
-                if (targetNode == null || !string.IsNullOrWhiteSpace(targetNode.templateId))
-                    return null;
-
-                WorldPlanGraphAsset.NodeTypeRecord type = template.FindNodeType(targetNode.typeId);
-                if (type == null)
-                    return null;
-
-                for (int i = 0; i < type.ports.Count; i++)
+                try
                 {
-                    WorldPlanGraphAsset.PortRecord port = type.ports[i];
-                    if (port != null && string.Equals(port.id, exposed.portId, StringComparison.Ordinal))
-                        return port;
-                }
+                    WorldPlanGraphAsset.NodeRecord targetNode = template.FindNode(exposed.nodeId);
+                    if (targetNode == null)
+                        return null;
 
-                return null;
+                    if (!string.IsNullOrWhiteSpace(targetNode.templateId))
+                    {
+                        WorldPlanGraphAsset nestedTemplate = template.FindReferencedTemplate(targetNode.templateId);
+                        if (nestedTemplate == null)
+                            return null;
+
+                        WorldPlanGraphAsset.ExposedPortRecord nestedExposed = nestedTemplate.FindExposedPort(exposed.portId);
+                        if (nestedExposed == null)
+                            return null;
+
+                        return ResolveTemplatePort(nestedTemplate, nestedExposed, activeTemplates);
+                    }
+
+                    WorldPlanGraphAsset.NodeTypeRecord type = template.FindNodeType(targetNode.typeId);
+                    if (type == null)
+                        return null;
+
+                    for (int i = 0; i < type.ports.Count; i++)
+                    {
+                        WorldPlanGraphAsset.PortRecord port = type.ports[i];
+                        if (port != null && string.Equals(port.id, exposed.portId, StringComparison.Ordinal))
+                            return port;
+                    }
+
+                    return null;
+                }
+                finally
+                {
+                    activeTemplates.Remove(template);
+                }
             }
 
             private Port FindPort(WorldPlanGraphNodeView node, string portId, Direction direction)

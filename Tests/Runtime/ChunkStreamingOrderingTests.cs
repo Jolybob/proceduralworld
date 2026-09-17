@@ -22,7 +22,7 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void EqualPriorityUsesDeterministicYXOrder()
+        public void EqualPriorityUsesDeterministicTieOrder()
         {
             var planner = new ChunkStreamingPlanner(1);
             ChunkStreamingDelta delta = planner.Update(new ChunkCoord(0, 0));

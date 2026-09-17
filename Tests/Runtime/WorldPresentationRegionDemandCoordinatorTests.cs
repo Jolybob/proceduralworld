@@ -47,15 +47,61 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void DisposeStopsFutureDemandChanges()
+        public void MultipleSourcesShareRegionsAndReconcileAsOneDemandSet()
         {
             var lifecycle = new RecordingLifecycle();
             var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
             var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
 
-            coordinator.SetDemandedRegions(new[] { 6 });
+            coordinator.SetSourceDemand(10, new[] { 2, 5 });
+            coordinator.SetSourceDemand(20, new[] { 5, 9 });
+            coordinator.RemoveSourceDemand(10);
+
+            Assert.AreEqual(1, coordinator.DemandSourceCount);
+            Assert.AreEqual(2, coordinator.DemandedRegionCount);
+            CollectionAssert.AreEqual(new[] { 2, 5, 9 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void RemovingOneSourceDoesNotUnloadSharedRegion()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+
+            coordinator.SetSourceDemand(1, new[] { 4, 8 });
+            coordinator.SetSourceDemand(2, new[] { 8, 12 });
+            coordinator.RemoveSourceDemand(1);
+
+            Assert.IsTrue(coordinator.IsDemanded(8));
+            CollectionAssert.AreEqual(new[] { 4 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void ReconcileIsIdempotentWithoutNewDemand()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+
+            coordinator.SetSourceDemand(1, new[] { 3, 6 });
+            coordinator.Reconcile();
+
+            CollectionAssert.AreEqual(new[] { 3, 6 }, lifecycle.LoadedRegions);
+            Assert.AreEqual(0, lifecycle.UnloadedRegions.Count);
+        }
+
+        [Test]
+        public void DisposeStopsFutureSourceDemandChanges()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var coordinator = new WorldPresentationRegionDemandCoordinator(residency);
+
+            coordinator.SetSourceDemand(1, new[] { 6 });
             coordinator.Dispose();
-            coordinator.SetDemandedRegions(new[] { 9 });
+            coordinator.SetSourceDemand(2, new[] { 9 });
 
             Assert.IsTrue(coordinator.IsDisposed);
             CollectionAssert.AreEqual(new[] { 6 }, lifecycle.UnloadedRegions);

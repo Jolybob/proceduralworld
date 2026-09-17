@@ -23,4 +23,13 @@ namespace Jolybob.ProceduralWorld
     {
         RegionId Resolve(EnvironmentSample sample);
     }
+
+    /// <summary>
+    /// Optional extension for region resolvers that also need deterministic world-space coordinates.
+    /// The legacy <see cref="IRegionResolver"/> contract remains available for field-only resolvers.
+    /// </summary>
+    public interface IPositionAwareRegionResolver : IRegionResolver
+    {
+        RegionId Resolve(EnvironmentSample sample, int worldX, int worldY);
+    }
 }

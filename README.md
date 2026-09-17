@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.20
+## Current architecture — 0.1.21
 
 The generation stack is intentionally separated by responsibility:
 
@@ -22,7 +22,7 @@ seed + settings
       +----> TerrainId
       +----> ResourceId
       +----> StructureId
-      +----> post-process
+      +----> post-process pipeline
       +----> streaming
       +----> persistence
       +----> presentation adapters
@@ -30,9 +30,9 @@ seed + settings
 
 `GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage before streaming, persistence, and presentation.
 
-Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types and structure types independently deterministic.
+Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types, structure types, and post-process steps independently deterministic.
 
 ## Main extension points
 
@@ -47,9 +47,13 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `IWorldRandom` / `WorldRandomService` — deterministic subsystem random streams
 - `IWorldGenerationPass` — ordered generation stages
 - `WorldGenerationPipeline` — composes generation passes
+- `IWorldPostProcessStep` — ordered final world-data modifications
+- `WorldPostProcessPipeline` — composes post-process steps with isolated random streams
+- `WorldPostProcessContext` — exposes chunk data and step-scoped deterministic services
+- `WorldPostProcessPass` — inserts the post-process pipeline into the main generation pipeline
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
 
-The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, and structure catalogs.
+The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
 
 ## Resource layer
 
@@ -62,6 +66,35 @@ Resources are disabled by default. Enable `WorldGenerationSettings.resourcesEnab
 Structures are generated as deterministic multi-cell footprints. `StructurePass` selects anchors using the Structures random domain plus the structure ID as a salt, validates the entire footprint before placement, prevents overlap with caves, resources, and other structures, and records occupancy through `GeneratedCell.Structure` and `GeneratedCellFlags.HasStructure`.
 
 Structures are disabled by default. Enable `WorldGenerationSettings.structuresEnabled` when a project wants procedural structure placement.
+
+## Post-process layer
+
+Post-process steps run after caves, resources, and structures and are intentionally independent from rendering. `WorldPostProcessPipeline` sorts steps by `Order` and executes them through `WorldPostProcessPass` at order `900` in the default generation pipeline.
+
+Each `IWorldPostProcessStep` supplies a stable `Salt`. `WorldPostProcessContext.Random` creates a deterministic stream using the world seed, chunk coordinate, the `PostProcess` random domain, and that salt. This lets one modification step change without perturbing unrelated post-process randomness.
+
+The default generator includes an empty post-process stage, so projects can inject world modifications without replacing the rest of the generation pipeline.
+
+Example:
+
+```csharp
+var postProcess = new WorldPostProcessPipeline()
+    .Add(new ReserveRareAreaStep());
+
+var generator = new ProceduralWorldGenerator(
+    seed,
+    settings,
+    pipeline: null,
+    environmentFields: null,
+    caveFields: null,
+    regions: null,
+    terrains: null,
+    resources: null,
+    structures: null,
+    postProcess: postProcess);
+```
+
+See `Runtime/Generation/PostProcess/README.md` for the full contract and a complete step example.
 
 ## Cave layer
 
@@ -111,11 +144,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `97531` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `86420` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, or the complete pipeline without changing the core chunk data model.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model.
 
 ## Roadmap
 
@@ -142,7 +175,7 @@ Planned extension points include:
 - terrain layers and material selection
 - richer resource distribution and clustering
 - richer structure placement and WFC
-- world modification layers
+- world modification layers built on post-process steps
 - chunk streaming
 - persistence interfaces
 - editor world preview

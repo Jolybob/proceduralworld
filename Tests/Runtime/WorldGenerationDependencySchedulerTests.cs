@@ -26,7 +26,7 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void SameChunkCanCarryPlanRealizationAndMaterializationDependencies()
+        public void SameChunkCanCarryPlanRealizationAndMaterializationDependenciesAcrossBudgets()
         {
             var graph = new WorldGenerationWorkGraph();
             var chunk = new ChunkCoord(4, -2);
@@ -40,12 +40,22 @@ namespace Jolybob.ProceduralWorld.Tests
             graph.AddDependency(plan, realization);
             graph.AddDependency(realization, materialization);
 
-            WorldGenerationDependencySchedule schedule = graph.BuildSchedule();
-            Assert.IsTrue(schedule.Succeeded);
-            Assert.AreEqual(3, schedule.Count);
-            Assert.AreEqual(WorldGenerationWorkKind.Plan, schedule.Items[0].Kind);
-            Assert.AreEqual(WorldGenerationWorkKind.Realization, schedule.Items[1].Kind);
-            Assert.AreEqual(WorldGenerationWorkKind.Materialization, schedule.Items[2].Kind);
+            WorldGenerationDependencySchedule first = graph.Dequeue(1);
+            Assert.IsTrue(first.Succeeded);
+            Assert.AreEqual(plan, new WorldGenerationWorkKey(first.Items[0].Chunk, first.Items[0].Kind));
+            Assert.AreEqual(WorldGenerationWorkStatus.Running, graph.GetStatus(plan));
+
+            WorldGenerationDependencySchedule blocked = graph.BuildSchedule();
+            Assert.AreEqual(0, blocked.Count);
+            Assert.IsTrue(blocked.Succeeded);
+
+            Assert.IsTrue(graph.Complete(plan));
+            WorldGenerationDependencySchedule second = graph.Dequeue(1);
+            Assert.AreEqual(realization, new WorldGenerationWorkKey(second.Items[0].Chunk, second.Items[0].Kind));
+            Assert.IsTrue(graph.Complete(realization));
+
+            WorldGenerationDependencySchedule third = graph.Dequeue(1);
+            Assert.AreEqual(materialization, new WorldGenerationWorkKey(third.Items[0].Chunk, third.Items[0].Kind));
         }
 
         [Test]
@@ -54,18 +64,19 @@ namespace Jolybob.ProceduralWorld.Tests
             var graph = new WorldGenerationWorkGraph();
             var source = new WorldGenerationWorkKey(new ChunkCoord(0, 0), WorldGenerationWorkKind.Plan);
             var dependent = new WorldGenerationWorkKey(new ChunkCoord(10, 10), WorldGenerationWorkKind.Materialization);
-            graph.Request(source.Chunk, source.Kind);
-            graph.Request(dependent.Chunk, dependent.Kind);
             graph.AddDependency(source, dependent);
 
-            WorldGenerationDependencySchedule schedule = graph.BuildSchedule();
-            Assert.IsTrue(schedule.Succeeded);
-            Assert.AreEqual(source, new WorldGenerationWorkKey(schedule.Items[0].Chunk, schedule.Items[0].Kind));
-            Assert.AreEqual(dependent, new WorldGenerationWorkKey(schedule.Items[1].Chunk, schedule.Items[1].Kind));
+            WorldGenerationDependencySchedule first = graph.Dequeue(1);
+            Assert.IsTrue(first.Succeeded);
+            Assert.AreEqual(source, new WorldGenerationWorkKey(first.Items[0].Chunk, first.Items[0].Kind));
+            Assert.IsTrue(graph.Complete(source));
+
+            WorldGenerationDependencySchedule second = graph.Dequeue(1);
+            Assert.AreEqual(dependent, new WorldGenerationWorkKey(second.Items[0].Chunk, second.Items[0].Kind));
         }
 
         [Test]
-        public void CycleProducesStructuredDiagnosticWithoutDequeueingWork()
+        public void CycleProducesStructuredDiagnosticWithoutClaimingWork()
         {
             var graph = new WorldGenerationWorkGraph();
             var a = new WorldGenerationWorkKey(new ChunkCoord(0, 0), WorldGenerationWorkKind.Plan);
@@ -76,21 +87,42 @@ namespace Jolybob.ProceduralWorld.Tests
             WorldGenerationDependencySchedule schedule = graph.Dequeue(10);
             Assert.IsFalse(schedule.Succeeded);
             Assert.AreEqual("DependencyCycle", schedule.Issues[0].Code);
-            Assert.AreEqual(2, graph.Count);
+            Assert.AreEqual(WorldGenerationWorkStatus.Pending, graph.GetStatus(a));
+            Assert.AreEqual(WorldGenerationWorkStatus.Pending, graph.GetStatus(b));
         }
 
         [Test]
-        public void BudgetReturnsOnlyReadyPrefixAndLeavesGraphIntact()
+        public void RunningPrerequisiteBlocksDependentsWithoutReportingCycle()
         {
             var graph = new WorldGenerationWorkGraph();
-            graph.Request(new ChunkCoord(0, 0), WorldGenerationWorkKind.Plan);
-            graph.Request(new ChunkCoord(1, 0), WorldGenerationWorkKind.Plan);
-            graph.Request(new ChunkCoord(2, 0), WorldGenerationWorkKind.Plan);
+            var source = new WorldGenerationWorkKey(new ChunkCoord(0, 0), WorldGenerationWorkKind.Plan);
+            var dependent = new WorldGenerationWorkKey(new ChunkCoord(1, 0), WorldGenerationWorkKind.Realization);
+            graph.AddDependency(source, dependent);
+            Assert.AreEqual(1, graph.Dequeue(1).Count);
 
-            WorldGenerationDependencySchedule schedule = graph.Dequeue(2);
-            Assert.IsTrue(schedule.Succeeded);
-            Assert.AreEqual(2, schedule.Count);
-            Assert.AreEqual(1, graph.Count);
+            WorldGenerationDependencySchedule blocked = graph.BuildSchedule();
+            Assert.IsTrue(blocked.Succeeded);
+            Assert.AreEqual(0, blocked.Count);
+        }
+
+        [Test]
+        public void FailedWorkBlocksDependentsUntilRetriedAndCompleted()
+        {
+            var graph = new WorldGenerationWorkGraph();
+            var source = new WorldGenerationWorkKey(new ChunkCoord(0, 0), WorldGenerationWorkKind.Plan);
+            var dependent = new WorldGenerationWorkKey(new ChunkCoord(0, 0), WorldGenerationWorkKind.Realization);
+            graph.AddDependency(source, dependent);
+
+            Assert.AreEqual(1, graph.Dequeue(1).Count);
+            Assert.IsTrue(graph.Fail(source));
+            WorldGenerationDependencySchedule blocked = graph.BuildSchedule();
+            Assert.IsFalse(blocked.Succeeded);
+            Assert.AreEqual("FailedDependency", blocked.Issues[0].Code);
+
+            Assert.IsTrue(graph.Retry(source));
+            Assert.AreEqual(1, graph.Dequeue(1).Count);
+            Assert.IsTrue(graph.Complete(source));
+            Assert.AreEqual(1, graph.Dequeue(1).Count);
         }
     }
 }

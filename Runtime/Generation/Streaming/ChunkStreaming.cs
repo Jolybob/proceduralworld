@@ -58,11 +58,16 @@ namespace Jolybob.ProceduralWorld
             toLoad.Clear();
             toUnload.Clear();
 
-            for (int y = center.Y - loadRadius; y <= center.Y + loadRadius; y++)
+            long minY = (long)center.Y - loadRadius;
+            long maxY = (long)center.Y + loadRadius;
+            long minX = (long)center.X - loadRadius;
+            long maxX = (long)center.X + loadRadius;
+
+            for (long y = minY; y <= maxY; y++)
             {
-                for (int x = center.X - loadRadius; x <= center.X + loadRadius; x++)
+                for (long x = minX; x <= maxX; x++)
                 {
-                    var coordinate = new ChunkCoord(x, y);
+                    var coordinate = new ChunkCoord((int)x, (int)y);
                     if (active.Add(coordinate))
                         toLoad.Add(coordinate);
                 }

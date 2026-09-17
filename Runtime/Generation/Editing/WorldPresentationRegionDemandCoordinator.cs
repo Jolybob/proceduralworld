@@ -93,14 +93,30 @@ namespace Jolybob.ProceduralWorld
         public void Dispose()
         {
             if (disposed) return;
-            ClearDemand();
+
+            aggregator.Clear();
+            ReconcileAggregatedDemand(false);
             disposed = true;
             DemandChanged = null;
         }
 
-        private void ReconcileAggregatedDemand()
+        private void ReconcileAggregatedDemand(bool publish = true)
         {
             var nextDemanded = aggregator.DemandedRegions;
+            var changed = demandOrder.Count != nextDemanded.Count;
+
+            if (!changed)
+            {
+                for (var i = 0; i < nextDemanded.Count; i++)
+                {
+                    if (demandOrder[i] != nextDemanded[i])
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
             var plan = planner.CreatePlan(residency.LoadedRegions, nextDemanded);
 
             for (var i = 0; i < plan.RegionsToUnload.Count; i++)
@@ -115,10 +131,15 @@ namespace Jolybob.ProceduralWorld
             demandOrder.Clear();
             demandOrder.AddRange(nextDemanded);
 
+            if (!publish || !changed)
+            {
+                return;
+            }
+
             var handler = DemandChanged;
             if (handler != null)
             {
-                handler(new WorldPresentationRegionDemandChange(demandOrder.AsReadOnly()));
+                handler(new WorldPresentationRegionDemandChange(demandOrder));
             }
         }
     }

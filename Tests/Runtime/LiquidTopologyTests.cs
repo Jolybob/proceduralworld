@@ -19,11 +19,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void LiquidTopologyIsDisabledByDefault()
         {
-            var settings = new WorldGenerationSettings
-            {
-                chunkSize = 4,
-                liquidsEnabled = false
-            };
+            var settings = new WorldGenerationSettings { chunkSize = 4, liquidsEnabled = false };
             var chunk = CreateChunk(settings.chunkSize);
             var context = CreateContext(settings, chunk, new ConstantEnvironmentProvider(1f, 1f, 0f));
 
@@ -98,11 +94,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void LiquidTopologyIsDeterministicAcrossChunks()
         {
-            var settings = new WorldGenerationSettings
-            {
-                chunkSize = 8,
-                liquidsEnabled = true
-            };
+            var settings = new WorldGenerationSettings { chunkSize = 8, liquidsEnabled = true };
             var generator = new ProceduralWorldGenerator(90417, settings);
 
             GeneratedChunk first = generator.GenerateChunk(new ChunkCoord(3, -2));
@@ -140,8 +132,7 @@ namespace Jolybob.ProceduralWorld.Tests
                 new DefaultCaveFieldProvider(1234, settings),
                 new WorldRandomService(1234),
                 ResourceCatalog.CreateDefault(),
-                StructureCatalog.CreateDefault(),
-                new TopologyPipeline());
+                StructureCatalog.CreateDefault());
         }
     }
 }

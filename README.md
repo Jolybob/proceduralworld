@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.23
+## Current architecture — 0.1.24
 
 The generation stack is intentionally separated by responsibility:
 
@@ -90,7 +90,7 @@ A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable
 Example:
 
 ```csharp
-var generator = new ProceduralWorldGenerator(68124, settings);
+var generator = new ProceduralWorldGenerator(59273, settings);
 var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
 var streaming = new WorldChunkStreamingController(generator, planner, sink);
 
@@ -121,6 +121,8 @@ Keep your project's existing dependencies and add only the `testables` entry; do
 Then let Unity re-import the package, reopen **Window > General > Test Runner**, select **EditMode**, and use **Run All**.
 
 For a locally embedded package, tests are considered testable automatically.
+
+The seed-difference regression test compares the seeded environment field across multiple world positions rather than requiring two different seeds to cross a coarse region/terrain threshold in one specific chunk. This keeps the test aligned with deterministic field behavior without making an unsupported assumption about region boundaries.
 
 ## Cave layer
 
@@ -170,7 +172,7 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `68124` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `59273` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 

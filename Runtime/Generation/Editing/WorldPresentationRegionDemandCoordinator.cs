@@ -19,9 +19,7 @@ namespace Jolybob.ProceduralWorld
         {
         }
 
-        public WorldPresentationRegionDemandCoordinator(
-            WorldPresentationRegionResidencyCoordinator residency,
-            WorldPresentationRegionDemandPlanner planner)
+        public WorldPresentationRegionDemandCoordinator(WorldPresentationRegionResidencyCoordinator residency, WorldPresentationRegionDemandPlanner planner)
         {
             this.residency = residency ?? throw new ArgumentNullException(nameof(residency));
             this.planner = planner ?? throw new ArgumentNullException(nameof(planner));
@@ -41,10 +39,9 @@ namespace Jolybob.ProceduralWorld
                 if (nextDemanded.Add(regionId)) nextOrder.Add(regionId);
             }
 
-            var plan = planner.CreatePlan(demandOrder, nextOrder);
+            var plan = planner.CreatePlan(residency.LoadedRegions, nextOrder);
             for (var i = 0; i < plan.RegionsToUnload.Count; i++)
                 residency.EnsureUnloaded(plan.RegionsToUnload[i]);
-
             for (var i = 0; i < plan.RegionsToLoad.Count; i++)
                 residency.EnsureLoaded(plan.RegionsToLoad[i]);
 
@@ -57,10 +54,8 @@ namespace Jolybob.ProceduralWorld
         public void ClearDemand()
         {
             if (disposed) return;
-
             for (var i = demandOrder.Count - 1; i >= 0; i--)
                 residency.EnsureUnloaded(demandOrder[i]);
-
             demandedRegions.Clear();
             demandOrder.Clear();
         }

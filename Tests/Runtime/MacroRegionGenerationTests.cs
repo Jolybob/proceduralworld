@@ -62,7 +62,7 @@ namespace Jolybob.ProceduralWorld.Tests
             };
             var generator = new ProceduralWorldGenerator(42, settings);
 
-            GeneratedChunk chunk = generator.GenerateChunk(new ChunkCoord(0, 0));
+            GeneratedChunk chunk = generator.GenerateChunk(new ChunkCoord(4, 0));
 
             bool foundMacroRegion = false;
             for (int y = 0; y < chunk.Size; y++)

@@ -31,7 +31,8 @@ namespace Jolybob.ProceduralWorld
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(X, Y, Cell.Region, Cell.Terrain, Cell.Resource, Cell.Structure, Cell.Tile, Cell.Biome, Cell.Flags);
+            int cellHash = WorldPersistenceUtility.GetCellHashCode(Cell);
+            return HashCode.Combine(X, Y, cellHash);
         }
     }
 
@@ -80,6 +81,12 @@ namespace Jolybob.ProceduralWorld
                    left.Tile == right.Tile &&
                    left.Biome == right.Biome &&
                    left.Flags == right.Flags;
+        }
+
+        public static int GetCellHashCode(GeneratedCell cell)
+        {
+            int first = HashCode.Combine(cell.Region, cell.Terrain, cell.Resource, cell.Structure);
+            return HashCode.Combine(first, cell.Tile, cell.Biome, cell.Flags);
         }
     }
 }

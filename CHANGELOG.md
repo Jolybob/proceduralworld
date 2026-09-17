@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.107] - 2026-09-17
+
+- Added `WorldGenerationExecutionCheckpoint` for resumable generation phase state across bounded execution budgets.
+- Added lease-bound checkpoint storage with stale-worker protection, monotonic progress validation, and deterministic active-work ordering.
+- Added checkpoint rebinding so expired work resumes from its last committed progress under a new execution attempt.
+- Added `IWorldGenerationResumableWorkExecutor` and `WorldGenerationResumableExecutionRunner` for one-step-at-a-time generation execution across frames or worker budgets.
+- Preserved failed checkpoints across explicit retries while removing execution checkpoints after successful completion.
+- Added regression coverage for budgeted resume, lease reclaim, stale checkpoint rejection, deterministic active-work resumption, and retry state.
+- Added world-generation execution checkpoint architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.107.
+
 ## [0.1.106] - 2026-09-17
 
 - Added `WorldGenerationExecutionLease` as a deterministic ownership token for running generation work.

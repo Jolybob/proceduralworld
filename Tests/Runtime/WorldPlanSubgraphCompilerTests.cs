@@ -119,7 +119,7 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
-        public void NestedTemplatesAreFlattenedWithScopedIds()
+        public void NestedTemplatesAreFlattenedWithScopedIdsAndRewiredPorts()
         {
             WorldPlanNodeTypeDefinition roomType = CreateType(
                 "Room",
@@ -139,16 +139,29 @@ namespace Jolybob.ProceduralWorld.Tests
                     new[] { child }),
                 new[] { new WorldPlanSubgraphPortDefinition("out", "Out", "child", "out") });
 
+            WorldPlanNodeTypeDefinition sinkType = CreateType(
+                "Sink",
+                new WorldPlanPortDefinition("in", "In", WorldPlanPortDirection.Input, "flow", true, false));
             WorldPlanGraphDefinition host = new WorldPlanGraphDefinition(
-                new WorldPlanNodeTypeDefinition[0],
-                new[] { new WorldPlanNodeDefinition("instance", "__subgraph_instance__", "Instance", "Parent") },
-                new WorldPlanConnectionDefinition[0],
+                new[] { sinkType },
+                new[]
+                {
+                    new WorldPlanNodeDefinition("instance", "__subgraph_instance__", "Instance", "Parent"),
+                    new WorldPlanNodeDefinition("sink", "Sink", "Sink")
+                },
+                new[]
+                {
+                    new WorldPlanConnectionDefinition("connect", "instance", "out", "sink", "in", WorldPlanConnectionKind.Required)
+                },
                 new[] { parent });
 
             WorldPlanSubgraphExpansionResult expansion = new WorldPlanSubgraphCompiler().Expand(host);
             Assert.IsTrue(expansion.Succeeded);
-            Assert.AreEqual(1, expansion.ExpandedDefinition.Nodes.Count);
-            Assert.AreEqual("instance/child/room", expansion.ExpandedDefinition.Nodes[0].Id);
+            Assert.AreEqual(2, expansion.ExpandedDefinition.Nodes.Count);
+            Assert.IsNotNull(FindNode(expansion.ExpandedDefinition, "instance/child/room"));
+            Assert.AreEqual(1, expansion.ExpandedDefinition.Connections.Count);
+            Assert.AreEqual("instance/child/room", expansion.ExpandedDefinition.Connections[0].SourceNodeId);
+            Assert.AreEqual("out", expansion.ExpandedDefinition.Connections[0].SourcePortId);
         }
 
         [Test]

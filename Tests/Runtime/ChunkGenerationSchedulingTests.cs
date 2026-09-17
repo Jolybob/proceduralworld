@@ -106,7 +106,7 @@ namespace Jolybob.ProceduralWorld.Tests
 
             controller.Update(new ChunkCoord(3, 0));
             Assert.AreEqual(9, sink.Unloaded.Count);
-            Assert.Less(controller.PendingGenerations, 9);
+            Assert.AreEqual(9, controller.PendingGenerations);
         }
 
         private sealed class RecordingSink : IWorldChunkSink

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.31] - 2026-09-17
+
+- Added `WorldEditHistoryEntry` to represent named groups of cell changes as one undo/redo operation.
+- Added `WorldEditHistory` to build grouped history entries from `IWorldChangeJournal` records.
+- Added exact before/after undo and redo application through `IWorldChunkAccess`.
+- Added automatic capture of pending journal changes when undo or redo is requested without an explicit commit.
+- Added redo-branch invalidation when a new edit is committed after undo.
+- Added history clearing support and safe reset behavior when the underlying journal is cleared.
+- Added regression tests for grouped edits, exact undo/redo restoration, reverse-order undo, redo invalidation, and pending edits.
+- Changed the architecture preview and edit-history test seed from `93417` to `105827`.
+- Updated package architecture documentation with the undo/redo history boundary.
+- Bumped the package version to 0.1.31.
+- Incremented package version for this update.
+
 ## [0.1.30] - 2026-09-17
 
 - Fixed `NamedEditOperationsRecordBeforeAndAfterState` so its tile edit always changes state instead of accidentally becoming a no-op when the generated tile is already `WorldTile.Core`.
@@ -13,7 +27,7 @@
 
 - Added `WorldEditOperationKind` to classify gameplay/world mutations without coupling them to presentation or persistence.
 - Added `WorldCellChange` containing world position plus complete before/after generated-cell state.
-- Added `IWorldChangeJournal` as a backend-neutral boundary for change history, replay, networking, analytics, or undo/redo systems.
+- Added `IWorldChangeJournal` as a backend-neutral change-history boundary.
 - Added `InMemoryWorldChangeJournal` for tests and prototypes.
 - Updated `WorldEditService` so successful mutations are recorded after the underlying world access accepts them.
 - Suppressed no-op edits from the journal and ensured failed edits never create change records.
@@ -34,15 +48,4 @@
 - Changed the architecture preview and persistent-streaming/edit test seed from `60427` to `71593`.
 - Updated streaming documentation with the new world-access and editing boundaries.
 - Bumped the package version to 0.1.28.
-- Incremented package version for this update.
-
-## [0.1.27] - 2026-09-17
-
-- Added `WorldPersistentChunkStreamingController` to connect chunk streaming with the existing persistence service without coupling generation to storage or rendering.
-- Added load-time restoration through `WorldChunkPersistenceService` and save-before-unload behavior for active chunks.
-- Added lifecycle-safe `Reset()` behavior that saves and unloads every currently loaded chunk before clearing streaming state.
-- Added persistent streaming regression tests covering restoration on load, save-before-unload, and reset cleanup.
-- Updated the Tilemap preview seed from `51746` to `60427` for this architecture update.
-- Updated streaming and package architecture documentation with the persistence-aware lifecycle.
-- Bumped the package version to 0.1.27.
 - Incremented package version for this update.

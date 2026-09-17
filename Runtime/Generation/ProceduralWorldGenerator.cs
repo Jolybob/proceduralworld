@@ -226,6 +226,8 @@ namespace Jolybob.ProceduralWorld
         {
             if (worldPlan != null && worldPlan.Seed != seed)
                 throw new ArgumentException("World-plan seed must match the generator seed.", nameof(worldPlan));
+            if (worldPlan != null && worldPlan.ChunkSize != this.settings.chunkSize)
+                throw new ArgumentException("World-plan chunk size must match the generator chunk size.", nameof(worldPlan));
 
             this.worldPlan = worldPlan;
         }

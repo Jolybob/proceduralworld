@@ -114,6 +114,8 @@ The builder executes these stages once per world runtime, rather than recreating
 
 `WorldPlanRuntime` indexes realization edits by chunk only as an acceleration structure. World coordinates remain the authoritative identity and no chunk-local copy of the semantic plan is created.
 
+The plan runtime carries an explicit `ChunkSize`. Lowering settings must use that same chunk size, and a generator rejects a supplied plan runtime whose chunk size differs from `WorldGenerationSettings.chunkSize`. This prevents cross-boundary realization lookups from silently using a different execution grid.
+
 ## Chunk-generation integration
 
 `ProceduralWorldGenerator` implements `IWorldPlanChunkGenerator` when supplied with a `WorldPlanRuntime`. The same runtime is also exposed on `WorldGenerationContext` so custom generation passes can inspect the global plan while they materialize a chunk.
@@ -144,7 +146,7 @@ Canvas positions and Unity authoring objects are not part of the deterministic r
 
 ## Authoring boundary
 
-`ProceduralWorldDefinitionAsset` can now reference a `WorldPlanGraphAsset`. The graph is compiled and laid out with the world definition's seed when the generator is created. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
+`ProceduralWorldDefinitionAsset` can now reference a `WorldPlanGraphAsset`. The graph is compiled and laid out with the world definition's seed when the generator is created, using the authored world chunk size for plan indexing. Feature resolver/materializer policies remain explicit runtime dependencies rather than hidden Unity presentation state.
 
 ## Runtime boundary
 

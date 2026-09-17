@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.56] - 2026-09-17
+
+- Added `ResourceWorldCellVisualLayer` for resource-specific visual overrides driven by `GeneratedCellFlags.HasResource` and `ResourceId`.
+- Added `StructureWorldCellVisualLayer` for structure-specific visual overrides driven by `GeneratedCellFlags.HasStructure` and `StructureId`.
+- Composed visual precedence as topology -> resource -> structure -> terrain fallback.
+- Added regression coverage for mapped, unmapped, and flag-gated resource and structure visuals.
+- Bumped the package version to 0.1.56.
+- Incremented package version for this update.
+
 ## [0.1.55] - 2026-09-17
 
 - Fixed Unity test compilation error CS0104 by explicitly qualifying `UnityEngine.Object` in `WorldCellVisualLayerCatalogTests`.

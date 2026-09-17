@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.75] - 2026-09-17
+
+- Extended `IWorldPresentationRegionDemandSource` with a source-identified `DemandChanged` event for reactive demand updates.
+- Updated `WorldPresentationRegionDemandSourceCoordinator` to subscribe and unsubscribe deterministically as sources are registered, replaced, unregistered, or cleared.
+- Preserved pull-based `Refresh` and `RefreshAll` APIs for explicit reconciliation and compatibility.
+- Added regression coverage for reactive refresh, stale-source detachment, and existing deterministic source behavior.
+- Bumped the package version to 0.1.75.
+- Incremented package version for this update.
+
 ## [0.1.74] - 2026-09-17
 
 - Added `IWorldPresentationRegionDemandSource` for independent, pull-based region demand providers.

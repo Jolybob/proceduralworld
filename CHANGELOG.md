@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.35] - 2026-09-17
+
+- Added `IWorldChangeRenderer` as a presentation boundary for converting canonical world changes into rendering or other presentation updates.
+- Added `WorldChangeRenderObserver` to bridge `WorldChangeObserverJournal` notifications into presentation code without coupling world state to a renderer implementation.
+- Direct edits are delivered through `Render(WorldCellChange)`, while transaction commits are delivered once through `RenderBatch(WorldChangeBatch)` to avoid per-cell rendering duplication.
+- Added deterministic disposal so both notification subscriptions are released safely and repeatedly disposing an observer is harmless.
+- Added regression tests for direct rendering notifications, transaction-scale rendering batches, and disposal behavior.
+- Changed the architecture preview and rendering test seed from `138427` to `149863`.
+- Updated world-editing architecture documentation with the presentation adapter boundary.
+- Bumped the package version to 0.1.35.
+- Incremented package version for this update.
+
 ## [0.1.34] - 2026-09-17
 
 - Added `WorldChangeBatch` as an immutable snapshot for related cell changes published as one logical world operation.
@@ -32,14 +44,14 @@
 - Added disposable subscriptions with stable registration-order notification and snapshot iteration so subscriptions can safely change during callbacks.
 - Kept no-op and failed edits out of the notification stream because they are not recorded by `WorldEditService`.
 - Added regression tests for exact change forwarding, no-op suppression, unsubscription, and deterministic multi-observer ordering.
-- Changed the architecture preview and editing test seed from `105827` to `116503` for this update.
+- Changed the architecture preview and editing test seed from `105827` to `116503`.
 - Updated package architecture and world-editing documentation with the notification boundary.
 - Bumped the package version to 0.1.32.
 - Incremented package version for this update.
 
 ## [0.1.31] - 2026-09-17
 
-- Added `WorldEditHistoryEntry` to represent named groups of changes as one undo/redo operation.
+- Added `WorldEditHistoryEntry` to represent named groups of changes as one history entry.
 - Added `WorldEditHistory` to build grouped history entries from `IWorldChangeJournal` records.
 - Added exact before/after undo and redo application through `IWorldChunkAccess`.
 - Added automatic capture of pending journal changes when undo or redo is requested without an explicit commit.

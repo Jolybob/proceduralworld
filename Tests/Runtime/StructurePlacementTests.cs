@@ -31,6 +31,28 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void Placement_IntersectsNegativeChunkCoordinates()
+        {
+            var definition = new StructureDefinition(
+                new StructureId(7),
+                "Boundary Shrine",
+                new RegionId(1),
+                new TerrainId(1),
+                1f,
+                1,
+                5,
+                5);
+            var placement = new StructurePlacement(
+                definition,
+                new WorldPosition(-65, -65),
+                new ChunkCoord(-2, -2));
+
+            Assert.IsTrue(placement.Intersects(new ChunkCoord(-2, -2), 64));
+            Assert.IsTrue(placement.Intersects(new ChunkCoord(-1, -1), 64));
+            Assert.IsFalse(placement.Intersects(new ChunkCoord(0, 0), 64));
+        }
+
+        [Test]
         public void Pass_StampsOnlyTheChunkLocalIntersection()
         {
             var definition = new StructureDefinition(
@@ -112,15 +134,11 @@ namespace Jolybob.ProceduralWorld.Tests
                 this.placements = placements;
             }
 
-            public void Collect(
-                ChunkCoord chunk,
-                int chunkSize,
-                StructureCatalog catalog,
-                StructurePlacementSet output)
+            public void Collect(WorldGenerationContext context, StructurePlacementSet output)
             {
                 foreach (StructurePlacement placement in placements.Placements)
                 {
-                    if (placement.Intersects(chunk, chunkSize))
+                    if (placement.Intersects(context.ChunkCoordinate, context.Chunk.Size))
                         output.Add(placement);
                 }
             }

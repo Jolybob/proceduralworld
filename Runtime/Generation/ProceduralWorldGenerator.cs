@@ -239,7 +239,7 @@ namespace Jolybob.ProceduralWorld
                 .Add(new CavePass(settings))
                 .Add(new TopologyPass(topology))
                 .Add(new ResourcePass(resources))
-                .Add(new StructurePass(structures))
+                .Add(new StructurePlacementPass(structures))
                 .Add(new WorldPostProcessPass(postProcess));
         }
     }

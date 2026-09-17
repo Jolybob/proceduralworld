@@ -8,7 +8,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void UpdateLoadsPersistedChunkState()
         {
-            const int seed = 60427;
+            const int seed = 71593;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var store = new InMemoryWorldChunkStore();
@@ -36,7 +36,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void MovingStreamingCenterPersistsEditedChunkBeforeUnload()
         {
-            const int seed = 60427;
+            const int seed = 71593;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var store = new InMemoryWorldChunkStore();
@@ -68,7 +68,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void ResetPersistsAndUnloadsAllLoadedChunks()
         {
-            const int seed = 60427;
+            const int seed = 71593;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var store = new InMemoryWorldChunkStore();

@@ -93,12 +93,19 @@ namespace Jolybob.ProceduralWorld
         public void Dispose()
         {
             if (disposed) return;
-            ClearDemand();
+
+            aggregator.Clear();
+            ReconcileAggregatedDemand(false);
             disposed = true;
             DemandChanged = null;
         }
 
         private void ReconcileAggregatedDemand()
+        {
+            ReconcileAggregatedDemand(true);
+        }
+
+        private void ReconcileAggregatedDemand(bool notify)
         {
             var nextDemanded = aggregator.DemandedRegions;
             var plan = planner.CreatePlan(residency.LoadedRegions, nextDemanded);
@@ -115,10 +122,14 @@ namespace Jolybob.ProceduralWorld
             demandOrder.Clear();
             demandOrder.AddRange(nextDemanded);
 
+            if (!notify)
+                return;
+
             var handler = DemandChanged;
             if (handler != null)
             {
-                handler(new WorldPresentationRegionDemandChange(demandOrder.AsReadOnly()));
+                var snapshot = new List<int>(demandOrder).AsReadOnly();
+                handler(new WorldPresentationRegionDemandChange(snapshot));
             }
         }
     }

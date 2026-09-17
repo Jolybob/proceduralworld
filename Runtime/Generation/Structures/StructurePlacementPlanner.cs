@@ -62,7 +62,12 @@ namespace Jolybob.ProceduralWorld
                 ownerChunk,
                 WorldRandomDomain.Structures,
                 definition.Id.Value);
-            int attempts = Math.Max(chunkSize * chunkSize, definition.Width * definition.Height * 4);
+            long requestedAttempts = Math.Max(
+                (long)chunkSize * chunkSize,
+                (long)definition.Width * definition.Height * 4L);
+            int attempts = requestedAttempts > int.MaxValue
+                ? int.MaxValue
+                : (int)requestedAttempts;
             int placed = 0;
 
             for (int attempt = 0; attempt < attempts && placed < definition.MaxPerChunk; attempt++)

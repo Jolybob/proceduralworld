@@ -1,10 +1,12 @@
 # World Features
 
-The feature layer provides the reusable world-space placement kernel for large or multi-cell generated features, lightweight spatial queries, and deterministic connectivity graphs.
+The feature layer provides the reusable world-space placement kernel for large or multi-cell generated features, scene/dungeon selection, lightweight spatial queries, and deterministic connectivity graphs.
 
 ## Responsibilities
 
 - define deterministic placement rules independent of feature-specific content
+- select reusable world scenes from biome/tag pools before placement
+- support limited and unique scenes without chunk-order dependence
 - create immutable world-space feature identities
 - collect unique placements without chunk-local identity drift
 - discover placements from deterministic owner chunks
@@ -12,7 +14,38 @@ The feature layer provides the reusable world-space placement kernel for large o
 - expose placement queries without requiring chunk materialization
 - cache queried chunks so repeated gameplay queries do not rerun feature planners
 - build deterministic connectivity relations between world features
-- keep feature planning, queries, and connectivity independent from rendering and prefabs
+- keep feature planning, queries, connectivity, and scene metadata independent from rendering and prefabs
+
+## Scene catalog
+
+`WorldSceneDefinition` is the runtime contract for a scene, dungeon room, landmark, or other reusable set-piece. It combines the generic placement rules with stable scene identity, biome/tag requirements, weighted selection, optional uniqueness, world-instance limits, and orientation policy.
+
+```text
+WorldSceneCatalog
+       |
+       v
+WorldSceneSelector
+       |
+       +-- enabled / weight
+       +-- required biome tags
+       +-- consumed unique IDs
+       +-- deterministic seed + salt
+       |
+       v
+WorldSceneDefinition
+       |
+       v
+WorldFeaturePlacementPlanner
+       |
+       v
+WorldFeaturePlacement
+```
+
+Selection is a world-semantic decision. The selector canonicalizes catalog IDs and derives its weighted draw from the world seed and selection salt, so reordering serialized scene lists does not change the selected scene. Required tags are matched before weighting, allowing the same catalog to serve forest, desert, snow, dungeon, or other biome pools. Unique scenes can be removed from subsequent selection through a persistent consumed-ID set without introducing process-local randomness.
+
+`WorldSceneOrientationMode` records whether the eventual materializer may use fixed, 90-degree rotation, mirroring, or both. The feature kernel remains presentation-free; orientation/stamping is a later materialization concern.
+
+`WorldSceneDefinitionAsset` and `WorldSceneCatalogAsset` expose this metadata through Unity authoring without introducing Tilemap, prefab, or scene-hierarchy dependencies into the runtime catalog.
 
 ## Core contracts
 
@@ -60,16 +93,6 @@ The builder uses:
 
 The graph can also be built directly from `WorldFeaturePlacementIndex` over an explicit world-space rectangle. This makes connectivity independent from renderer residency and keeps an unbounded procedural world from being accidentally treated as one graph.
 
-```csharp
-var graph = new WorldConnectivityGraphBuilder().Build(
-    featureIndex,
-    new WorldPosition(-256, -256),
-    new WorldPosition(256, 256),
-    new WorldConnectivitySettings(96, 3));
-```
-
-The graph layer does not carve terrain, instantiate prefabs, or perform pathfinding. It supplies stable world-space relations for later POI, landmark, road, navigation, and gameplay systems.
-
 ## Spatial semantics
 
 All positions remain in world coordinates. Negative coordinates use mathematical floor division. Spatial bucket arithmetic and squared-distance calculations are protected against integer wraparound at the supported world limits.
@@ -78,4 +101,4 @@ All positions remain in world coordinates. Negative coordinates use mathematical
 
 Structures are the first feature type adapted to the generic kernel. `StructureDefinition` implements the shared placement-definition contract while retaining structure-specific region/terrain requirements. The existing `StructurePlacement`, `IStructurePlacementSource`, and `StructurePlacementPass` APIs remain available for compatibility and materialization.
 
-The owner chunk is the deterministic authority for creating a placement. Any chunk whose world-space rectangle intersects that placement may materialize its local portion. Querying and connectivity remain read-only and do not imply that the target chunk is resident.
+Scenes now share the same world-space kernel rather than creating a second chunk-local placement system. The owner chunk remains the deterministic authority for creating a placement, while any intersecting chunk may materialize its local portion. Scene selection and uniqueness therefore happen before chunk geometry and renderer residency.

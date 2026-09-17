@@ -12,7 +12,7 @@ namespace Jolybob.ProceduralWorld
 
         public bool IsDisposed => disposed;
         public int LoadedRegionCount => loadedRegions.Count;
-        public IReadOnlyList<int> LoadedRegions => loadOrder;
+        public IReadOnlyList<int> LoadedRegions => loadOrder.AsReadOnly();
 
         public WorldPresentationRegionResidencyCoordinator(IWorldPresentationRegionLifecycle lifecycle)
         {

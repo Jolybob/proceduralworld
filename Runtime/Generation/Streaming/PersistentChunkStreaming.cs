@@ -50,7 +50,13 @@ namespace Jolybob.ProceduralWorld
 
         public bool TryGetCell(WorldPosition position, out GeneratedCell cell)
         {
-            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, GetChunkSize());
+            if (!TryFindLoadedChunkSize(out int chunkSize))
+            {
+                cell = default(GeneratedCell);
+                return false;
+            }
+
+            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, chunkSize);
             if (!loadedChunks.TryGetValue(coordinate, out GeneratedChunk chunk))
             {
                 cell = default(GeneratedCell);
@@ -65,7 +71,10 @@ namespace Jolybob.ProceduralWorld
 
         public bool SetCell(WorldPosition position, GeneratedCell cell)
         {
-            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, GetChunkSize());
+            if (!TryFindLoadedChunkSize(out int chunkSize))
+                return false;
+
+            ChunkCoord coordinate = WorldChunkCoordinates.ToChunk(position, chunkSize);
             if (!loadedChunks.TryGetValue(coordinate, out GeneratedChunk chunk))
                 return false;
 
@@ -91,13 +100,16 @@ namespace Jolybob.ProceduralWorld
             planner.Reset();
         }
 
-        private int GetChunkSize()
+        private bool TryFindLoadedChunkSize(out int chunkSize)
         {
             foreach (GeneratedChunk chunk in loadedChunks.Values)
-                return chunk.Size;
+            {
+                chunkSize = chunk.Size;
+                return true;
+            }
 
-            throw new InvalidOperationException(
-                "World chunk access is unavailable until at least one chunk is loaded.");
+            chunkSize = 0;
+            return false;
         }
 
         private void Load(ChunkCoord coordinate)

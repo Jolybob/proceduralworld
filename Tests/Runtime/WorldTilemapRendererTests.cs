@@ -183,7 +183,7 @@ namespace Jolybob.ProceduralWorld.Tests
                     new WorldPosition(0, 0),
                     new GeneratedCell(WorldTile.Deep, 0),
                     new GeneratedCell(WorldTile.Core, 0),
-                    WorldEditOperationKind.SetTile));
+                    WorldEditOperationKind.SetTile)));
         }
 
         private Tile CreateTile(string name)

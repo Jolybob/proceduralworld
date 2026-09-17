@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.97] - 2026-09-17
+
+- Added `WorldPlanLayoutSettings`, `WorldPlanNodeLayout`, `WorldPlanLayoutPort`, and `WorldPlanLayout` as a Unity-independent world-space layout representation.
+- Added `WorldPlanLayoutSolver` to deterministically arrange compiled world-plan nodes by connected-component graph distance and canonical node ID ordering.
+- Added minimum-footprint and minimum-clearance aware spacing so generated plan layouts do not overlap occupied node regions.
+- Added deterministic semantic port anchors with stable left/right/bottom side assignment and ordinal port ordering.
+- Added regression coverage for input-order independence, clearance-aware spacing, deterministic layer advancement, and connection-driven port anchoring.
+- Added world-plan layout architecture documentation and Unity `.meta` metadata for the new runtime/test assets.
+- Bumped the package version to 0.1.97.
+
 ## [0.1.96] - 2026-09-17
 
 - Added reusable hierarchical world-plan subgraphs through `WorldPlanSubgraphTemplateDefinition`, `WorldPlanSubgraphPortDefinition`, and template-backed `WorldPlanNodeDefinition` instances.
@@ -27,7 +37,7 @@
 - Added a typed world-plan graph runtime model with deterministic node and connection ordering.
 - Added customizable node types, semantic ports, connection kinds, node properties, and footprint/clearance metadata.
 - Added `WorldPlanCompiler` and `WorldPlanValidationResult` for deterministic compilation and structural validation.
-- Added a Unity `WorldPlanGraphAsset` authoring asset that keeps editor canvas positions separate from runtime plan semantics.
+- Added a Unity `WorldPlanGraphAsset` authoring asset that keeps editor canvas positions separate from runtime graph semantics.
 - Added a Unity node graph editor with draggable nodes, custom port rendering, semantic-type compatibility filtering, connection creation/removal, graph validation, framing, and asset-backed undo/save behaviour.
 - Added regression coverage for deterministic compilation, unknown node types, incompatible port types, required ports, and node properties.
 - Updated the Editor assembly to reference the Authoring assembly.

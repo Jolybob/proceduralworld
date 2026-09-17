@@ -77,7 +77,8 @@ namespace Jolybob.ProceduralWorld.Tests
             GeneratedCell original;
             Assert.IsTrue(controller.TryGetCell(position, out original));
             GeneratedCell modified = original;
-            modified.SetTerrain(modified.Terrain, WorldTile.Core);
+            WorldTile replacement = modified.Tile == WorldTile.Core ? WorldTile.Deep : WorldTile.Core;
+            modified.SetTerrain(modified.Terrain, replacement);
             Assert.IsTrue(controller.SetCell(position, modified));
 
             controller.Update(new ChunkCoord(2, 0));
@@ -89,7 +90,7 @@ namespace Jolybob.ProceduralWorld.Tests
 
             GeneratedCell restored;
             Assert.IsTrue(controller.TryGetCell(position, out restored));
-            Assert.AreEqual(WorldTile.Core, restored.Tile);
+            Assert.AreEqual(replacement, restored.Tile);
         }
 
         [Test]

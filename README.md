@@ -2,7 +2,7 @@
 
 A modular, deterministic 2D procedural-world framework designed to be installed as a Unity Package Manager (UPM) package and extended by any 2D game.
 
-## Current architecture — 0.1.21
+## Current architecture — 0.1.22
 
 The generation stack is intentionally separated by responsibility:
 
@@ -23,14 +23,14 @@ seed + settings
       +----> ResourceId
       +----> StructureId
       +----> post-process pipeline
-      +----> streaming
+      +----> chunk streaming planner/controller
       +----> persistence
       +----> presentation adapters
 ```
 
 `GeneratedCell.Region`, `GeneratedCell.Terrain`, `GeneratedCell.Resource`, and `GeneratedCell.Structure` are the canonical generated-data identifiers. The older `Biome` and `Tile` fields remain compatibility mirrors for existing integrations.
 
-Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage before streaming, persistence, and presentation.
+Fields produce reusable deterministic values. Regions convert environment data into stable region identities. Terrain catalogs convert region definitions into terrain definitions. Caves, resources, and structures are independent generation passes that modify generated cell state without coupling generation to rendering. The post-process layer provides a final composable data-only modification stage. Streaming then decides which chunk coordinates are active without changing how chunks are generated.
 
 Generation systems that need randomness should use `WorldRandomService` and request a stream for their subsystem, chunk, and optional item salt. This keeps resource types, structure types, and post-process steps independently deterministic.
 
@@ -51,6 +51,10 @@ Generation systems that need randomness should use `WorldRandomService` and requ
 - `WorldPostProcessPipeline` — composes post-process steps with isolated random streams
 - `WorldPostProcessContext` — exposes chunk data and step-scoped deterministic services
 - `WorldPostProcessPass` — inserts the post-process pipeline into the main generation pipeline
+- `IWorldChunkSink` — receives streaming load/unload operations
+- `ChunkStreamingPlanner` — computes deterministic active-chunk deltas
+- `ChunkStreamingDelta` — describes loads and unloads for one update
+- `WorldChunkStreamingController` — connects chunk planning to deterministic generation
 - `ProceduralWorldGenerator` — orchestrates deterministic chunk generation
 
 The existing `ProceduralWorldGenerator(seed, settings)` API remains available. Advanced users can provide custom pipelines, field providers, catalogs, cave fields, resource catalogs, structure catalogs, and a post-process pipeline.
@@ -75,26 +79,25 @@ Each `IWorldPostProcessStep` supplies a stable `Salt`. `WorldPostProcessContext.
 
 The default generator includes an empty post-process stage, so projects can inject world modifications without replacing the rest of the generation pipeline.
 
+## Chunk streaming layer
+
+Streaming is deliberately separate from generation and rendering. `ChunkStreamingPlanner` tracks the currently active chunk coordinates and computes the load/unload delta around a center chunk. `loadRadius` defines the required active square, while an optional larger `unloadRadius` adds hysteresis so nearby movement does not immediately unload edge chunks.
+
+`WorldChunkStreamingController` connects the planner to `ProceduralWorldGenerator` and an `IWorldChunkSink`. Newly requested coordinates are generated exactly through the normal deterministic generator; unload operations only notify the sink.
+
+A radius of `2` activates 25 chunks. Streaming coordinates are emitted in stable Y-then-X order, making scheduling and tests deterministic.
+
 Example:
 
 ```csharp
-var postProcess = new WorldPostProcessPipeline()
-    .Add(new ReserveRareAreaStep());
+var generator = new ProceduralWorldGenerator(75319, settings);
+var planner = new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3);
+var streaming = new WorldChunkStreamingController(generator, planner, sink);
 
-var generator = new ProceduralWorldGenerator(
-    seed,
-    settings,
-    pipeline: null,
-    environmentFields: null,
-    caveFields: null,
-    regions: null,
-    terrains: null,
-    resources: null,
-    structures: null,
-    postProcess: postProcess);
+streaming.Update(new ChunkCoord(10, -4));
 ```
 
-See `Runtime/Generation/PostProcess/README.md` for the full contract and a complete step example.
+See `Runtime/Generation/Streaming/README.md` for the complete contract.
 
 ## Cave layer
 
@@ -144,11 +147,11 @@ https://github.com/Jolybob/proceduralworld.git
    `Procedural World > Procedural World Tilemap`.
 5. Press Play.
 
-The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `86420` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
+The component creates a Tilemap if one is not already present and generates a 5x5 chunk preview around the world origin. The preview seed is currently `75319` for this architecture revision. The colors are generated at runtime, so no sprites or Tile assets need to be imported.
 
 ## Custom fields and catalogs
 
-Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model.
+Projects can replace environmental and cave fields, region/terrain catalogs, the resource catalog, the structure catalog, the complete generation pipeline, or the post-process pipeline without changing the core chunk data model. Streaming consumers are also replaceable through `IWorldChunkSink`.
 
 ## Roadmap
 
@@ -176,7 +179,7 @@ Planned extension points include:
 - richer resource distribution and clustering
 - richer structure placement and WFC
 - world modification layers built on post-process steps
-- chunk streaming
+- streaming prioritization and asynchronous generation hooks
 - persistence interfaces
 - editor world preview
 - Jobs/Burst implementations

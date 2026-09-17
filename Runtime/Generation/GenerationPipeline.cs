@@ -20,6 +20,7 @@ namespace Jolybob.ProceduralWorld
         public ICaveFieldProvider CaveFields { get; }
         public WorldRandomService Random { get; }
         public ResourceCatalog Resources { get; }
+        public StructureCatalog Structures { get; }
 
         public WorldGenerationContext(
             int seed,
@@ -31,7 +32,8 @@ namespace Jolybob.ProceduralWorld
                 new DefaultEnvironmentFieldProvider(seed, settings, noise),
                 new DefaultCaveFieldProvider(seed, settings),
                 new WorldRandomService(seed),
-                ResourceCatalog.CreateDefault())
+                ResourceCatalog.CreateDefault(),
+                StructureCatalog.CreateDefault())
         {
         }
 
@@ -46,7 +48,8 @@ namespace Jolybob.ProceduralWorld
                 environmentFields,
                 new DefaultCaveFieldProvider(seed, settings),
                 new WorldRandomService(seed),
-                ResourceCatalog.CreateDefault())
+                ResourceCatalog.CreateDefault(),
+                StructureCatalog.CreateDefault())
         {
         }
 
@@ -62,7 +65,8 @@ namespace Jolybob.ProceduralWorld
                 environmentFields,
                 caveFields,
                 new WorldRandomService(seed),
-                ResourceCatalog.CreateDefault())
+                ResourceCatalog.CreateDefault(),
+                StructureCatalog.CreateDefault())
         {
         }
 
@@ -79,7 +83,8 @@ namespace Jolybob.ProceduralWorld
                 environmentFields,
                 caveFields,
                 random,
-                ResourceCatalog.CreateDefault())
+                ResourceCatalog.CreateDefault(),
+                StructureCatalog.CreateDefault())
         {
         }
 
@@ -93,6 +98,26 @@ namespace Jolybob.ProceduralWorld
             ICaveFieldProvider caveFields,
             WorldRandomService random,
             ResourceCatalog resources)
+            : this(seed, settings, chunkCoordinate, chunk, noise,
+                environmentFields,
+                caveFields,
+                random,
+                resources,
+                StructureCatalog.CreateDefault())
+        {
+        }
+
+        public WorldGenerationContext(
+            int seed,
+            WorldGenerationSettings settings,
+            ChunkCoord chunkCoordinate,
+            GeneratedChunk chunk,
+            INoiseField noise,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
+            WorldRandomService random,
+            ResourceCatalog resources,
+            StructureCatalog structures)
         {
             Seed = seed;
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -103,6 +128,7 @@ namespace Jolybob.ProceduralWorld
             CaveFields = caveFields ?? throw new ArgumentNullException(nameof(caveFields));
             Random = random ?? throw new ArgumentNullException(nameof(random));
             Resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            Structures = structures ?? throw new ArgumentNullException(nameof(structures));
         }
     }
 

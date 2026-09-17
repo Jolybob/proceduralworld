@@ -73,7 +73,7 @@
 - Preserved chunk loading, unloading, direct changes, and batch change rendering semantics for overlay presentation.
 - Added regression coverage for overlay ordering, fallthrough, empty resolution, duplicate orders, and invalid negative orders.
 - Added Unity `.meta` files for the new overlay runtime and tests.
-- Bumped package version to 0.1.57.
+- Bumped the package version to 0.1.57.
 - Incremented package version for this update.
 
 ## [0.1.56] - 2026-09-17
@@ -84,7 +84,7 @@
 - Added deterministic default layer ordering: topology, resource, structure, then terrain fallback.
 - Added regression coverage for resource and structure resolution, unmapped fallthrough, and layer ordering.
 - Added Unity `.meta` files for the new visual-layer runtime and tests.
-- Bumped package version to 0.1.56.
+- Bumped the package version to 0.1.56.
 - Incremented package version for this update.
 
 ## [0.1.55] - 2026-09-17

@@ -55,7 +55,7 @@ namespace Jolybob.ProceduralWorld
         private readonly WorldRandomService random;
 
         public ProceduralWorldGenerator(int seed, WorldGenerationSettings settings)
-            : this(seed, settings, null, null, null, null, null, null, null)
+            : this(seed, settings, null, null, null, null, null, null, null, null)
         {
         }
 
@@ -63,7 +63,7 @@ namespace Jolybob.ProceduralWorld
             int seed,
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline)
-            : this(seed, settings, pipeline, null, null, null, null, null, null)
+            : this(seed, settings, pipeline, null, null, null, null, null, null, null)
         {
         }
 
@@ -72,7 +72,7 @@ namespace Jolybob.ProceduralWorld
             WorldGenerationSettings settings,
             WorldGenerationPipeline pipeline,
             IEnvironmentFieldProvider environmentFields)
-            : this(seed, settings, pipeline, environmentFields, null, null, null, null, null)
+            : this(seed, settings, pipeline, environmentFields, null, null, null, null, null, null)
         {
         }
 
@@ -83,7 +83,7 @@ namespace Jolybob.ProceduralWorld
             IEnvironmentFieldProvider environmentFields,
             RegionCatalog regions,
             TerrainCatalog terrains)
-            : this(seed, settings, pipeline, environmentFields, null, regions, terrains, null, null)
+            : this(seed, settings, pipeline, environmentFields, null, regions, terrains, null, null, null)
         {
         }
 
@@ -95,7 +95,7 @@ namespace Jolybob.ProceduralWorld
             ICaveFieldProvider caveFields,
             RegionCatalog regions,
             TerrainCatalog terrains)
-            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, null, null)
+            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, null, null, null)
         {
         }
 
@@ -108,7 +108,7 @@ namespace Jolybob.ProceduralWorld
             RegionCatalog regions,
             TerrainCatalog terrains,
             ResourceCatalog resources)
-            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, resources, null)
+            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, resources, null, null)
         {
         }
 
@@ -122,6 +122,21 @@ namespace Jolybob.ProceduralWorld
             TerrainCatalog terrains,
             ResourceCatalog resources,
             StructureCatalog structures)
+            : this(seed, settings, pipeline, environmentFields, caveFields, regions, terrains, resources, structures, null)
+        {
+        }
+
+        public ProceduralWorldGenerator(
+            int seed,
+            WorldGenerationSettings settings,
+            WorldGenerationPipeline pipeline,
+            IEnvironmentFieldProvider environmentFields,
+            ICaveFieldProvider caveFields,
+            RegionCatalog regions,
+            TerrainCatalog terrains,
+            ResourceCatalog resources,
+            StructureCatalog structures,
+            WorldPostProcessPipeline postProcess)
         {
             this.seed = seed;
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -144,7 +159,13 @@ namespace Jolybob.ProceduralWorld
             this.resources = resources ?? ResourceCatalog.CreateDefault();
             this.structures = structures ?? StructureCatalog.CreateDefault();
             random = new WorldRandomService(seed);
-            this.pipeline = pipeline ?? CreateDefaultPipeline(this.regions, this.terrains, this.resources, this.structures, settings);
+            this.pipeline = pipeline ?? CreateDefaultPipeline(
+                this.regions,
+                this.terrains,
+                this.resources,
+                this.structures,
+                postProcess ?? new WorldPostProcessPipeline(),
+                settings);
         }
 
         public GeneratedChunk GenerateChunk(ChunkCoord coordinate)
@@ -170,6 +191,7 @@ namespace Jolybob.ProceduralWorld
             TerrainCatalog terrains,
             ResourceCatalog resources,
             StructureCatalog structures,
+            WorldPostProcessPipeline postProcess,
             WorldGenerationSettings settings)
         {
             return new WorldGenerationPipeline()
@@ -177,7 +199,8 @@ namespace Jolybob.ProceduralWorld
                 .Add(new TerrainPass(regions, terrains))
                 .Add(new CavePass(settings))
                 .Add(new ResourcePass(resources))
-                .Add(new StructurePass(structures));
+                .Add(new StructurePass(structures))
+                .Add(new WorldPostProcessPass(postProcess));
         }
     }
 }

@@ -36,11 +36,12 @@ namespace Jolybob.ProceduralWorld.Tests
             WorldPlanCorridorResult result = new WorldPlanCorridorPlanner().Plan(plan, layout, new BlockMiddleTraversal());
             Assert.IsTrue(result.Succeeded);
             Assert.Greater(result.Corridors[0].Cells.Count, 0);
+            Assert.IsTrue(result.Corridors[0].Cells.Count > 3, "The traversal policy should force a detour around the blocked center cell.");
         }
 
         private sealed class BlockMiddleTraversal : IWorldPlanCorridorTraversal
         {
-            public bool CanTraverse(WorldPlanCorridorContext context) => context.Position.X != 3;
+            public bool CanTraverse(WorldPlanCorridorContext context) => !(context.Position.X == 3 && context.Position.Y == 1);
             public int GetTraversalCost(WorldPlanCorridorContext context) => 1;
         }
 

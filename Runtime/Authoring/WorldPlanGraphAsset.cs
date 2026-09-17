@@ -82,44 +82,105 @@ namespace Jolybob.ProceduralWorld.Authoring
             generationSeed = seed;
         }
 
+        public void AddNode(NodeRecord node)
+        {
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
+            nodes.Add(node);
+        }
+
+        public void RemoveNode(string nodeId)
+        {
+            if (string.IsNullOrWhiteSpace(nodeId))
+                return;
+
+            for (int i = nodes.Count - 1; i >= 0; i--)
+            {
+                if (nodes[i] != null && string.Equals(nodes[i].id, nodeId, StringComparison.Ordinal))
+                    nodes.RemoveAt(i);
+            }
+
+            RemoveConnectionsForNode(nodeId);
+        }
+
+        public void AddConnection(ConnectionRecord connection)
+        {
+            if (connection == null)
+                throw new ArgumentNullException(nameof(connection));
+            connections.Add(connection);
+        }
+
+        public void RemoveConnection(string connectionId)
+        {
+            if (string.IsNullOrWhiteSpace(connectionId))
+                return;
+
+            for (int i = connections.Count - 1; i >= 0; i--)
+            {
+                if (connections[i] != null && string.Equals(connections[i].id, connectionId, StringComparison.Ordinal))
+                    connections.RemoveAt(i);
+            }
+        }
+
+        public void RemoveConnectionsForNode(string nodeId)
+        {
+            if (string.IsNullOrWhiteSpace(nodeId))
+                return;
+
+            for (int i = connections.Count - 1; i >= 0; i--)
+            {
+                ConnectionRecord connection = connections[i];
+                if (connection == null
+                    || string.Equals(connection.sourceNodeId, nodeId, StringComparison.Ordinal)
+                    || string.Equals(connection.targetNodeId, nodeId, StringComparison.Ordinal))
+                {
+                    connections.RemoveAt(i);
+                }
+            }
+        }
+
         public void EnsureIds()
         {
-            HashSet<string> nodeTypeIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < nodeTypes.Count; i++)
             {
                 NodeTypeRecord type = nodeTypes[i];
                 if (type == null)
                     continue;
 
-                type.id = EnsureUnique(type.id, "node", nodeTypeIds);
-                HashSet<string> portIds = new HashSet<string>(StringComparer.Ordinal);
+                if (string.IsNullOrWhiteSpace(type.id))
+                    type.id = "node_" + Guid.NewGuid().ToString("N");
+
                 for (int p = 0; p < type.ports.Count; p++)
                 {
                     PortRecord port = type.ports[p];
                     if (port == null)
                         continue;
-                    port.id = EnsureUnique(port.id, "port", portIds);
+
+                    if (string.IsNullOrWhiteSpace(port.id))
+                        port.id = "port_" + Guid.NewGuid().ToString("N");
                 }
             }
 
-            HashSet<string> nodeIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < nodes.Count; i++)
             {
                 NodeRecord node = nodes[i];
                 if (node == null)
                     continue;
-                node.id = EnsureUnique(node.id, "node", nodeIds);
+
+                if (string.IsNullOrWhiteSpace(node.id))
+                    node.id = Guid.NewGuid().ToString("N");
                 if (string.IsNullOrWhiteSpace(node.label))
                     node.label = node.typeId;
             }
 
-            HashSet<string> connectionIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < connections.Count; i++)
             {
                 ConnectionRecord connection = connections[i];
                 if (connection == null)
                     continue;
-                connection.id = EnsureUnique(connection.id, "connection", connectionIds);
+
+                if (string.IsNullOrWhiteSpace(connection.id))
+                    connection.id = Guid.NewGuid().ToString("N");
             }
         }
 
@@ -246,24 +307,6 @@ namespace Jolybob.ProceduralWorld.Authoring
                 label = string.IsNullOrWhiteSpace(label) ? typeId : label,
                 position = position
             };
-        }
-
-        private static string EnsureUnique(string value, string fallbackPrefix, HashSet<string> used)
-        {
-            string candidate = string.IsNullOrWhiteSpace(value) ? fallbackPrefix : value.Trim();
-            if (used.Add(candidate))
-                return candidate;
-
-            int suffix = 2;
-            string suffixed;
-            do
-            {
-                suffixed = candidate + "_" + suffix;
-                suffix++;
-            }
-            while (!used.Add(suffixed));
-
-            return suffixed;
         }
     }
 }

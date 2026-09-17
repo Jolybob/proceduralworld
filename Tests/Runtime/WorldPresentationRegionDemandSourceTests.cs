@@ -111,6 +111,85 @@ namespace Jolybob.ProceduralWorld.Tests
         }
 
         [Test]
+        public void RegisteredSourceIdsPreserveRegistrationOrder()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+
+            sources.Register(new TestSource(7, 2));
+            sources.Register(new TestSource(3, 4));
+            sources.Register(new TestSource(7, 5));
+
+            CollectionAssert.AreEqual(new[] { 7, 3 }, sources.RegisteredSourceIds);
+        }
+
+        [Test]
+        public void DisposeDetachesSourcesAndReleasesDemand()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Register(source);
+            sources.Dispose();
+            source.SetRegions(5);
+
+            Assert.IsTrue(sources.IsDisposed);
+            Assert.AreEqual(0, sources.SourceCount);
+            Assert.IsFalse(sources.HasSource(1));
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void OperationsAfterDisposeAreNoOps()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Dispose();
+            sources.Register(source);
+            sources.Refresh(1);
+            sources.RefreshAll();
+            sources.Clear();
+
+            Assert.AreEqual(0, sources.SourceCount);
+            Assert.IsFalse(sources.HasSource(1));
+            Assert.IsFalse(sources.IsBatching);
+            Assert.IsTrue(sources.IsDisposed);
+            CollectionAssert.IsEmpty(lifecycle.LoadedRegions);
+            CollectionAssert.IsEmpty(lifecycle.UnloadedRegions);
+        }
+
+        [Test]
+        public void DisposedBatchCannotFlushLater()
+        {
+            var lifecycle = new RecordingLifecycle();
+            var residency = new WorldPresentationRegionResidencyCoordinator(lifecycle);
+            var demand = new WorldPresentationRegionDemandCoordinator(residency);
+            var sources = new WorldPresentationRegionDemandSourceCoordinator(demand);
+            var source = new TestSource(1, 2);
+
+            sources.Register(source);
+            var batch = sources.BeginBatch();
+            source.SetRegions(5);
+            sources.Dispose();
+            batch.Dispose();
+
+            Assert.IsTrue(sources.IsDisposed);
+            Assert.IsFalse(sources.IsBatching);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.LoadedRegions);
+            CollectionAssert.AreEqual(new[] { 2 }, lifecycle.UnloadedRegions);
+        }
+
+        [Test]
         public void UnregisteredSourceCannotRefreshDemand()
         {
             var lifecycle = new RecordingLifecycle();

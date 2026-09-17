@@ -31,7 +31,7 @@ WorldGenerationExecutionCheckpoint
 world realization / materialization
 ```
 
-The architecture is intentionally aligned with incremental procedural generation: Core Keeper's documented generation work can be spread over multiple frames to reduce stuttering, while chunk generation continues to be triggered by exploration and can cause additional structure-generation work. The package therefore treats a generation phase as resumable work rather than assuming one scheduler dequeue equals one completed chunk. citeturn1search0turn2search0
+The architecture is intentionally aligned with incremental procedural generation: Core Keeper's documented generation work can be spread over multiple frames to reduce stuttering, while chunk generation continues to be triggered by exploration and can cause additional structure-generation work. The package therefore treats a generation phase as resumable work rather than assuming one scheduler dequeue equals one completed chunk.
 
 ## Checkpoint model
 

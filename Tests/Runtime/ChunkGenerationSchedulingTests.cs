@@ -109,6 +109,61 @@ namespace Jolybob.ProceduralWorld.Tests
             Assert.AreEqual(9, controller.PendingGenerations);
         }
 
+        [Test]
+        public void ScheduledPersistentStreamingLoadsOnlyWhenBudgetIsProcessed()
+        {
+            var settings = new WorldGenerationSettings { chunkSize = 4 };
+            var store = new InMemoryWorldChunkStore();
+            var persistence = new WorldChunkPersistenceService(
+                new ProceduralWorldGenerator(99107, settings),
+                store);
+            var sink = new RecordingSink();
+            var controller = new WorldScheduledPersistentChunkStreamingController(
+                persistence,
+                new ChunkStreamingPlanner(1),
+                sink);
+
+            ChunkStreamingDelta delta = controller.Update(new ChunkCoord(0, 0));
+
+            Assert.AreEqual(9, delta.ToLoad.Count);
+            Assert.AreEqual(9, controller.PendingGenerations);
+            Assert.AreEqual(0, controller.LoadedChunks.Count);
+            Assert.AreEqual(0, sink.Loaded.Count);
+
+            Assert.AreEqual(2, controller.Process(2));
+            Assert.AreEqual(2, controller.LoadedChunks.Count);
+            Assert.AreEqual(2, sink.Loaded.Count);
+        }
+
+        [Test]
+        public void ScheduledPersistentStreamingCancelsPendingUnloadAndSavesLoadedChunks()
+        {
+            var settings = new WorldGenerationSettings { chunkSize = 4 };
+            var store = new InMemoryWorldChunkStore();
+            var persistence = new WorldChunkPersistenceService(
+                new ProceduralWorldGenerator(99107, settings),
+                store);
+            var sink = new RecordingSink();
+            var controller = new WorldScheduledPersistentChunkStreamingController(
+                persistence,
+                new ChunkStreamingPlanner(1),
+                sink);
+
+            controller.Update(new ChunkCoord(0, 0));
+            Assert.AreEqual(1, controller.Process(1));
+            GeneratedChunk loaded = controller.LoadedChunks[new ChunkCoord(0, 0)];
+
+            GeneratedCell edited = loaded.GetCell(0, 0);
+            edited.SetTile(WorldTile.Core);
+            loaded.SetCell(0, 0, edited);
+
+            controller.Update(new ChunkCoord(3, 0));
+
+            Assert.IsFalse(controller.LoadedChunks.ContainsKey(new ChunkCoord(0, 0)));
+            Assert.IsTrue(store.Contains(new ChunkCoord(0, 0)));
+            Assert.AreEqual(9, sink.Unloaded.Count);
+        }
+
         private sealed class RecordingSink : IWorldChunkSink
         {
             public readonly List<Loaded> Loaded = new List<Loaded>();

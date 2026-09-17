@@ -42,10 +42,22 @@ namespace Jolybob.ProceduralWorld
                     ((long)context.ChunkCoordinate.Y * chunkSize) + chunkSize - 1L,
                     chunkSize);
 
-                for (int ownerY = minOwnerY; ownerY <= maxOwnerY; ownerY++)
+                for (int ownerY = minOwnerY; ; ownerY++)
                 {
-                    for (int ownerX = minOwnerX; ownerX <= maxOwnerX; ownerX++)
-                        planner.CollectOwnerChunk(new ChunkCoord(ownerX, ownerY), definition, chunkSize, output);
+                    for (int ownerX = minOwnerX; ; ownerX++)
+                    {
+                        planner.CollectOwnerChunk(
+                            new ChunkCoord(ownerX, ownerY),
+                            definition,
+                            chunkSize,
+                            output);
+
+                        if (ownerX == maxOwnerX)
+                            break;
+                    }
+
+                    if (ownerY == maxOwnerY)
+                        break;
                 }
             }
         }

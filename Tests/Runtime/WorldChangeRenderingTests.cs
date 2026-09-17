@@ -22,7 +22,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void TransactionBatchReachesRendererWithoutPerCellDuplication()
         {
-            const int seed = 149863;
+            const int seed = 161729;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(

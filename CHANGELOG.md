@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.40] - 2026-09-17
+
+- Added `WorldScheduledPersistentChunkStreamingController` to combine deterministic generation scheduling with persistence-aware chunk lifecycle management.
+- Pending chunk generations are budgeted and cancellable before persistence loading occurs.
+- Completed scheduled chunks enter the controller's active `IWorldChunkAccess` state only after processing budget is granted.
+- Loaded persistent chunks are saved before unload and before reset, matching the immediate persistent streaming lifecycle.
+- Added regression tests covering deferred persistent loads, bounded processing, cancellation through movement, and save-before-unload behavior.
+- Changed the preview seed from `196423` to `207341`.
+- Bumped the package version to 0.1.40.
+- Incremented package version for this update.
+
 ## [0.1.39] - 2026-09-17
 
 - Added `IWorldChunkGenerator` to isolate chunk generation from streaming and scheduling.

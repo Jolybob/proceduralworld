@@ -56,6 +56,8 @@ namespace Jolybob.ProceduralWorld
     {
         private readonly Dictionary<WorldGenerationWorkKey, WorldGenerationWorkItem> items = new Dictionary<WorldGenerationWorkKey, WorldGenerationWorkItem>();
         private readonly Dictionary<WorldGenerationWorkKey, WorldGenerationWorkStatus> statuses = new Dictionary<WorldGenerationWorkKey, WorldGenerationWorkStatus>();
+        private readonly Dictionary<WorldGenerationWorkKey, WorldGenerationExecutionLease> leases = new Dictionary<WorldGenerationWorkKey, WorldGenerationExecutionLease>();
+        private readonly Dictionary<WorldGenerationWorkKey, int> attempts = new Dictionary<WorldGenerationWorkKey, int>();
         private readonly HashSet<WorldGenerationDependency> dependencies = new HashSet<WorldGenerationDependency>();
 
         public int Count => items.Count;
@@ -73,7 +75,7 @@ namespace Jolybob.ProceduralWorld
                 items[key] = new WorldGenerationWorkItem(chunk, kind, priority);
                 statuses[key] = WorldGenerationWorkStatus.Pending;
             }
-            else if (priority > existing.Priority)
+            else if (priority > existing.Priority && statuses[key] != WorldGenerationWorkStatus.Running)
             {
                 items[key] = new WorldGenerationWorkItem(chunk, kind, priority);
                 if (statuses[key] == WorldGenerationWorkStatus.Completed || statuses[key] == WorldGenerationWorkStatus.Failed)
@@ -88,6 +90,8 @@ namespace Jolybob.ProceduralWorld
             return status;
         }
 
+        public bool TryGetLease(WorldGenerationWorkKey key, out WorldGenerationExecutionLease lease) => leases.TryGetValue(key, out lease);
+
         public void AddDependency(WorldGenerationWorkKey prerequisite, WorldGenerationWorkKey dependent)
         {
             if (prerequisite.Equals(dependent)) throw new ArgumentException("A work item cannot depend on itself.");
@@ -98,28 +102,131 @@ namespace Jolybob.ProceduralWorld
         {
             if (!items.Remove(key)) return false;
             statuses.Remove(key);
+            leases.Remove(key);
             dependencies.RemoveWhere(d => d.Prerequisite.Equals(key) || d.Dependent.Equals(key));
             return true;
         }
 
-        public void Clear() { items.Clear(); statuses.Clear(); dependencies.Clear(); }
+        public void Clear() { items.Clear(); statuses.Clear(); leases.Clear(); attempts.Clear(); dependencies.Clear(); }
 
         public bool Complete(WorldGenerationWorkKey key)
         {
+            if (leases.ContainsKey(key)) return false;
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Running) return false;
             statuses[key] = WorldGenerationWorkStatus.Completed; return true;
         }
 
         public bool Fail(WorldGenerationWorkKey key)
         {
+            if (leases.ContainsKey(key)) return false;
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Running) return false;
             statuses[key] = WorldGenerationWorkStatus.Failed; return true;
+        }
+
+        public bool Complete(WorldGenerationExecutionLease lease)
+        {
+            if (!TryTakeOwnership(lease)) return false;
+            leases.Remove(lease.WorkKey);
+            statuses[lease.WorkKey] = WorldGenerationWorkStatus.Completed;
+            return true;
+        }
+
+        public bool Fail(WorldGenerationExecutionLease lease)
+        {
+            if (!TryTakeOwnership(lease)) return false;
+            leases.Remove(lease.WorkKey);
+            statuses[lease.WorkKey] = WorldGenerationWorkStatus.Failed;
+            return true;
         }
 
         public bool Retry(WorldGenerationWorkKey key)
         {
             if (!statuses.TryGetValue(key, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Failed) return false;
             statuses[key] = WorldGenerationWorkStatus.Pending; return true;
+        }
+
+        public WorldGenerationExecutionLeaseSchedule Claim(int maxItems, string ownerId, long currentTick, long leaseDurationTicks)
+        {
+            if (maxItems < 0) throw new ArgumentOutOfRangeException(nameof(maxItems));
+            if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("Lease owner ID must not be empty.", nameof(ownerId));
+            if (leaseDurationTicks <= 0) throw new ArgumentOutOfRangeException(nameof(leaseDurationTicks));
+
+            RecoverExpired(currentTick);
+            WorldGenerationDependencySchedule schedule = BuildSchedule(maxItems);
+            if (!schedule.Succeeded)
+            {
+                var issues = new List<WorldGenerationExecutionLeaseIssue>();
+                for (int i = 0; i < schedule.Issues.Count; i++)
+                    issues.Add(new WorldGenerationExecutionLeaseIssue(schedule.Issues[i].Code, schedule.Issues[i].Message, schedule.Issues[i].Key));
+                return new WorldGenerationExecutionLeaseSchedule(
+                    new WorldGenerationWorkItem[0],
+                    new WorldGenerationExecutionLease[0],
+                    issues);
+            }
+
+            var claimedItems = new List<WorldGenerationWorkItem>(schedule.Count);
+            var claimedLeases = new List<WorldGenerationExecutionLease>(schedule.Count);
+            for (int i = 0; i < schedule.Count; i++)
+            {
+                WorldGenerationWorkItem item = schedule.Items[i];
+                WorldGenerationWorkKey key = new WorldGenerationWorkKey(item.Chunk, item.Kind);
+                int attempt = attempts.TryGetValue(key, out int previousAttempt) ? checked(previousAttempt + 1) : 1;
+                long expiresAtTick = checked(currentTick + leaseDurationTicks);
+                var lease = new WorldGenerationExecutionLease(
+                    key,
+                    ownerId,
+                    WorldGenerationExecutionLeaseId.Create(key, ownerId, attempt),
+                    attempt,
+                    currentTick,
+                    expiresAtTick);
+                attempts[key] = attempt;
+                leases[key] = lease;
+                statuses[key] = WorldGenerationWorkStatus.Running;
+                claimedItems.Add(item);
+                claimedLeases.Add(lease);
+            }
+
+            return new WorldGenerationExecutionLeaseSchedule(claimedItems, claimedLeases);
+        }
+
+        public bool Renew(WorldGenerationExecutionLease lease, long currentTick, long leaseDurationTicks)
+        {
+            if (leaseDurationTicks <= 0) return false;
+            if (!leases.TryGetValue(lease.WorkKey, out WorldGenerationExecutionLease active) || !active.Equals(lease)) return false;
+            if (statuses[lease.WorkKey] != WorldGenerationWorkStatus.Running || active.IsExpired(currentTick)) return false;
+
+            long expiresAtTick;
+            try { expiresAtTick = checked(currentTick + leaseDurationTicks); }
+            catch (OverflowException) { return false; }
+
+            leases[lease.WorkKey] = new WorldGenerationExecutionLease(
+                active.WorkKey,
+                active.OwnerId,
+                active.LeaseId,
+                active.Attempt,
+                active.AcquiredAtTick,
+                expiresAtTick);
+            return true;
+        }
+
+        public int RecoverExpired(long currentTick)
+        {
+            var expired = new List<WorldGenerationExecutionLease>();
+            foreach (KeyValuePair<WorldGenerationWorkKey, WorldGenerationExecutionLease> pair in leases)
+                if (pair.Value.IsExpired(currentTick)) expired.Add(pair.Value);
+            expired.Sort(CompareLeases);
+
+            int recovered = 0;
+            for (int i = 0; i < expired.Count; i++)
+            {
+                WorldGenerationExecutionLease lease = expired[i];
+                if (!leases.TryGetValue(lease.WorkKey, out WorldGenerationExecutionLease active) || !active.Equals(lease)) continue;
+                if (statuses[lease.WorkKey] != WorldGenerationWorkStatus.Running) continue;
+                leases.Remove(lease.WorkKey);
+                statuses[lease.WorkKey] = WorldGenerationWorkStatus.Pending;
+                recovered++;
+            }
+            return recovered;
         }
 
         public WorldGenerationDependencySchedule BuildSchedule(int maxItems = int.MaxValue)
@@ -184,6 +291,12 @@ namespace Jolybob.ProceduralWorld
             if (!items.ContainsKey(key)) { items.Add(key, new WorldGenerationWorkItem(key.Chunk, key.Kind)); statuses.Add(key, WorldGenerationWorkStatus.Pending); }
         }
 
+        private bool TryTakeOwnership(WorldGenerationExecutionLease lease)
+        {
+            if (!statuses.TryGetValue(lease.WorkKey, out WorldGenerationWorkStatus status) || status != WorldGenerationWorkStatus.Running) return false;
+            return leases.TryGetValue(lease.WorkKey, out WorldGenerationExecutionLease active) && active.Equals(lease);
+        }
+
         private int CountStatus(WorldGenerationWorkStatus status)
         {
             int count = 0; foreach (WorldGenerationWorkStatus value in statuses.Values) if (value == status) count++; return count;
@@ -195,6 +308,15 @@ namespace Jolybob.ProceduralWorld
             c = a.Kind.CompareTo(b.Kind); if (c != 0) return c;
             c = a.Chunk.X.CompareTo(b.Chunk.X); if (c != 0) return c;
             return a.Chunk.Y.CompareTo(b.Chunk.Y);
+        }
+
+        private int CompareLeases(WorldGenerationExecutionLease a, WorldGenerationExecutionLease b)
+        {
+            int c = a.WorkKey.Chunk.X.CompareTo(b.WorkKey.Chunk.X); if (c != 0) return c;
+            c = a.WorkKey.Chunk.Y.CompareTo(b.WorkKey.Chunk.Y); if (c != 0) return c;
+            c = a.WorkKey.Kind.CompareTo(b.WorkKey.Kind); if (c != 0) return c;
+            c = string.CompareOrdinal(a.OwnerId, b.OwnerId); if (c != 0) return c;
+            return a.Attempt.CompareTo(b.Attempt);
         }
 
         private bool TryFindPendingCycle(List<WorldGenerationWorkKey> pending, out WorldGenerationWorkKey cycleKey)

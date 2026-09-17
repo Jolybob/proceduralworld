@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.106] - 2026-09-17
+
+- Added `WorldGenerationExecutionLease` as a deterministic ownership token for running generation work.
+- Added `Claim`, `Renew`, `RecoverExpired`, and lease-authorized `Complete` / `Fail` lifecycle operations to the dependency work graph.
+- Added deterministic attempt numbers and lease IDs so reclaimed work is distinguishable from stale worker executions.
+- Added stale-worker protection: an expired or superseded lease cannot complete or fail a later execution attempt.
+- Added `WorldGenerationExecutionLeaseCoordinator`, `IWorldGenerationLeasedWorkExecutor`, and `WorldGenerationExecutionLeaseRunner` for dependency-safe worker execution.
+- Added regression coverage for lease creation, renewal, expiry/reclaim, deterministic claim ordering, stale-worker rejection, and runner success/failure.
+- Added world-generation execution lease architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.106.
+
 ## [0.1.105] - 2026-09-17
 
 - Added `WorldGenerationExecutionResult` with stable fingerprints for deterministic world-generation outputs.

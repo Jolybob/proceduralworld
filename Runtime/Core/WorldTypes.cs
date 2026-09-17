@@ -49,6 +49,15 @@ namespace Jolybob.ProceduralWorld
         Core = 4
     }
 
+    public enum CellTopology : byte
+    {
+        Solid = 0,
+        Empty = 1,
+        Water = 2,
+        Lava = 3,
+        Chasm = 4
+    }
+
     public readonly struct TerrainId : IEquatable<TerrainId>
     {
         public readonly byte Value;
@@ -98,6 +107,7 @@ namespace Jolybob.ProceduralWorld
         public ResourceId Resource;
         public StructureId Structure;
         public WorldTile Tile;
+        public CellTopology Topology;
         public byte Biome;
         public GeneratedCellFlags Flags;
 
@@ -108,6 +118,7 @@ namespace Jolybob.ProceduralWorld
                 default(ResourceId),
                 default(StructureId),
                 tile,
+                tile == WorldTile.Empty ? CellTopology.Empty : CellTopology.Solid,
                 biome,
                 GeneratedCellFlags.None)
         {
@@ -119,6 +130,7 @@ namespace Jolybob.ProceduralWorld
             ResourceId resource,
             StructureId structure,
             WorldTile tile,
+            CellTopology topology,
             byte biome,
             GeneratedCellFlags flags = GeneratedCellFlags.None)
         {
@@ -127,6 +139,7 @@ namespace Jolybob.ProceduralWorld
             Resource = resource;
             Structure = structure;
             Tile = tile;
+            Topology = topology;
             Biome = biome;
             Flags = flags;
         }
@@ -141,6 +154,16 @@ namespace Jolybob.ProceduralWorld
         {
             Terrain = terrain;
             Tile = tile;
+        }
+
+        public void SetTopology(CellTopology topology, WorldTile presentationTile = WorldTile.Empty)
+        {
+            Topology = topology;
+            Tile = presentationTile;
+            if (topology == CellTopology.Chasm)
+                Flags |= GeneratedCellFlags.Chasm;
+            else
+                Flags &= ~GeneratedCellFlags.Chasm;
         }
 
         public void SetResource(ResourceId resource)

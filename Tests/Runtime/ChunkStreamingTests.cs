@@ -52,7 +52,7 @@ namespace Jolybob.ProceduralWorld.Tests
 
             Assert.Contains(new ChunkCoord(-1, -1), new List<ChunkCoord>(delta.ToUnload));
             Assert.Contains(new ChunkCoord(-1, 1), new List<ChunkCoord>(delta.ToUnload));
-            Assert.AreEqual(6, delta.ToUnload.Count);
+            Assert.AreEqual(9, delta.ToUnload.Count);
             Assert.AreEqual(9, delta.ToLoad.Count);
         }
 

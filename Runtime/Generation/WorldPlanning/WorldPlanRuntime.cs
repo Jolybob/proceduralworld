@@ -10,6 +10,7 @@ namespace Jolybob.ProceduralWorld
     /// </summary>
     public sealed class WorldPlanRuntimeSettings
     {
+        public int ChunkSize { get; }
         public WorldPlanLayoutSettings LayoutSettings { get; }
         public WorldPlanFeatureLoweringSettings LoweringSettings { get; }
         public IWorldPlanFeatureResolver FeatureResolver { get; }
@@ -17,14 +18,22 @@ namespace Jolybob.ProceduralWorld
         public IWorldPlanRealizationSource RealizationSource { get; }
 
         public WorldPlanRuntimeSettings(
+            int chunkSize = 64,
             WorldPlanLayoutSettings layoutSettings = null,
             WorldPlanFeatureLoweringSettings loweringSettings = null,
             IWorldPlanFeatureResolver featureResolver = null,
             IWorldPlanPlacementFeasibility placementFeasibility = null,
             IWorldPlanRealizationSource realizationSource = null)
         {
+            if (chunkSize <= 0)
+                throw new ArgumentOutOfRangeException(nameof(chunkSize));
+
             LayoutSettings = layoutSettings ?? WorldPlanLayoutSettings.Default;
-            LoweringSettings = loweringSettings ?? WorldPlanFeatureLoweringSettings.Default;
+            LoweringSettings = loweringSettings ?? new WorldPlanFeatureLoweringSettings(chunkSize);
+            if (LoweringSettings.ChunkSize != chunkSize)
+                throw new ArgumentException("World-plan lowering chunk size must match the runtime chunk size.", nameof(loweringSettings));
+
+            ChunkSize = chunkSize;
             FeatureResolver = featureResolver;
             PlacementFeasibility = placementFeasibility;
             RealizationSource = realizationSource;
@@ -44,6 +53,7 @@ namespace Jolybob.ProceduralWorld
         private readonly WorldRealizationMap realizationMap;
 
         public int Seed { get; }
+        public int ChunkSize { get; }
         public WorldPlanCompilationResult Compilation { get; }
         public WorldPlanLayoutResult LayoutResult { get; }
         public WorldPlanFeatureLoweringResult LoweringResult { get; }
@@ -70,6 +80,7 @@ namespace Jolybob.ProceduralWorld
 
         internal WorldPlanRuntime(
             int seed,
+            int chunkSize,
             WorldPlanCompilationResult compilation,
             WorldPlanLayoutResult layoutResult,
             WorldPlanFeatureLoweringResult loweringResult,
@@ -77,12 +88,16 @@ namespace Jolybob.ProceduralWorld
             WorldRealizationMap realizationMap,
             List<WorldPlanValidationIssue> issues)
         {
+            if (chunkSize <= 0)
+                throw new ArgumentOutOfRangeException(nameof(chunkSize));
+
             Seed = seed;
+            ChunkSize = chunkSize;
             Compilation = compilation;
             LayoutResult = layoutResult;
             LoweringResult = loweringResult;
             Realization = realization ?? WorldRealizationBatch.Empty;
-            this.realizationMap = realizationMap ?? new WorldRealizationMap();
+            this.realizationMap = realizationMap ?? new WorldRealizationMap(chunkSize);
             this.issues = issues ?? new List<WorldPlanValidationIssue>();
         }
 
@@ -125,14 +140,14 @@ namespace Jolybob.ProceduralWorld
 
             if (!compilation.Succeeded)
             {
-                return CreateRuntime(seed, compilation, null, EmptyLowering(), WorldRealizationBatch.Empty, new WorldRealizationMap(), issues);
+                return CreateRuntime(seed, settings.ChunkSize, compilation, null, EmptyLowering(), WorldRealizationBatch.Empty, new WorldRealizationMap(settings.ChunkSize), issues);
             }
 
             WorldPlanLayoutResult layout = new WorldPlanLayoutSolver().Solve(compilation.Plan, settings.LayoutSettings);
             AppendIssues(issues, layout.Issues);
             if (!layout.Succeeded)
             {
-                return CreateRuntime(seed, compilation, layout, EmptyLowering(), WorldRealizationBatch.Empty, new WorldRealizationMap(), issues);
+                return CreateRuntime(seed, settings.ChunkSize, compilation, layout, EmptyLowering(), WorldRealizationBatch.Empty, new WorldRealizationMap(settings.ChunkSize), issues);
             }
 
             WorldPlanFeatureLoweringResult lowering = EmptyLowering();
@@ -161,7 +176,7 @@ namespace Jolybob.ProceduralWorld
                 realization = new WorldPlanRealizer().Realize(lowering, settings.RealizationSource);
             }
 
-            var realizationMap = new WorldRealizationMap(settings.LoweringSettings.ChunkSize);
+            var realizationMap = new WorldRealizationMap(settings.ChunkSize);
             for (int i = 0; i < realization.Edits.Count; i++)
             {
                 WorldRealizationEdit edit = realization.Edits[i];
@@ -174,11 +189,12 @@ namespace Jolybob.ProceduralWorld
                     "World realization edit '" + edit.Id + "' conflicts with existing edit '" + conflict.Existing.Id + "' at " + edit.Position + "."));
             }
 
-            return CreateRuntime(seed, compilation, layout, lowering, realization, realizationMap, issues);
+            return CreateRuntime(seed, settings.ChunkSize, compilation, layout, lowering, realization, realizationMap, issues);
         }
 
         private static WorldPlanRuntime CreateRuntime(
             int seed,
+            int chunkSize,
             WorldPlanCompilationResult compilation,
             WorldPlanLayoutResult layout,
             WorldPlanFeatureLoweringResult lowering,
@@ -186,7 +202,7 @@ namespace Jolybob.ProceduralWorld
             WorldRealizationMap realizationMap,
             List<WorldPlanValidationIssue> issues)
         {
-            return new WorldPlanRuntime(seed, compilation, layout, lowering, realization, realizationMap, issues);
+            return new WorldPlanRuntime(seed, chunkSize, compilation, layout, lowering, realization, realizationMap, issues);
         }
 
         private static WorldPlanFeatureLoweringResult EmptyLowering()

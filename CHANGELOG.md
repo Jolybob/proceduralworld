@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.105] - 2026-09-17
+
+- Added `WorldGenerationExecutionResult` with stable fingerprints for deterministic world-generation outputs.
+- Added `WorldGenerationExecutionReceipt` and `IWorldGenerationExecutionReceiptStore` as a persistence-agnostic commit-evidence boundary.
+- Added `InMemoryWorldGenerationExecutionReceiptStore` for runtime composition and regression testing.
+- Added `WorldRealizationBatchCommitter` for atomic, idempotent world-space realization commits and exact replay handling.
+- Added `IWorldGenerationTransactionalWorkExecutor` and `WorldGenerationTransactionalRunner` to complete generation work only after world commit and receipt persistence succeed.
+- Added deterministic, process-independent execution fingerprints using an explicit stable hash.
+- Added regression coverage for idempotent replay, atomic conflict handling, fingerprint determinism, transactional completion, failure isolation, and retry after receipt persistence failure.
+- Added world-generation transaction architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.105.
+
 ## [0.1.104] - 2026-09-17
 
 - Added persistent `WorldGenerationWorkStatus` state for pending, running, completed, and failed generation work.

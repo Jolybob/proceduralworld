@@ -4,11 +4,12 @@
 
 - Added `WorldPlanRuntimeBuilder` as the authoritative orchestration boundary for semantic plan expansion, compilation, world-space layout, optional feature lowering, optional realization, and chunk indexing.
 - Added `WorldPlanRuntimeSettings` so feature resolution, placement feasibility, realization semantics, and deterministic layout/lowering policies remain explicit runtime dependencies.
+- Added an explicit world-plan `ChunkSize` contract; lowering settings must match it, and generators reject plan runtimes configured for a different chunk size.
 - Added `WorldPlanRuntime` with a world-space realization index and chunk-intersection queries without creating chunk-local planning graphs.
 - Added `IWorldPlanChunkGenerator` and `WorldPlanChunkGeneration` as the optional plan-aware capability boundary for chunk generators.
 - Passed the immutable world-plan runtime through `WorldGenerationContext` so custom generation passes can consume global semantic intent during chunk materialization.
-- Integrated optional `WorldPlanGraphAsset` references into `ProceduralWorldDefinitionAsset`, compiling and laying out the plan once per generator instance using the world definition seed.
-- Added regression coverage for plan/layout runtime creation, feature lowering and chunk-indexed realization, context propagation, and capability detection.
+- Integrated optional `WorldPlanGraphAsset` references into `ProceduralWorldDefinitionAsset`, compiling and laying out the plan once per generator instance using the world definition seed and chunk size.
+- Added regression coverage for plan/layout runtime creation, feature lowering and chunk-indexed realization, chunk-size invariants, context propagation, and capability detection.
 - Restored the complete world-generation checkpoint regression test suite after the previous test-file regression and retained the required `System` import.
 - Added world-plan runtime integration documentation and Unity `.meta` metadata.
 - Bumped the package version to 0.1.108.
@@ -85,7 +86,7 @@
 
 - Added `WorldRealizationEdit`, `WorldRealizationBatch`, and `WorldRealizationMap` as the deterministic world-space boundary between semantic intent and chunk materialization.
 - Added source traceability, operation kinds, priorities, stable canonical ordering, conflict detection, removal, point/chunk/rectangle queries, and negative-coordinate indexing.
-- Added `IWorldPlanRealizationSource` and `WorldPlanRealizer` to convert lowered world-plan feature placements into renderer/gameplay-independent world edits.
+- Added `IWorldPlanRealizationSource` and `WorldPlanRealizer` to convert lowered world-plan feature placements into deterministic world edits.
 - Added regression coverage for deterministic batches, negative coordinates, same-kind conflicts, different-layer coexistence, and deduplicated rectangle queries.
 - Added world-realization architecture documentation and Unity `.meta` metadata.
 - Bumped the package version to 0.1.101.

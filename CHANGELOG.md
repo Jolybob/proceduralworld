@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.41] - 2026-09-17
+
+- Added `WorldScheduledPersistentChunkStreamingController` as the combined scheduling + persistence streaming boundary.
+- Pending chunk generation is now budgeted before `WorldChunkPersistenceService.LoadChunk` runs, so deferred chunks do not consume persistence work until actually processed.
+- Added loaded-world access through `IWorldChunkAccess` to the scheduled persistent controller, matching the immediate persistent controller contract.
+- Preserved save-before-unload and save-before-reset semantics for already loaded chunks while cancelling not-yet-generated work first.
+- Added regression tests for deferred persistent loading, zero-budget behavior, pending cancellation without persistence writes, save/restore across unload, and reset cleanup.
+- Changed the preview seed from `207341` to `219877`.
+- Bumped the package version to 0.1.41.
+- Incremented package version for this update.
+
 ## [0.1.40] - 2026-09-17
 
 - Added `WorldScheduledPersistentChunkStreamingController` to combine deterministic generation scheduling with persistence-aware chunk lifecycle management.
@@ -47,19 +58,4 @@
 - Updated streaming documentation with the scheduling boundary and custom ordering contract.
 - Updated the preview component seed to `173921`.
 - Bumped the package version to 0.1.37.
-- Incremented package version for this update.
-
-## [0.1.36] - 2026-09-17
-
-- Added `WorldTilemapRenderer` as the first concrete Unity presentation adapter implementing both `IWorldChunkSink` and `IWorldChangeRenderer`.
-- Chunk loads now render directly into a Tilemap and chunk unloads clear only the unloaded chunk bounds.
-- Direct world edits update a single Tilemap position through the canonical `After.Tile` state.
-- Transaction-scale rendering uses `Tilemap.SetTiles()` and coalesces repeated positions to the latest state in the logical batch.
-- Missing `WorldTile` to `TileBase` mappings fail fast with a clear `KeyNotFoundException` instead of silently producing an invalid presentation.
-- Updated `ProceduralWorldTilemap` to use the reusable `WorldTilemapRenderer` instead of maintaining a second chunk-rendering implementation.
-- Added Tilemap integration tests for chunk coordinate mapping, unload clearing, direct cell updates, batch coalescing, and missing mappings.
-- Updated the package test assembly to reference the Tilemap rendering assembly.
-- Changed the architecture preview and rendering test seed from `149863` to `161729`.
-- Updated root and editing architecture documentation with the concrete Tilemap adapter and streaming wiring.
-- Bumped the package version to 0.1.36.
 - Incremented package version for this update.

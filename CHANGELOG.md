@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.100] - 2026-09-17
+
+- Added `WorldReservation` and `WorldReservationMap` as a deterministic world-space coordination layer for claimed, protected, occupied, or otherwise reserved areas.
+- Added chunk-indexed reservation queries with cross-chunk de-duplication while keeping world coordinates authoritative.
+- Added atomic reservation conflict handling, removal, lookup, containment queries, and mathematical floor-division for negative world coordinates.
+- Added `WorldPlanPlacementReservationPolicy` to integrate reservations with feature-lowering feasibility and prevent deterministic plan-node footprint overlap.
+- Added `WorldPlanCorridorReservationTraversal` to route corridors around reserved world cells without coupling corridor planning to chunk residency.
+- Added `WorldPlanCorridorReservationWriter` with atomic rollback when a realized corridor conflicts with existing reservations.
+- Added regression coverage for cross-chunk indexing, overlap conflicts, negative coordinates, and corridor rollback.
+- Added world-reservation architecture documentation and Unity `.meta` metadata.
+- Bumped the package version to 0.1.100.
+
 ## [0.1.99] - 2026-09-17
 
 - Added `WorldPlanCorridor`, `WorldPlanCorridorPlanner`, and deterministic world-space corridor realization for compiled plan connections.
@@ -30,36 +42,3 @@
 - Added regression coverage for input-order independence, clearance-aware spacing, deterministic layer advancement, and connection-driven port anchoring.
 - Added world-plan layout architecture documentation and Unity `.meta` metadata.
 - Bumped the package version to 0.1.97.
-
-## [0.1.96] - 2026-09-17
-
-- Added reusable hierarchical world-plan subgraphs through `WorldPlanSubgraphTemplateDefinition`, `WorldPlanSubgraphPortDefinition`, and template-backed `WorldPlanNodeDefinition` instances.
-- Added `WorldPlanSubgraphCompiler` to deterministically expand nested template instances into the existing flat runtime plan representation.
-- Added stable scope-based node, type, and connection identities so repeated template instances remain independent while preserving deterministic input-order behaviour.
-- Added exposed-port rewiring across template boundaries, including nested exposed ports, with semantic direction/type validation delegated to the existing flat compiler.
-- Added template-cycle, duplicate-template, missing-template, missing-exposed-port, and missing-endpoint validation diagnostics.
-- Extended `WorldPlanGraphAsset` authoring with reusable-template metadata, exposed ports, referenced template assets, and template instances.
-- Extended the Unity 6 GraphView editor with reusable subgraph instance creation and exposed-port visualization, including nested template port resolution.
-- Hardened graph inspector/window validation and compilation against authoring reference-cycle exceptions.
-- Added regression coverage for template expansion, deterministic instance ordering, nested flattening, missing templates, missing exposed ports, and connection rewiring.
-- Added world-plan subgraph architecture documentation and Unity `.meta` metadata.
-- Bumped the package version to 0.1.96.
-
-## [0.1.95] - 2026-09-17
-
-- Fixed Unity 6 `WorldPlanGraphWindow` editor compilation errors caused by using the inaccessible `UnityEngine.UIElements.Toolbar` type; the editor now uses a plain `VisualElement` toolbar container.
-- Qualified GraphView manipulator registration with `this.AddManipulator(...)` so Unity's `VisualElementExtensions.AddManipulator` extension is resolved correctly.
-- Updated world-plan graph ports to use Unity 6's generic `Port.Create<Edge>(...)` factory and removed the redundant custom edge connector listener.
-- Preserved graph editing, typed-port compatibility filtering, connection persistence, node movement, deletion, validation, and framing behaviour.
-- Bumped the package version to 0.1.95.
-
-## [0.1.94] - 2026-09-17
-
-- Added a typed world-plan graph runtime model with deterministic node and connection ordering.
-- Added customizable node types, semantic ports, connection kinds, node properties, and footprint/clearance metadata.
-- Added `WorldPlanCompiler` and `WorldPlanValidationResult` for deterministic compilation and structural validation.
-- Added a Unity `WorldPlanGraphAsset` authoring asset that keeps editor canvas positions separate from runtime graph semantics.
-- Added a Unity node graph editor with draggable nodes, custom port rendering, semantic-type compatibility filtering, connection creation/removal, graph validation, framing, and asset-backed undo/save behaviour.
-- Added regression coverage for deterministic compilation, unknown node types, incompatible port types, required ports, and node properties.
-- Updated the Editor assembly to reference the Authoring assembly.
-- Bumped the package version to 0.1.94.

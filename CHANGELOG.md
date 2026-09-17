@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.88] - 2026-09-17
+
+- Restored the six-argument `ProceduralWorldGenerator` constructor shape used by the 0.1.87 structure-placement regression test.
+- Preserved the existing advanced constructor surface while keeping the compatibility overload delegated to the full implementation.
+- Bumped the package version to 0.1.88.
+
 ## [0.1.87] - 2026-09-17
 
 - Added `StructurePlacement` as an immutable world-space structure identity with an explicit owner chunk and intersectable footprint.
@@ -45,14 +51,4 @@
 - Prevented disposal cleanup from publishing a final demand-change notification.
 - Preserved deterministic load/unload ordering and normal demand notifications.
 - Bumped the package version to 0.1.83.
-- Incremented package version for this update.
-
-## [0.1.82] - 2026-09-17
-
-- Added `WorldPresentationRegionDemandChange` as an immutable notification payload for reconciled region demand state.
-- Added `DemandChanged` notifications and a deterministic read-only `DemandedRegions` snapshot to `WorldPresentationRegionDemandCoordinator`.
-- Preserved separation between demand aggregation, residency execution, and downstream observers.
-- Added regression coverage for deterministic snapshots, snapshot stability, and post-disposal notification safety.
-- Added a Unity `.meta` file for the new runtime asset.
-- Bumped the package version to 0.1.82.
 - Incremented package version for this update.

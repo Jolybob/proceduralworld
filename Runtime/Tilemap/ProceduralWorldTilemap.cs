@@ -10,7 +10,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
     public sealed class ProceduralWorldTilemap : MonoBehaviour
     {
         [Header("Generation")]
-        [SerializeField] private int seed = 149863;
+        [SerializeField] private int seed = 161729;
         [SerializeField] private WorldGenerationSettings settings = new WorldGenerationSettings();
 
         [Header("Preview")]
@@ -19,6 +19,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
         [SerializeField] private bool centerCameraOnWorld = true;
 
         private UnityTilemap tilemap;
+        private WorldTilemapRenderer worldRenderer;
         private readonly Dictionary<WorldTile, TileBase> tiles = new Dictionary<WorldTile, TileBase>();
 
         private void Start()
@@ -33,6 +34,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
             EnsureTilemap();
             BuildRuntimeTiles();
             tilemap.ClearAllTiles();
+            worldRenderer = new WorldTilemapRenderer(tilemap, settings.chunkSize, tiles);
 
             var generator = new ProceduralWorldGenerator(seed, settings);
 
@@ -41,7 +43,7 @@ namespace Jolybob.ProceduralWorld.Tilemap
                 for (int chunkX = -chunksRadius; chunkX <= chunksRadius; chunkX++)
                 {
                     var chunk = generator.GenerateChunk(new ChunkCoord(chunkX, chunkY));
-                    RenderChunk(chunk);
+                    worldRenderer.Load(chunk.Coordinate, chunk);
                 }
             }
 
@@ -103,30 +105,6 @@ namespace Jolybob.ProceduralWorld.Tilemap
             tile.sprite = sprite;
             tile.color = Color.white;
             return tile;
-        }
-
-        private void RenderChunk(GeneratedChunk chunk)
-        {
-            int size = chunk.Size;
-            var positions = new Vector3Int[size * size];
-            var tileBases = new TileBase[size * size];
-
-            int i = 0;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    var cell = chunk.GetCell(x, y);
-                    positions[i] = new Vector3Int(
-                        chunk.Coordinate.X * size + x,
-                        chunk.Coordinate.Y * size + y,
-                        0);
-                    tileBases[i] = tiles[cell.Tile];
-                    i++;
-                }
-            }
-
-            tilemap.SetTiles(positions, tileBases);
         }
     }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.30] - 2026-09-17
+
+- Fixed `NamedEditOperationsRecordBeforeAndAfterState` so its tile edit always changes state instead of accidentally becoming a no-op when the generated tile is already `WorldTile.Core`.
+- Kept no-op suppression in `WorldEditService`; the regression now selects the opposite tile from the current state before testing the named operation sequence.
+- Changed the architecture preview seed from `82641` to `93417` for this fix revision.
+- Updated world-editing documentation to clarify that named operations are journaled only when they actually change state.
+- Bumped the package version to 0.1.30.
+- Incremented package version for this update.
+
 ## [0.1.29] - 2026-09-17
 
 - Added `WorldEditOperationKind` to classify gameplay/world mutations without coupling them to presentation or persistence.

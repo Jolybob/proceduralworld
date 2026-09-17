@@ -12,7 +12,7 @@ Topology is the layer that answers **what occupies a cell** independently from r
 - `Lava`
 - `Chasm`
 
-This makes caves and future liquids/chasm systems explicit instead of using `WorldTile.Empty` as hidden gameplay state.
+This makes caves and liquids explicit instead of using `WorldTile.Empty` as hidden gameplay state.
 
 ## Topology pipeline
 
@@ -20,6 +20,7 @@ Topology modifiers are composed through `TopologyPipeline` and inserted into the
 
 ```csharp
 var topology = new TopologyPipeline()
+    .Add(new LiquidTopologyPass(settings))
     .Add(new ChasmPass(settings));
 
 var pipeline = new WorldGenerationPipeline()
@@ -30,7 +31,15 @@ var pipeline = new WorldGenerationPipeline()
     .Add(new ResourcePass(resources));
 ```
 
-A custom topology feature implements `ITopologyModifier` and chooses an order within the topology layer. The main generation pipeline remains unaware of whether the topology layer contains chasms, liquids, erosion, bridges, or future modifiers.
+A custom topology feature implements `ITopologyModifier` and chooses an order within the topology layer. The main generation pipeline remains unaware of whether the topology layer contains liquids, chasms, erosion, bridges, or future modifiers.
+
+## Liquids
+
+`LiquidTopologyPass` provides a deterministic first-stage liquid model. Water is assigned from low elevation plus sufficient moisture; lava is assigned from high elevation plus sufficient temperature. The pass only changes cells that are still `Solid`, so caves and other earlier topology decisions are not overwritten.
+
+Liquids are disabled by default so existing generated worlds retain their previous topology. Enable `WorldGenerationSettings.liquidsEnabled` and tune `waterElevationThreshold`, `waterMoistureThreshold`, `lavaElevationThreshold`, and `lavaHeatThreshold`.
+
+This is intentionally **not** a fluid simulation. It establishes a stable generated topology classification that later gameplay or simulation systems may evolve without changing deterministic world generation.
 
 ## Chasms
 

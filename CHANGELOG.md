@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.42] - 2026-09-17
+
+- Fixed a duplicate `WorldScheduledPersistentChunkStreamingController` definition that caused Unity compilation errors when both scheduled-persistent source files were imported.
+- Removed the redundant `ScheduledPersistentChunkStreaming.cs` implementation and its Unity metadata, keeping the canonical `PersistentChunkGenerationScheduling.cs` implementation as the single source of truth.
+- Preserved the 0.1.41 scheduled persistent streaming API and behavior without changing its public contract.
+- Changed the preview seed from `219877` to `231509`.
+- Bumped the package version to 0.1.42.
+- Incremented package version for this update.
+
 ## [0.1.41] - 2026-09-17
 
 - Added `WorldScheduledPersistentChunkStreamingController` as the combined scheduling + persistence streaming boundary.

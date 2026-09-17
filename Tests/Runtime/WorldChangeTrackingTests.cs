@@ -7,7 +7,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void EditServiceRecordsSuccessfulCellChanges()
         {
-            const int seed = 93417;
+            const int seed = 116503;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -35,7 +35,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void NoOpEditDoesNotCreateAChange()
         {
-            const int seed = 93417;
+            const int seed = 116503;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -55,7 +55,7 @@ namespace Jolybob.ProceduralWorld.Tests
         [Test]
         public void NamedEditOperationsRecordBeforeAndAfterState()
         {
-            const int seed = 93417;
+            const int seed = 116503;
             var settings = new WorldGenerationSettings { chunkSize = 4 };
             var generator = new ProceduralWorldGenerator(seed, settings);
             var access = new WorldPersistentChunkStreamingController(
@@ -92,7 +92,7 @@ namespace Jolybob.ProceduralWorld.Tests
         {
             var access = new WorldPersistentChunkStreamingController(
                 new WorldChunkPersistenceService(
-                    new ProceduralWorldGenerator(93417, new WorldGenerationSettings { chunkSize = 4 }),
+                    new ProceduralWorldGenerator(116503, new WorldGenerationSettings { chunkSize = 4 }),
                     new InMemoryWorldChunkStore()),
                 new ChunkStreamingPlanner(0),
                 new NullSink());

@@ -16,6 +16,7 @@ The streaming layer controls which chunk coordinates are active. It does not dec
 - `BudgetedChunkGenerationService` processes a bounded number of queued chunks per call.
 - `WorldScheduledChunkStreamingController` composes planning, generation scheduling, cancellation, and sink delivery for frame-budgeted streaming.
 - `WorldPersistentChunkStreamingController` adds persistence-aware load, save-before-unload, and reset behavior.
+- `WorldScheduledPersistentChunkStreamingController` combines budgeted generation with persistence-aware loading, unloading, and loaded-world access.
 - `IWorldChunkAccess` exposes the minimal read/write boundary for currently loaded chunks.
 - `WorldChunkCoordinates` converts world positions into chunk coordinates and local cell coordinates, including negative positions.
 - `WorldEditService` provides high-level gameplay/player mutation operations on loaded cells.
@@ -38,7 +39,7 @@ The default order uses `long` distance arithmetic to avoid overflow at extreme i
 
 ## Budgeted generation
 
-Generation can now be separated from the streaming update loop. `IWorldChunkGenerator` preserves the existing synchronous generator contract while allowing schedulers to work with alternate generators in tests or production.
+Generation can be separated from the streaming update loop. `IWorldChunkGenerator` preserves the existing synchronous generator contract while allowing schedulers to work with alternate generators in tests or production.
 
 `DeterministicChunkGenerationScheduler` stores each coordinate at an integer priority and uses insertion order as the deterministic tie-break. Re-enqueuing an existing coordinate updates its priority instead of creating a duplicate request. Pending work can be cancelled when streaming moves far enough away that the planner unloads the coordinate.
 
@@ -57,6 +58,40 @@ controller.Process(maxChunks: 2);
 ```
 
 `Update()` plans activation and queues work; `Process()` performs only the configured amount of generation and forwards completed chunks to the sink. Unloaded coordinates are cancelled from the pending queue before the sink receives their unload notification. The original `WorldChunkStreamingController` remains available for projects that want immediate generation.
+
+## Budgeted persistent streaming
+
+`WorldScheduledPersistentChunkStreamingController` extends the same scheduling boundary to persistent worlds. Planning and queuing remain separate from execution, but each generated request is resolved through `WorldChunkPersistenceService.LoadChunk`, so the generated base state and any saved overrides are restored only when the request actually runs.
+
+```text
+ChunkStreamingPlanner
+        |
+        v
+IChunkGenerationScheduler
+        |
+        v
+Budgeted generation
+        |
+        v
+WorldChunkPersistenceService
+        |
+        +----> loaded world state
+        |
+        v
+IWorldChunkSink
+```
+
+```csharp
+var controller = new WorldScheduledPersistentChunkStreamingController(
+    persistence,
+    new ChunkStreamingPlanner(loadRadius: 2, unloadRadius: 3),
+    sink);
+
+controller.Update(new ChunkCoord(10, -4));
+controller.Process(maxChunks: 2);
+```
+
+This means a chunk that becomes irrelevant before its generation budget is reached never needs to be generated or restored. When a loaded chunk leaves the active set, it is saved before the sink receives its unload notification. `Reset()` saves all loaded chunks and clears both planned and pending generation work. The controller also implements `IWorldChunkAccess`, so gameplay code can use the same loaded-world boundary as the immediate persistent controller.
 
 ## Radius model
 
@@ -83,7 +118,7 @@ IWorldChunkStore
 
 On load, the controller asks `WorldChunkPersistenceService` for the chunk, so deterministic generation happens first and saved overrides are then applied. On unload, the currently loaded chunk is saved before the sink receives its unload notification. `Reset()` saves and unloads every currently loaded chunk before clearing the planner state.
 
-The controller implements `IWorldChunkAccess`. This creates a narrow boundary between world lifecycle management and gameplay systems: gameplay code does not need to know about the streaming planner, persistence backend, or rendering sink.
+The scheduled persistent controller preserves those lifecycle guarantees while adding a generation budget between planning and persistence.
 
 ## World editing boundary
 
@@ -102,6 +137,6 @@ Edits only succeed for currently loaded chunks. This prevents gameplay code from
 
 ## Separation
 
-Generation remains deterministic and authoritative for the generated base state. Streaming decides when a chunk should become active. Load ordering is a scheduling policy, not part of generation, so changing the ordering strategy does not alter generated chunk contents. The generation scheduler adds a second independent policy: how much pending generation work is allowed to execute during one update. Persistence stores edits separately from that generated base state. `IWorldChunkAccess` exposes only loaded state to gameplay systems. Rendering adapters can consume loaded chunks without becoming part of the planner or scheduler.
+Generation remains deterministic and authoritative for the generated base state. Streaming decides when a chunk should become active. Load ordering is a scheduling policy, not part of generation, so changing the ordering strategy does not alter generated chunk contents. The generation scheduler adds a second independent policy: how much pending generation work is allowed to execute during one update. Persistence stores edits separately from that generated base state. The scheduled persistent controller composes both concerns without moving persistence into the scheduler itself. `IWorldChunkAccess` exposes only loaded state to gameplay systems. Rendering adapters can consume loaded chunks without becoming part of the planner, scheduler, or persistence backend.
 
 The preview seed used by this architecture revision is `196423`.

@@ -31,6 +31,8 @@ namespace Jolybob.ProceduralWorld
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
+            if (!context.Settings.liquidsEnabled)
+                return;
 
             int size = context.Chunk.Size;
             for (int y = 0; y < size; y++)
